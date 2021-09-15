@@ -29,11 +29,13 @@ let dealerCardDisplay;
 
 let runningCountScoreBoard;
 let runningCount = 0;
+let trueCountScoreBoard;
+let trueCount = 0;
 
 let cardIndex = 0;
 
 let numDecks = 2;
-let numPlayers = 6;
+let numPlayers = 7;
 let deckPen = .75;
 
 
@@ -68,6 +70,10 @@ class GameScene extends Phaser.Scene {
         this.load.image('background', '/static/assets/table_layout.png');
         this.load.image('face_down_card', '/static/assets/card_back.png');
 
+        // action buttons
+
+
+        // playing card spritesheet
         this.load.spritesheet("cards", "/static/assets/cards.png", {
             frameWidth: gameOptions.cardWidth,
             frameHeight: gameOptions.cardHeight
@@ -85,14 +91,16 @@ class GameScene extends Phaser.Scene {
         bg.scale = .75;
         bg.setPosition(1400/2, 740/2);
 
-        runningCountScoreBoard = this.add.text(25, 25, "Running Count: 0", {fontSize: '20px', fill: '#fff'});
-        player1CardDisplay = this.add.text(900, 500, "Player1 Cards: ", {fontSize: '20px', fill: '#fff'});
-        player2CardDisplay = this.add.text(900, 525, "Player2 Cards: ", {fontSize: '20px', fill: '#fff'});
-        player3CardDisplay = this.add.text(900, 550, "Player3 Cards: ", {fontSize: '20px', fill: '#fff'});
-        player4CardDisplay = this.add.text(900, 575, "Player4 Cards: ", {fontSize: '20px', fill: '#fff'});
-        player5CardDisplay = this.add.text(900, 600, "Player5 Cards: ", {fontSize: '20px', fill: '#fff'});
-        player6CardDisplay = this.add.text(900, 625, "Player6 Cards: ", {fontSize: '20px', fill: '#fff'});
-        player7CardDisplay = this.add.text(900, 650, "Player7 Cards: ", {fontSize: '20px', fill: '#fff'});
+        runningCountScoreBoard = this.add.text(1175, 25, "Running Count: 0", {fontSize: '20px', fill: '#fff'});
+        trueCountScoreBoard = this.add.text(1175, 50, "True Count: 0", {fontSize: '20px', fill: '#fff'});
+        dealerCardDisplay = this.add.text(1175, 75, "Dealer Cards: \n", {fontSize: '20px', fill: '#fff'});
+        player1CardDisplay = this.add.text(1175, 125, "Player1 Cards: \n", {fontSize: '20px', fill: '#fff'});
+        player2CardDisplay = this.add.text(1175, 175, "Player2 Cards: \n", {fontSize: '20px', fill: '#fff'});
+        player3CardDisplay = this.add.text(1175, 225, "Player3 Cards: \n", {fontSize: '20px', fill: '#fff'});
+        player4CardDisplay = this.add.text(1175, 275, "Player4 Cards: \n", {fontSize: '20px', fill: '#fff'});
+        player5CardDisplay = this.add.text(1175, 325, "Player5 Cards: \n", {fontSize: '20px', fill: '#fff'});
+        player6CardDisplay = this.add.text(1175, 375, "Player6 Cards: \n", {fontSize: '20px', fill: '#fff'});
+        player7CardDisplay = this.add.text(1175, 425, "Player7 Cards: \n", {fontSize: '20px', fill: '#fff'});
 
         // places controlPanel
         let controlPanel = this.add.rectangle(700, 875, 1400, 275, 0x008b8b);
@@ -108,6 +116,8 @@ class GameScene extends Phaser.Scene {
         //deck.setPosition(1200/2, 900/2);
 
         var timeline = this.tweens.createTimeline();
+
+        trueCount = Math.ceil(runningCount / Math.ceil((numDecks * 52 - cardIndex) / 52));
         
         // i = card
         // j = player
@@ -125,7 +135,7 @@ class GameScene extends Phaser.Scene {
             dealerCards[i] = (this.getValue(cardInts, cardIndex));
             this.dealCard(cardInts[cardIndex], shuffledDeck, timeline, i, 7);
 
-            console.log("Dealer Cards: " + dealerCards);
+            // console.log("Dealer Cards: " + dealerCards);
             //dealerCardDisplay.setText("Dealer cards: " + dealerCards[j]);
 
             cardIndex++;
@@ -133,7 +143,7 @@ class GameScene extends Phaser.Scene {
         
         timeline.play();
 
-
+        // this.playGame();
     };
 
     update() {
@@ -188,61 +198,69 @@ class GameScene extends Phaser.Scene {
             delay: 500,
             onComplete: function() {
 
+                shuffledDeck[cardIndex].setDepth(i);
+
                 if (j < 7)
                 {
                     if (playerCards[j][i] === "A" || playerCards[j][i] === "K" || playerCards[j][i] === "Q" || 
                     playerCards[j][i] === "J" || playerCards[j][i] === "10")
                     {
                         runningCount = runningCount - 1;
+                        trueCount = Math.ceil(runningCount / Math.ceil((numDecks * 52 - cardIndex) / 52));
                         runningCountScoreBoard.setText('Running Count: ' + runningCount);
+                        trueCountScoreBoard.setText('True Count: ' + trueCount);
                     }
                     else if (playerCards[j][i] === "7" || playerCards[j][i] === "8" || playerCards[j][i] === "9"  )
                     {
                         runningCount = runningCount;
+                        trueCount = Math.ceil(runningCount / Math.ceil((numDecks * 52 - cardIndex) / 52));
                         runningCountScoreBoard.setText('Running Count: ' + runningCount);
+                        trueCountScoreBoard.setText('True Count: ' + trueCount);
                     }
                     else
                     {
                         runningCount = runningCount + 1;
+                        trueCount = Math.ceil(runningCount / Math.ceil((numDecks * 52 - cardIndex) / 52));
                         runningCountScoreBoard.setText('Running Count: ' + runningCount);
+                        trueCountScoreBoard.setText('True Count: ' + trueCount);
                     }
-
-                    // this.updatePlayerCardDisplay(i, j);
 
                     if (i == 0)
                     {
                         if (j == 0)
-                            player1CardDisplay.setText("Player" + (j + 1) + " Cards: " + playerCards[j][i]);
+                            player1CardDisplay.setText("Player" + (j + 1) + " Cards:\n[" + playerCards[j][i] + "]");
                         else if (j == 1)
-                            player2CardDisplay.setText("Player" + (j + 1) + " Cards: " + playerCards[j][i]);
+                            player2CardDisplay.setText("Player" + (j + 1) + " Cards:\n[" + playerCards[j][i] + "]");
                         else if (j == 2)
-                            player3CardDisplay.setText("Player" + (j + 1) + " Cards: " + playerCards[j][i]);
+                            player3CardDisplay.setText("Player" + (j + 1) + " Cards:\n[" + playerCards[j][i] + "]");
                         else if (j == 3)
-                            player4CardDisplay.setText("Player" + (j + 1) + " Cards: " + playerCards[j][i]);
+                            player4CardDisplay.setText("Player" + (j + 1) + " Cards:\n[" + playerCards[j][i] + "]");
                         else if (j == 4)
-                            player5CardDisplay.setText("Player" + (j + 1) + " Cards: " + playerCards[j][i]);
+                            player5CardDisplay.setText("Player" + (j + 1) + " Cards:\n[" + playerCards[j][i] + "]");
                         else if (j == 5)
-                            player6CardDisplay.setText("Player" + (j + 1) + " Cards: " + playerCards[j][i]);
+                            player6CardDisplay.setText("Player" + (j + 1) + " Cards:\n[" + playerCards[j][i] + "]");
                         else if (j == 6)
-                            player7CardDisplay.setText("Player" + (j + 1) + " Cards: " + playerCards[j][i]);
+                            player7CardDisplay.setText("Player" + (j + 1) + " Cards:\n[" + playerCards[j][i] + "]");
                     }
                     else if (i == 1)
                     {
                         if (j == 0)
-                            player1CardDisplay.setText("Player" + (j + 1) + " Cards: " + playerCards[j][i-1] + "," + playerCards[j][i]);
+                            player1CardDisplay.setText("Player" + (j + 1) + " Cards:\n[" + playerCards[j][i-1] + "," + playerCards[j][i] + "]");
                         else if (j == 1)
-                            player2CardDisplay.setText("Player" + (j + 1) + " Cards: " + playerCards[j][i-1] + "," + playerCards[j][i]);
+                            player2CardDisplay.setText("Player" + (j + 1) + " Cards:\n[" + playerCards[j][i-1] + "," + playerCards[j][i] + "]");
                         else if (j == 2)
-                            player3CardDisplay.setText("Player" + (j + 1) + " Cards: " + playerCards[j][i-1] + "," + playerCards[j][i]);
+                            player3CardDisplay.setText("Player" + (j + 1) + " Cards:\n[" + playerCards[j][i-1] + "," + playerCards[j][i] + "]");
                         else if (j == 3)
-                            player4CardDisplay.setText("Player" + (j + 1) + " Cards: " + playerCards[j][i-1] + "," + playerCards[j][i]);
+                            player4CardDisplay.setText("Player" + (j + 1) + " Cards:\n[" + playerCards[j][i-1] + "," + playerCards[j][i] + "]");
                         else if (j == 4)
-                            player5CardDisplay.setText("Player" + (j + 1) + " Cards: " + playerCards[j][i-1] + "," + playerCards[j][i]);
+                            player5CardDisplay.setText("Player" + (j + 1) + " Cards:\n[" + playerCards[j][i-1] + "," + playerCards[j][i] + "]");
                         else if (j == 5)
-                            player6CardDisplay.setText("Player" + (j + 1) + " Cards: " + playerCards[j][i-1] + "," + playerCards[j][i]);
+                            player6CardDisplay.setText("Player" + (j + 1) + " Cards:\n[" + playerCards[j][i-1] + "," + playerCards[j][i] + "]");
                         else if (j == 6)
-                            player7CardDisplay.setText("Player" + (j + 1) + " Cards: " + playerCards[j][i-1] + "," + playerCards[j][i]);
+                            player7CardDisplay.setText("Player" + (j + 1) + " Cards:\n[" + playerCards[j][i-1] + "," + playerCards[j][i] + "]");
                     }
+                    // gonna have to continue this if/else for all card combinations, 
+                    // such as having 5 cards, also need to take splits into consideration
 
                 }
                 else
@@ -251,59 +269,39 @@ class GameScene extends Phaser.Scene {
                         dealerCards[i] === "J" || dealerCards[i] === "10")
                     {
                         runningCount = runningCount - 1;
+                        trueCount = Math.ceil(runningCount / Math.ceil((numDecks * 52 - cardIndex) / 52));
                         runningCountScoreBoard.setText('Running Count: ' + runningCount);
+                        trueCountScoreBoard.setText('True Count: ' + trueCount);
                     }
                     else if (dealerCards[i] === "7" || dealerCards[i] === "8" || dealerCards[i] === "9"  )
                     {
                         runningCount = runningCount;
+                        trueCount = Math.ceil(runningCount / Math.ceil((numDecks * 52 - cardIndex) / 52));
                         runningCountScoreBoard.setText('Running Count: ' + runningCount);
+                        trueCountScoreBoard.setText('True Count: ' + trueCount);
                     }
                     else
                     {
                         runningCount = runningCount + 1;
+                        trueCount = Math.ceil(runningCount / Math.ceil((numDecks * 52 - cardIndex) / 52));
                         runningCountScoreBoard.setText('Running Count: ' + runningCount);
+                        trueCountScoreBoard.setText('True Count: ' + trueCount);
                     }
+
+                    if (i == 0)
+                    {
+                        dealerCardDisplay.setText("Dealer Cards:\n[" + dealerCards[i] + "]");
+                    }
+                    else if (i == 1)
+                    {
+                        dealerCardDisplay.setText("Dealer Cards:\n[" + dealerCards[i-1] + "," + dealerCards[i] + "]");
+                    }
+
+
+
                 }
             }
         })
-    };
-
-    updatePlayerCardDisplay(i, j) {
-
-        if (i == 0)
-        {
-            if (j == 0)
-                player1CardDisplay.setText("Player" + (j + 1) + " Cards: " + playerCards[j][i]);
-            else if (j == 1)
-                player2CardDisplay.setText("Player" + (j + 1) + " Cards: " + playerCards[j][i]);
-            else if (j == 2)
-                player3CardDisplay.setText("Player" + (j + 1) + " Cards: " + playerCards[j][i]);
-            else if (j == 3)
-                player4CardDisplay.setText("Player" + (j + 1) + " Cards: " + playerCards[j][i]);
-            else if (j == 4)
-                player5CardDisplay.setText("Player" + (j + 1) + " Cards: " + playerCards[j][i]);
-            else if (j == 5)
-                player6CardDisplay.setText("Player" + (j + 1) + " Cards: " + playerCards[j][i]);
-            else if (j == 6)
-                player7CardDisplay.setText("Player" + (j + 1) + " Cards: " + playerCards[j][i]);
-        }
-        else if (i == 1)
-        {
-            if (j == 0)
-                player1CardDisplay.setText("Player" + (j + 1) + " Cards: " + playerCards[j][i-1] + "," + playerCards[j][i]);
-            else if (j == 1)
-                player2CardDisplay.setText("Player" + (j + 1) + " Cards: " + playerCards[j][i-1] + "," + playerCards[j][i]);
-            else if (j == 2)
-                player3CardDisplay.setText("Player" + (j + 1) + " Cards: " + playerCards[j][i-1] + "," + playerCards[j][i]);
-            else if (j == 3)
-                player4CardDisplay.setText("Player" + (j + 1) + " Cards: " + playerCards[j][i-1] + "," + playerCards[j][i]);
-            else if (j == 4)
-                player5CardDisplay.setText("Player" + (j + 1) + " Cards: " + playerCards[j][i-1] + "," + playerCards[j][i]);
-            else if (j == 5)
-                player6CardDisplay.setText("Player" + (j + 1) + " Cards: " + playerCards[j][i-1] + "," + playerCards[j][i]);
-            else if (j == 6)
-                player7CardDisplay.setText("Player" + (j + 1) + " Cards: " + playerCards[j][i-1] + "," + playerCards[j][i]);
-        }
     };
 
     // finds the values of each sprite
@@ -335,6 +333,10 @@ class GameScene extends Phaser.Scene {
             return "Q";
         else if (cardInts[cardIndex] % 13 == 12)
             return "K";
+
+    };
+
+    playGame() {
 
     };
 
