@@ -81,11 +81,12 @@ let disclaimer;
 
 
 //TODO:
-// print player total value (cant really do this cause of aces) (just treat A's as 1 for now)
+// determine if each seat won, lost, split, or got BJ
+// reset the game for another round
 
-// set up a game loop
-// implement hit and stand actions
-// wait for a players actions, then proceed to next player
+// add money, bets, and doubling
+
+// add splits
 
 let gameOptions = {
  
@@ -260,10 +261,6 @@ class GameScene extends Phaser.Scene {
         })
     };
 
-    standCard() {
-
-    };
-
     doubleCard() {
 
     };
@@ -385,19 +382,64 @@ class GameScene extends Phaser.Scene {
 
     isBlackjack(playerCards) {
         var length = playerCards.length;
-        var sum = 1;
+        var sum = 0;
+
+        if (length != 2)
+            return false;
         
         for (let i = 0; i < length; i++)
         {
-            // sum = sum + playerCards[i];
-            sum = sum;
+            if (playerCards[i] === "A")
+            {
+                sum = sum + 11;
+            }
+            else if (playerCards[i] === "10" || playerCards[i] === "J" || playerCards[i] === "Q" || playerCards[i] === "K")
+            {
+                sum = sum + 10;
+            }
         }
+
+        if (sum == 21)
+            return true;
 
         return false;
     };
 
-    isBust(){
+    isBust(playerCards){
+        var length = playerCards.length;
+        var sum = 0;
+        var aceCount = 0;
 
+        for (let i = 0; i < length; i++)
+        {
+            if (playerCards[i] === "A")
+            {
+                aceCount++;
+            }
+            else if (playerCards[i] === "10" || playerCards[i] === "J" || playerCards[i] === "Q" || playerCards[i] === "K")
+            {
+                sum = sum + 10;
+            }
+            else
+            {
+                sum = sum + parseInt(playerCards[i], 10);
+            }
+        }
+
+        while (aceCount > 0)
+        {
+            if (sum + 11 > 21)
+                sum = sum + 1;
+            else
+                sum = sum + 11;
+
+            aceCount--;
+        }
+
+        if (sum > 21)
+            return true;
+
+        return false;
     };
 
     // Load assets
@@ -605,74 +647,131 @@ class GameScene extends Phaser.Scene {
 
         // i = card
         // j = player
-        
+
         currentPlayer = 0;
 
-        if (this.isBlackjack(playerCards[currentPlayer], this))
-        {
+        // player chooses to hit
+        playerHit.on('pointerdown', function(){
+            playerCards[currentPlayer][2] = (this.scene.getValue(cardInts, cardIndex, this));
+            this.scene.hitCard(cardInts[cardIndex], shuffledDeck, 2, currentPlayer, this);
+            cardIndex++;
 
-        }
-        else if (this.isBust(playerCards[currentPlayer]))
-        {
-
-        }
-        else
-        {
-            playerHit.on('pointerdown', function(){
-                playerCards[currentPlayer][2] = (this.scene.getValue(cardInts, cardIndex, this));
-                this.scene.hitCard(cardInts[cardIndex], shuffledDeck, 2, currentPlayer, this);
-                cardIndex++;
-            })
-
-            playerStand.on('pointerdown', function(){
-
+            if (this.scene.isBlackjack(playerCards[currentPlayer], this))
+            {
                 if (currentPlayer == 0)
                 {
-                    player1TurnIndicator.fillColor = 0xFFFFFF;
-                    player2TurnIndicator.fillColor = 0x8E1600;
-                    currentPlayer = currentPlayer + 1;
+                    player1CardDisplay.setTint(0xFFD700);
                 }
                 else if (currentPlayer == 1)
                 {
-                    player2TurnIndicator.fillColor = 0xFFFFFF;
-                    player3TurnIndicator.fillColor = 0x8E1600;
-                    currentPlayer = currentPlayer + 1;
+                    player2CardDisplay.setTint(0xFFD700);
                 }
                 else if (currentPlayer == 2)
                 {
-                    player3TurnIndicator.fillColor = 0xFFFFFF;
-                    player4TurnIndicator.fillColor = 0x8E1600;
-                    currentPlayer = currentPlayer + 1;
+                    player3CardDisplay.setTint(0xFFD700);
                 }
                 else if (currentPlayer == 3)
                 {
-                    player4TurnIndicator.fillColor = 0xFFFFFF;
-                    player5TurnIndicator.fillColor = 0x8E1600;
-                    currentPlayer = currentPlayer + 1;
+                    player4CardDisplay.setTint(0xFFD700);
                 }
                 else if (currentPlayer == 4)
                 {
-                    player5TurnIndicator.fillColor = 0xFFFFFF;
-                    player6TurnIndicator.fillColor = 0x8E1600;
-                    currentPlayer = currentPlayer + 1;
+                    player5CardDisplay.setTint(0xFFD700);
                 }
                 else if (currentPlayer == 5)
                 {
-                    player6TurnIndicator.fillColor = 0xFFFFFF;
-                    player7TurnIndicator.fillColor = 0x8E1600;
-                    currentPlayer = currentPlayer + 1;
+                    player6CardDisplay.setTint(0xFFD700);
                 }
                 else if (currentPlayer == 6)
                 {
-                    player7TurnIndicator.fillColor = 0xFFFFFF;
-                    player1TurnIndicator.fillColor = 0x8E1600;
-                    currentPlayer = 0;
+                    player7CardDisplay.setTint(0xFFD700);
                     // add more here since that means the round is over
                 }
-            })
 
+            }
+            else if (this.scene.isBust(playerCards[currentPlayer]))
+            {
+                if (currentPlayer == 0)
+                {
+                    player1CardDisplay.setTint(0x8E1600);
+                }
+                else if (currentPlayer == 1)
+                {
+                    player2CardDisplay.setTint(0x8E1600);
+                }
+                else if (currentPlayer == 2)
+                {
+                    player3CardDisplay.setTint(0x8E1600);
+                }
+                else if (currentPlayer == 3)
+                {
+                    player4CardDisplay.setTint(0x8E1600);
+                }
+                else if (currentPlayer == 4)
+                {
+                    player5CardDisplay.setTint(0x8E1600);
+                }
+                else if (currentPlayer == 5)
+                {
+                    player6CardDisplay.setTint(0x8E1600);
+                }
+                else if (currentPlayer == 6)
+                {
+                    player7CardDisplay.setTint(0x8E1600);
+                    // add more here since that means the round is over
+                }
+            }
 
-        }
+        })
+
+        // player chooses to stand
+        playerStand.on('pointerdown', function(){
+
+            if (currentPlayer == 0)
+            {
+                player1TurnIndicator.fillColor = 0xFFFFFF;
+                player2TurnIndicator.fillColor = 0x8E1600;
+                currentPlayer = currentPlayer + 1;
+            }
+            else if (currentPlayer == 1)
+            {
+                player2TurnIndicator.fillColor = 0xFFFFFF;
+                player3TurnIndicator.fillColor = 0x8E1600;
+                currentPlayer = currentPlayer + 1;
+            }
+            else if (currentPlayer == 2)
+            {
+                player3TurnIndicator.fillColor = 0xFFFFFF;
+                player4TurnIndicator.fillColor = 0x8E1600;
+                currentPlayer = currentPlayer + 1;
+            }
+            else if (currentPlayer == 3)
+            {
+                player4TurnIndicator.fillColor = 0xFFFFFF;
+                player5TurnIndicator.fillColor = 0x8E1600;
+                currentPlayer = currentPlayer + 1;
+            }
+            else if (currentPlayer == 4)
+            {
+                player5TurnIndicator.fillColor = 0xFFFFFF;
+                player6TurnIndicator.fillColor = 0x8E1600;
+                currentPlayer = currentPlayer + 1;
+            }
+            else if (currentPlayer == 5)
+            {
+                player6TurnIndicator.fillColor = 0xFFFFFF;
+                player7TurnIndicator.fillColor = 0x8E1600;
+                currentPlayer = currentPlayer + 1;
+            }
+            else if (currentPlayer == 6)
+            {
+                player7TurnIndicator.fillColor = 0xFFFFFF;
+                player1TurnIndicator.fillColor = 0x8E1600;
+                currentPlayer = 0;
+                // add more here since that means the round is over
+            }
+        })
+
 
 
     };
