@@ -1,9 +1,9 @@
 "use strict";
 
 // cards x & y positions 1-5 for players 1-7 + dealer 
-const cardX = [[1061, 965, 847, 705, 559, 428, 330, 705], [1050, 950, 825, 685, 540, 405, 310, 685], [1025, 925, 800, 660, 515, 385, 285, 660]];
-const cardY = [[269, 361, 421, 445, 421, 355, 263, 75], [250, 350, 400, 420, 400, 335, 243, 55], [225, 325, 375, 400, 375, 310, 230, 30]];
-const cardA = [-48, -33, -16, 0, 16, 32, 48, 0];
+const cardX = [[965, 705, 428, 705], [950, 685, 405, 725], [925, 660, 385, 745], [910, 640, 365, 765], [895, 620, 345, 785]];
+const cardY = [[361, 445, 355, 75], [350, 420, 335, 95], [325, 400, 310, 115], [300, 380, 295, 135], [275, 360, 270, 155]];
+const cardA = [-33, 0, 32, 0];
 
 const spriteNames = ['AS', '2S', '3S', '4S', '5S', '6S', '7S', '8S', '9S', '10S', 'JS', 'QS', 'KS', 
                     'AC', '2C', '3C', '4C', '5C', '6C', '7C', '8C', '9C', '10C', 'JC', 'QC', 'KC',
@@ -16,17 +16,13 @@ const spriteValues = [11, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10,
                     11, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10];
 
 // doesnt handle splits right now
-const playerCards = [[], [], [], [], [], [], []];
+let playerCards = [[], [], []];
 // displays info on right side
 let player1CardDisplay;
 let player2CardDisplay;
 let player3CardDisplay;
-let player4CardDisplay;
-let player5CardDisplay;
-let player6CardDisplay;
-let player7CardDisplay;
 
-const dealerCards = [];
+let dealerCards = [];
 let dealerCardDisplay;
 
 let runningCountScoreBoard;
@@ -39,7 +35,7 @@ let cardIndex = 0;
 
 // changeable settings
 let numDecks = 2;
-let numPlayers = 7;
+let numPlayers = 3;
 let deckPen = .75;
 let playerCurrency = 500;
 
@@ -58,10 +54,6 @@ let blueChip_10_Button;
 let greenChip_25_Button;
 let blackChip_100_Button;
 
-let player7TurnIndicator;
-let player6TurnIndicator;
-let player5TurnIndicator;
-let player4TurnIndicator;
 let player3TurnIndicator;
 let player2TurnIndicator;
 let player1TurnIndicator;
@@ -79,9 +71,11 @@ let splitText;
 
 let disclaimer;
 
+let nextRoundButton;
+
 
 //TODO:
-// determine if each seat won, lost, split, or got BJ
+// dealer needs to draw to 16, and stand on 17
 // reset the game for another round
 
 // add money, bets, and doubling
@@ -91,13 +85,13 @@ let disclaimer;
 let gameOptions = {
  
     // card width, in pixels
-    cardWidth: 334,
+    cardWidth: 560,
  
     // card height, in pixels
-    cardHeight: 440,
+    cardHeight: 780,
  
     // card scale. 1 = original size, 0.5 half size and so on
-    cardScale: 0.175
+    cardScale: 0.125
 }
 
 let textStyle = {
@@ -110,7 +104,7 @@ let textStyle = {
 
 function updateInfo(i, j) {
 
-    if (j < 7)
+    if (j < 3)
     {
         if (playerCards[j][i] === "A" || playerCards[j][i] === "K" || playerCards[j][i] === "Q" || 
         playerCards[j][i] === "J" || playerCards[j][i] === "10")
@@ -143,14 +137,6 @@ function updateInfo(i, j) {
                 player2CardDisplay.setText("Player" + (j + 1) + " Cards:\n[" + playerCards[j][i] + "]");
             else if (j == 2)
                 player3CardDisplay.setText("Player" + (j + 1) + " Cards:\n[" + playerCards[j][i] + "]");
-            else if (j == 3)
-                player4CardDisplay.setText("Player" + (j + 1) + " Cards:\n[" + playerCards[j][i] + "]");
-            else if (j == 4)
-                player5CardDisplay.setText("Player" + (j + 1) + " Cards:\n[" + playerCards[j][i] + "]");
-            else if (j == 5)
-                player6CardDisplay.setText("Player" + (j + 1) + " Cards:\n[" + playerCards[j][i] + "]");
-            else if (j == 6)
-                player7CardDisplay.setText("Player" + (j + 1) + " Cards:\n[" + playerCards[j][i] + "]");
         }
         else if (i == 1)
         {
@@ -160,14 +146,6 @@ function updateInfo(i, j) {
                 player2CardDisplay.setText("Player" + (j + 1) + " Cards:\n[" + playerCards[j][i-1] + "," + playerCards[j][i] + "]");
             else if (j == 2)
                 player3CardDisplay.setText("Player" + (j + 1) + " Cards:\n[" + playerCards[j][i-1] + "," + playerCards[j][i] + "]");
-            else if (j == 3)
-                player4CardDisplay.setText("Player" + (j + 1) + " Cards:\n[" + playerCards[j][i-1] + "," + playerCards[j][i] + "]");
-            else if (j == 4)
-                player5CardDisplay.setText("Player" + (j + 1) + " Cards:\n[" + playerCards[j][i-1] + "," + playerCards[j][i] + "]");
-            else if (j == 5)
-                player6CardDisplay.setText("Player" + (j + 1) + " Cards:\n[" + playerCards[j][i-1] + "," + playerCards[j][i] + "]");
-            else if (j == 6)
-                player7CardDisplay.setText("Player" + (j + 1) + " Cards:\n[" + playerCards[j][i-1] + "," + playerCards[j][i] + "]");
         }
         else if (i == 2)
         {
@@ -177,14 +155,15 @@ function updateInfo(i, j) {
                 player2CardDisplay.setText("Player" + (j + 1) + " Cards:\n[" + playerCards[j][i-2] + "," + playerCards[j][i-1]  + "," + playerCards[j][i] +  "]");
             else if (j == 2)
                 player3CardDisplay.setText("Player" + (j + 1) + " Cards:\n[" + playerCards[j][i-2] + "," + playerCards[j][i-1]  + "," + playerCards[j][i] +  "]");
-            else if (j == 3)
-                player4CardDisplay.setText("Player" + (j + 1) + " Cards:\n[" + playerCards[j][i-2] + "," + playerCards[j][i-1]  + "," + playerCards[j][i] +  "]");
-            else if (j == 4)
-                player5CardDisplay.setText("Player" + (j + 1) + " Cards:\n[" + playerCards[j][i-2] + "," + playerCards[j][i-1]  + "," + playerCards[j][i] +  "]");
-            else if (j == 5)
-                player6CardDisplay.setText("Player" + (j + 1) + " Cards:\n[" + playerCards[j][i-2] + "," + playerCards[j][i-1]  + "," + playerCards[j][i] +  "]");
-            else if (j == 6)
-                player7CardDisplay.setText("Player" + (j + 1) + " Cards:\n[" + playerCards[j][i-2] + "," + playerCards[j][i-1]  + "," + playerCards[j][i] +  "]");
+        }
+        else if (i == 3)
+        {
+            if (j == 0)
+                player1CardDisplay.setText("Player" + (j + 1) + " Cards:\n[" + playerCards[j][i-3] + "," + playerCards[j][i-2] + "," + playerCards[j][i-1] + "," + playerCards[j][i] + "]");
+            else if (j == 1)
+                player2CardDisplay.setText("Player" + (j + 1) + " Cards:\n[" + playerCards[j][i-3] + "," + playerCards[j][i-2] + "," + playerCards[j][i-1] + "," + playerCards[j][i] + "]");
+            else if (j == 2)
+                player3CardDisplay.setText("Player" + (j + 1) + " Cards:\n[" + playerCards[j][i-3] + "," + playerCards[j][i-2] + "," + playerCards[j][i-1] + "," + playerCards[j][i] + "]");
         }
         // gonna have to continue this if/else for all card combinations, 
         // such as having 5 cards, also need to take splits into consideration
@@ -225,11 +204,16 @@ function updateInfo(i, j) {
         }
         else if (i == 2)
         {
-            dealerCardDisplay.setText("Dealer Cards:\n[?, " + dealerCards[i-1] + ", " + dealerCards[i] + "]");
+            dealerCardDisplay.setText("Dealer Cards:\n[" + dealerCards[i-2] + ", " + dealerCards[i-1] + ", " + dealerCards[i] + "]");
         }
-
-
-
+        else if (i == 3)
+        {
+            dealerCardDisplay.setText("Dealer Cards:\n[" + dealerCards[i-3] + ", " + dealerCards[i-2] + ", " + dealerCards[i-1] + ", " + dealerCards[i] + "]");
+        }
+        else if (i == 4)
+        {
+            dealerCardDisplay.setText("Dealer Cards:\n[" + dealerCards[i-4] + ", " + dealerCards[i-3] + ", " + dealerCards[i-2] + ", " + dealerCards[i-1] + ", " + dealerCards[i] + "]");
+        }
     }
 };
 
@@ -237,6 +221,23 @@ class GameScene extends Phaser.Scene {
 
     constructor() {
         super({ key: 'GameScene' });
+    };
+
+    drawDealerCards(dealerCards, cardIndex, cardInts, i) {
+        var length = 2;
+        var timeline = this.tweens.createTimeline();
+        var j = 3;
+
+        while(this.getHandValue(dealerCards) < 17)
+        {
+            dealerCards[i] = (this.getValue(cardInts, cardIndex));
+            this.dealCard(cardInts[cardIndex], shuffledDeck, timeline, i, 3, 0, dealerCard);
+
+            i++;
+            cardIndex++;
+        }
+
+        timeline.play();
     };
     
     hitCard(cardIndex, shuffledDeck, i, j) {
@@ -330,6 +331,7 @@ class GameScene extends Phaser.Scene {
         {
             this.deckOfCards[i] = this.add.sprite(900, 75, "cards", i % 52);
             this.deckOfCards[i].setScale(gameOptions.cardScale);
+            //this.deckOfCards[i].smoothed = false;
         }
 
         return this.deckOfCards;
@@ -380,6 +382,40 @@ class GameScene extends Phaser.Scene {
 
     };
 
+    getHandValue(playerCards) {
+        var length = playerCards.length;
+        var sum = 0;
+        var aceCount = 0;
+
+        for (let i = 0; i < length; i++)
+        {
+            if (playerCards[i] === "A")
+            {
+                aceCount++;
+            }
+            else if (playerCards[i] === "10" || playerCards[i] === "J" || playerCards[i] === "Q" || playerCards[i] === "K")
+            {
+                sum = sum + 10;
+            }
+            else
+            {
+                sum = sum + parseInt(playerCards[i], 10);
+            }
+        }
+
+        while (aceCount > 0)
+        {
+            if (sum + 11 > 21)
+                sum = sum + 1;
+            else
+                sum = sum + 11;
+
+            aceCount--;
+        }
+
+        return sum;
+    };
+    
     isBlackjack(playerCards) {
         var length = playerCards.length;
         var sum = 0;
@@ -405,7 +441,7 @@ class GameScene extends Phaser.Scene {
         return false;
     };
 
-    isBust(playerCards){
+    isBust(playerCards) {
         var length = playerCards.length;
         var sum = 0;
         var aceCount = 0;
@@ -442,113 +478,149 @@ class GameScene extends Phaser.Scene {
         return false;
     };
 
-    // Load assets
-    preload() {
+    isWinOrLoss() {
 
-        // load background and other assets
-        this.load.image('background', '/static/assets/table_layout.png');
-        this.load.image('face_down_card', '/static/assets/card_back.png');
+        let dealerHandValue = this.getHandValue(dealerCards);
 
-        // action buttons
-
-        // chips
-        this.load.image('chip_1', '/static/assets/1Chip.png');
-        this.load.image('chip_1_angle', '/static/assets/1ChipAngle.png');
-        this.load.image('chip_5', '/static/assets/5Chip.png');
-        this.load.image('chip_5_angle', '/static/assets/5ChipAngle.png');
-        this.load.image('chip_10', '/static/assets/10Chip.png');
-        this.load.image('chip_10_angle', '/static/assets/10ChipAngle.png');
-        this.load.image('chip_25', '/static/assets/25Chip.png');
-        this.load.image('chip_25_angle', '/static/assets/25ChipAngle.png');
-        this.load.image('chip_100', '/static/assets/100Chip.png');
-        this.load.image('chip_100_angle', '/static/assets/100ChipAngle.png');
-
-        // playing card spritesheet
-        this.load.spritesheet("cards", "/static/assets/cards.png", {
-            frameWidth: gameOptions.cardWidth,
-            frameHeight: gameOptions.cardHeight
-        });
+        for (let i = 0; i < numPlayers; i++)
+        {
+            let handValue = this.getHandValue(playerCards[i]);
+            
+            if (this.isBlackjack(playerCards[i]))
+            {
+                // blackjack
+                if (i == 0)
+                {
+                    player1CardDisplay.setTint(0xFFD700);
+                }
+                else if (i == 1)
+                {
+                    player2CardDisplay.setTint(0xFFD700);
+                }
+                else if (i == 2)
+                {
+                    player3CardDisplay.setTint(0xFFD700);
+                }
+            }
+            else if ((handValue > dealerHandValue && handValue < 22) || (handValue < 22 && dealerHandValue > 21))
+            {
+                // hand wins
+                if (i == 0)
+                {
+                    player1CardDisplay.setTint(0x00FF00);
+                }
+                else if (i == 1)
+                {
+                    player2CardDisplay.setTint(0x00FF00);
+                }
+                else if (i == 2)
+                {
+                    player3CardDisplay.setTint(0x00FF00);
+                }
+            }
+            else if (handValue == dealerHandValue)
+            {
+                // push
+                if (i == 0)
+                {
+                    player1CardDisplay.setTint(0xFFFFFF);
+                }
+                else if (i == 1)
+                {
+                    player2CardDisplay.setTint(0xFFFFFF);
+                }
+                else if (i == 2)
+                {
+                    player3CardDisplay.setTint(0xFFFFFF);
+                }
+            }
+            else
+            {
+                // hand loses
+                if (i == 0)
+                {
+                    player1CardDisplay.setTint(0x8E1600);
+                }
+                else if (i == 1)
+                {
+                    player2CardDisplay.setTint(0x8E1600);
+                }
+                else if (i == 2)
+                {
+                    player3CardDisplay.setTint(0x8E1600);
+                }
+            }
+        }
     };
 
-    // called a single time after preload ends
-    create() {
+    revealDealerInfo(dealerCards) {
 
-        // places the background
-        bg = this.add.image(0, 0, 'background');
-        bg.scale = .75;
-        bg.setPosition(1400/2, 740/2);
+        // updates info on right side based on the dealers faced down card
 
-        // displays info on the top right side of canvas
-        runningCountScoreBoard = this.add.text(1175, 25, "Running Count: 0", {fontSize: '20px', fill: '#fff'});
-        trueCountScoreBoard = this.add.text(1175, 50, "True Count: 0", {fontSize: '20px', fill: '#fff'});
-        dealerCardDisplay = this.add.text(1175, 75, "Dealer Cards: \n", {fontSize: '20px', fill: '#fff'});
-        player1CardDisplay = this.add.text(1175, 125, "Player1 Cards: \n", {fontSize: '20px', fill: '#fff'});
-        player2CardDisplay = this.add.text(1175, 175, "Player2 Cards: \n", {fontSize: '20px', fill: '#fff'});
-        player3CardDisplay = this.add.text(1175, 225, "Player3 Cards: \n", {fontSize: '20px', fill: '#fff'});
-        player4CardDisplay = this.add.text(1175, 275, "Player4 Cards: \n", {fontSize: '20px', fill: '#fff'});
-        player5CardDisplay = this.add.text(1175, 325, "Player5 Cards: \n", {fontSize: '20px', fill: '#fff'});
-        player6CardDisplay = this.add.text(1175, 375, "Player6 Cards: \n", {fontSize: '20px', fill: '#fff'});
-        player7CardDisplay = this.add.text(1175, 425, "Player7 Cards: \n", {fontSize: '20px', fill: '#fff'});
+        if (dealerCards[0] === "A" || dealerCards[0] === "K" || dealerCards[0] === "Q" || 
+            dealerCards[0] === "J" || dealerCards[0] === "10")
+        {
+            runningCount = runningCount - 1;
+            trueCount = Math.floor(runningCount / Math.ceil((numDecks * 52 - cardIndex) / 52));
+            runningCountScoreBoard.setText('Running Count: ' + runningCount);
+            trueCountScoreBoard.setText('True Count: ' + trueCount);
+        }
+        else if (dealerCards[0] === "7" || dealerCards[0] === "8" || dealerCards[0] === "9"  )
+        {
+            runningCount = runningCount;
+            trueCount = Math.floor(runningCount / Math.ceil((numDecks * 52 - cardIndex) / 52));
+            runningCountScoreBoard.setText('Running Count: ' + runningCount);
+            trueCountScoreBoard.setText('True Count: ' + trueCount);
+        }
+        else
+        {
+            runningCount = runningCount + 1;
+            trueCount = Math.floor(runningCount / Math.ceil((numDecks * 52 - cardIndex) / 52));
+            runningCountScoreBoard.setText('Running Count: ' + runningCount);
+            trueCountScoreBoard.setText('True Count: ' + trueCount);
+        }
 
-        // places controlPanel
-        controlPanel = this.add.rectangle(700, 875, 1400, 275, 0x008b8b);
+ 
+        dealerCardDisplay.setText("Dealer Cards:\n[" + dealerCards[0] + ", " + dealerCards[1] + "]");
 
-        // gets a shuffled deck
-        shuffledDeck = this.initializeDeck(numDecks);
-        cardInts = this.shuffleInts(numDecks);
 
-        dealerCard = this.add.image(900, 75, 'face_down_card');
-        dealerCard.scale = .12;
+    };
 
-        // places deck on table, will get replaced by boot later on
-        deck = this.add.image(900, 75, 'face_down_card');
-        deck.scale = .125;
+    resetBoard() {
+        dealerCardDisplay.setText("Dealer Cards: \n");
+        player1CardDisplay.setText("Player1 Cards: \n");
+        player2CardDisplay.setText("Player2 Cards: \n");
+        player3CardDisplay.setText("Player3 Cards: \n");
+        player1CardDisplay.setTint(0xFFFFFF);
+        player2CardDisplay.setTint(0xFFFFFF);
+        player3CardDisplay.setTint(0xFFFFFF);
+        nextRoundButton.visible = false;
 
-        // places betting buttons
-        whiteChip_1_Button = this.add.image(500, 925, 'chip_1');
-        whiteChip_1_Button.scale = .075;
-        redChip_5_Button = this.add.image(600, 925, 'chip_5');
-        redChip_5_Button.scale = .075;
-        blueChip_10_Button = this.add.image(700, 925, 'chip_10');
-        blueChip_10_Button.scale = .075;
-        greenChip_25_Button = this.add.image(800, 925, 'chip_25');
-        greenChip_25_Button.scale = .075;
-        blackChip_100_Button = this.add.image(900, 925, 'chip_100');
-        blackChip_100_Button.scale = .075;
+        dealerCard.setPosition(900, 75);
+        dealerCard.visible = true;
 
-        // placing player turn indicators
-        player7TurnIndicator = this.add.circle(325, 775, 15, 0xFFFFFF);
-        player6TurnIndicator = this.add.circle(450, 775, 15, 0xFFFFFF);
-        player5TurnIndicator = this.add.circle(575, 775, 15, 0xFFFFFF);
-        player4TurnIndicator = this.add.circle(700, 775, 15, 0xFFFFFF);
-        player3TurnIndicator = this.add.circle(825, 775, 15, 0xFFFFFF);
-        player2TurnIndicator = this.add.circle(950, 775, 15, 0xFFFFFF);
-        player1TurnIndicator = this.add.circle(1075, 775, 15, 0x8E1600);
+        playerCards = [[], [], []];
+        dealerCards = [];
 
-        // placing player action buttons
-        playerHit = this.add.rectangle(400, 845, 150, 50, 0x808080);
-        hitText = this.add.text(385, 833, "Hit", textStyle);
-        playerDouble = this.add.rectangle(600, 845, 150, 50, 0x808080);
-        doubleText = this.add.text(563, 833, "Double", textStyle);
-        playerStand = this.add.rectangle(800, 845, 150, 50, 0x808080);
-        standText = this.add.text(768, 833, "Stand", textStyle);
-        playerSplit = this.add.rectangle(1000, 845, 150, 50, 0x808080);
-        splitText = this.add.text(975, 833, "Split", textStyle);
+        // destroy sprites
+        for (let i = 0; i < cardIndex; i++)
+        {
+            shuffledDeck[cardInts[i]].destroy(true);
+        }
+    };
 
-        // places gambling warning
-        //let gamblingWarning = this.add.graphics();
-        //gamblingWarning.fillStyle(0xFFFFFF, 1);
-        //gamblingWarning.fillRoundedRect(350, 100, 700, 500, 32);
-        //gamblingWarning.setDepth(100000);
+    newRound() {
 
-        // WIP Disclaimer
-        disclaimer = this.add.text(25, 25, "Work In Progress", {fontSize: '20px', fill: '#fff'});
+        //playerHit.setInteractive(false);
+        //playerDouble.setInteractive(false);
+        //playerStand.setInteractive(false);
+        //playerSplit.setInteractive(false);
+        playerHit.fillColor = 0x808080;
+        playerDouble.fillColor = 0x808080;
+        playerStand.fillColor = 0x808080;
+        playerSplit.fillColor = 0x808080;
 
-        // math and game logic starts here
-        
         var timeline = this.tweens.createTimeline();
-
-        trueCount = Math.floor(runningCount / Math.ceil((numDecks * 52 - cardIndex) / 52));
         
         // i = card
         // j = player
@@ -564,16 +636,17 @@ class GameScene extends Phaser.Scene {
 
             // deals to the dealer
             dealerCards[i] = (this.getValue(cardInts, cardIndex));
+            //console.log(dealerCards[i]);
             if (i == 0)
             {
-                this.dealCard(cardInts[cardIndex], shuffledDeck, timeline, i, 7, 1, dealerCard);
-                shuffledDeck[cardIndex].setPosition(cardX[0][7], cardY[0][7]);
-                shuffledDeck[cardIndex].setDepth(-1);
+                this.dealCard(cardInts[cardIndex], shuffledDeck, timeline, i, 3, 1, dealerCard);
                 dealerIndex = cardIndex;
+                shuffledDeck[cardInts[dealerIndex]].setPosition(cardX[0][3], cardY[0][3]);
+                shuffledDeck[cardInts[dealerIndex]].setDepth(-1);
             }
             else
             {
-                this.dealCard(cardInts[cardIndex], shuffledDeck, timeline, i, 7, 0, dealerCard);
+                this.dealCard(cardInts[cardIndex], shuffledDeck, timeline, i, 3, 0, dealerCard);
             }
 
             cardIndex++;
@@ -629,14 +702,138 @@ class GameScene extends Phaser.Scene {
             playerSplit.on('pointerout', function(){
                 playerSplit.fillColor = 0xFFFFFF;
             })
+
+            // check if any players have blackjack
+            for (let i = 0; i < numPlayers; i++)
+            {
+                if (this.isBlackjack(playerCards[i]))
+                {
+                    if (i == 0)
+                    {
+                        player1CardDisplay.setTint(0xFFD700);
+                    }
+                    else if (i == 1)
+                    {  
+                        player2CardDisplay.setTint(0xFFD700);
+                    }
+                    else if (i == 2)
+                    {
+                        player3CardDisplay.setTint(0xFFD700);
+                    }
+                }
+            }
+
         }, this);
 
-        // this.switchedOn = 'playerHit';
+    };
 
-        //playerHit.on('pointerdown', function(){
-        //    playerCards[0][2] = (this.scene.getValue(cardInts, cardIndex, this));
-        //    this.scene.hitCard(cardInts[cardIndex], shuffledDeck, 2, 0, this);
-        //})
+    // Load assets
+    preload() {
+
+        // load background and other assets
+        this.load.image('background', '/static/assets/table_layout.png');
+        this.load.image('face_down_card', '/static/assets/card_back.png');
+
+        // action buttons
+
+        // chips
+        this.load.image('chip_1', '/static/assets/1Chip.png');
+        this.load.image('chip_1_angle', '/static/assets/1ChipAngle.png');
+        this.load.image('chip_5', '/static/assets/5Chip.png');
+        this.load.image('chip_5_angle', '/static/assets/5ChipAngle.png');
+        this.load.image('chip_10', '/static/assets/10Chip.png');
+        this.load.image('chip_10_angle', '/static/assets/10ChipAngle.png');
+        this.load.image('chip_25', '/static/assets/25Chip.png');
+        this.load.image('chip_25_angle', '/static/assets/25ChipAngle.png');
+        this.load.image('chip_100', '/static/assets/100Chip.png');
+        this.load.image('chip_100_angle', '/static/assets/100ChipAngle.png');
+        this.load.image('nextRoundButton', '/static/assets/nextRoundButton.png');
+
+        // playing card spritesheet
+        this.load.spritesheet("cards", "/static/assets/classicCards.png", {
+            frameWidth: gameOptions.cardWidth,
+            frameHeight: gameOptions.cardHeight
+        });
+    };
+
+    // called a single time after preload ends
+    create() {
+
+        // places the background
+        bg = this.add.image(0, 0, 'background');
+        bg.scale = .75;
+        bg.setPosition(1400/2, 740/2);
+
+        // displays info on the top right side of canvas
+        runningCountScoreBoard = this.add.text(1175, 25, "Running Count: 0", {fontSize: '20px', fill: '#fff'});
+        trueCountScoreBoard = this.add.text(1175, 50, "True Count: 0", {fontSize: '20px', fill: '#fff'});
+        dealerCardDisplay = this.add.text(1175, 75, "Dealer Cards: \n", {fontSize: '20px', fill: '#fff'});
+        player1CardDisplay = this.add.text(1175, 175, "Player1 Cards: \n", {fontSize: '20px', fill: '#fff'});
+        player2CardDisplay = this.add.text(1175, 275, "Player2 Cards: \n", {fontSize: '20px', fill: '#fff'});
+        player3CardDisplay = this.add.text(1175, 375, "Player3 Cards: \n", {fontSize: '20px', fill: '#fff'});
+
+        // places controlPanel
+        controlPanel = this.add.rectangle(700, 875, 1400, 275, 0x008b8b);
+
+        // gets a shuffled deck
+        shuffledDeck = this.initializeDeck(numDecks);
+        cardInts = this.shuffleInts(numDecks);
+
+        dealerCard = this.add.image(900, 75, 'face_down_card');
+        dealerCard.scale = .13;
+
+        // places deck on table, will get replaced by boot later on
+        deck = this.add.image(900, 75, 'face_down_card');
+        deck.scale = .13;
+
+        // places betting buttons
+        whiteChip_1_Button = this.add.image(500, 925, 'chip_1');
+        whiteChip_1_Button.scale = .075;
+        redChip_5_Button = this.add.image(600, 925, 'chip_5');
+        redChip_5_Button.scale = .075;
+        blueChip_10_Button = this.add.image(700, 925, 'chip_10');
+        blueChip_10_Button.scale = .075;
+        greenChip_25_Button = this.add.image(800, 925, 'chip_25');
+        greenChip_25_Button.scale = .075;
+        blackChip_100_Button = this.add.image(900, 925, 'chip_100');
+        blackChip_100_Button.scale = .075;
+
+        // places next round button
+        nextRoundButton = this.add.image(1000, 925, 'nextRoundButton');
+        nextRoundButton.scale = 1.25;
+        nextRoundButton.visible = false;
+
+
+        // placing player turn indicators
+        player3TurnIndicator = this.add.circle(450, 775, 15, 0xFFFFFF);
+        player2TurnIndicator = this.add.circle(700, 775, 15, 0xFFFFFF);
+        player1TurnIndicator = this.add.circle(950, 775, 15, 0x8E1600);
+
+
+        // placing player action buttons
+        playerHit = this.add.rectangle(400, 845, 150, 50, 0x808080);
+        hitText = this.add.text(385, 833, "Hit", textStyle);
+        playerDouble = this.add.rectangle(600, 845, 150, 50, 0x808080);
+        doubleText = this.add.text(563, 833, "Double", textStyle);
+        playerStand = this.add.rectangle(800, 845, 150, 50, 0x808080);
+        standText = this.add.text(768, 833, "Stand", textStyle);
+        playerSplit = this.add.rectangle(1000, 845, 150, 50, 0x808080);
+        splitText = this.add.text(975, 833, "Split", textStyle);
+
+        // places gambling warning
+        //let gamblingWarning = this.add.graphics();
+        //gamblingWarning.fillStyle(0xFFFFFF, 1);
+        //gamblingWarning.fillRoundedRect(350, 100, 700, 500, 32);
+        //gamblingWarning.setDepth(100000);
+
+        // WIP Disclaimer
+        disclaimer = this.add.text(25, 25, "Work In Progress", {fontSize: '20px', fill: '#fff'});
+
+        // math and game logic starts here
+
+        trueCount = Math.floor(runningCount / Math.ceil((numDecks * 52 - cardIndex) / 52));
+
+        this.newRound();
        
         // 1. check if player has bj or is bust
         // 2. if bj, perform appropriate actions
@@ -652,73 +849,81 @@ class GameScene extends Phaser.Scene {
 
         // player chooses to hit
         playerHit.on('pointerdown', function(){
-            playerCards[currentPlayer][2] = (this.scene.getValue(cardInts, cardIndex, this));
-            this.scene.hitCard(cardInts[cardIndex], shuffledDeck, 2, currentPlayer, this);
+            playerCards[currentPlayer][playerCards[currentPlayer].length] = (this.scene.getValue(cardInts, cardIndex, this));
+            this.scene.hitCard(cardInts[cardIndex], shuffledDeck, playerCards[currentPlayer].length-1, currentPlayer, this);
             cardIndex++;
 
-            if (this.scene.isBlackjack(playerCards[currentPlayer], this))
-            {
-                if (currentPlayer == 0)
-                {
-                    player1CardDisplay.setTint(0xFFD700);
-                }
-                else if (currentPlayer == 1)
-                {
-                    player2CardDisplay.setTint(0xFFD700);
-                }
-                else if (currentPlayer == 2)
-                {
-                    player3CardDisplay.setTint(0xFFD700);
-                }
-                else if (currentPlayer == 3)
-                {
-                    player4CardDisplay.setTint(0xFFD700);
-                }
-                else if (currentPlayer == 4)
-                {
-                    player5CardDisplay.setTint(0xFFD700);
-                }
-                else if (currentPlayer == 5)
-                {
-                    player6CardDisplay.setTint(0xFFD700);
-                }
-                else if (currentPlayer == 6)
-                {
-                    player7CardDisplay.setTint(0xFFD700);
-                    // add more here since that means the round is over
-                }
+            // playerCards[currentPlayer][playerCards[currentPlayer].length + 1]
+            // to dynamically hit cards
 
-            }
-            else if (this.scene.isBust(playerCards[currentPlayer]))
+            if (this.scene.isBust(playerCards[currentPlayer]))
             {
                 if (currentPlayer == 0)
                 {
-                    player1CardDisplay.setTint(0x8E1600);
+                    if (numPlayers != 1)
+                    {
+                        player1CardDisplay.setTint(0x8E1600);
+                        player1TurnIndicator.fillColor = 0xFFFFFF;
+                        player2TurnIndicator.fillColor = 0x8E1600;
+                        currentPlayer = currentPlayer + 1;
+                    }
+                    else
+                    {
+                        // plus more stuff since if its the last player
+                        dealerCard.visible = false;
+                        shuffledDeck[cardInts[dealerIndex]].setDepth(7);
+                        this.scene.revealDealerInfo(dealerCards);
+                        // dealer needs to draw to 16, and stand on 17
+                        this.scene.drawDealerCards(dealerCards, cardIndex, cardInts, dealerCards.length);
+                        cardIndex = cardIndex + dealerCards.length - 2;
+                        this.scene.isWinOrLoss();
+                        //this.scene.resetBoard();
+                        nextRoundButton.visible = true;
+                        nextRoundButton.setInteractive({ useHandCursor: true });
+                    }
                 }
                 else if (currentPlayer == 1)
                 {
-                    player2CardDisplay.setTint(0x8E1600);
+                    if (numPlayers != 2)
+                    {
+                        player2CardDisplay.setTint(0x8E1600);
+                        player2TurnIndicator.fillColor = 0xFFFFFF;
+                        player3TurnIndicator.fillColor = 0x8E1600;
+                        currentPlayer = currentPlayer + 1;
+                    }
+                    else
+                    {
+                        // plus more stuff since if its the last player
+                        dealerCard.visible = false;
+                        shuffledDeck[cardInts[dealerIndex]].setDepth(1);
+                        this.scene.revealDealerInfo(dealerCards);
+                        // dealer needs to draw to 16, and stand on 17
+                        this.scene.drawDealerCards(dealerCards, cardIndex, cardInts, dealerCards.length);
+                        cardIndex = cardIndex + dealerCards.length - 2;
+                        this.scene.isWinOrLoss();
+                        //this.scene.resetBoard();
+                        nextRoundButton.visible = true;
+                        nextRoundButton.setInteractive({ useHandCursor: true });
+                    }
                 }
                 else if (currentPlayer == 2)
                 {
                     player3CardDisplay.setTint(0x8E1600);
-                }
-                else if (currentPlayer == 3)
-                {
-                    player4CardDisplay.setTint(0x8E1600);
-                }
-                else if (currentPlayer == 4)
-                {
-                    player5CardDisplay.setTint(0x8E1600);
-                }
-                else if (currentPlayer == 5)
-                {
-                    player6CardDisplay.setTint(0x8E1600);
-                }
-                else if (currentPlayer == 6)
-                {
-                    player7CardDisplay.setTint(0x8E1600);
-                    // add more here since that means the round is over
+                    player3TurnIndicator.fillColor = 0xFFFFFF;
+                    player1TurnIndicator.fillColor = 0x8E1600;
+                    currentPlayer = 0;
+
+                    // plus more stuff since if its the last player
+                    dealerCard.visible = false;
+                    shuffledDeck[cardInts[dealerIndex]].setDepth(1);
+                    this.scene.revealDealerInfo(dealerCards);
+                    // dealer needs to draw to 16, and stand on 17
+                    this.scene.drawDealerCards(dealerCards, cardIndex, cardInts, dealerCards.length);
+                    cardIndex = cardIndex + dealerCards.length - 2;
+                    this.scene.isWinOrLoss();
+                    //this.scene.resetBoard();
+                    nextRoundButton.visible = true;
+                    nextRoundButton.setInteractive({ useHandCursor: true });
                 }
             }
 
@@ -729,49 +934,74 @@ class GameScene extends Phaser.Scene {
 
             if (currentPlayer == 0)
             {
-                player1TurnIndicator.fillColor = 0xFFFFFF;
-                player2TurnIndicator.fillColor = 0x8E1600;
-                currentPlayer = currentPlayer + 1;
+                if (numPlayers != 1)
+                {
+                    player1TurnIndicator.fillColor = 0xFFFFFF;
+                    player2TurnIndicator.fillColor = 0x8E1600;
+                    currentPlayer = currentPlayer + 1;
+                }
+                else
+                {
+                    // plus more stuff since if its the last player
+                    dealerCard.visible = false;
+                    shuffledDeck[cardInts[dealerIndex]].setDepth(1);
+                    this.scene.revealDealerInfo(dealerCards);
+                    // dealer needs to draw to 16, and stand on 17
+                    this.scene.drawDealerCards(dealerCards, cardIndex, cardInts, dealerCards.length);
+                    cardIndex = cardIndex + dealerCards.length - 2;
+                    this.scene.isWinOrLoss();
+                    //this.scene.resetBoard();
+                    nextRoundButton.visible = true;
+                    nextRoundButton.setInteractive({ useHandCursor: true });
+                }
             }
             else if (currentPlayer == 1)
             {
-                player2TurnIndicator.fillColor = 0xFFFFFF;
-                player3TurnIndicator.fillColor = 0x8E1600;
-                currentPlayer = currentPlayer + 1;
+                if (numPlayers != 2)
+                {
+                    player2TurnIndicator.fillColor = 0xFFFFFF;
+                    player3TurnIndicator.fillColor = 0x8E1600;
+                    currentPlayer = currentPlayer + 1;
+                }
+                else
+                {
+                    player2TurnIndicator.fillColor = 0xFFFFFF;
+                    player1TurnIndicator.fillColor = 0x8E1600;
+                    currentPlayer = 0;
+                    dealerCard.visible = false;
+                    shuffledDeck[cardInts[dealerIndex]].setDepth(1);
+                    this.scene.revealDealerInfo(dealerCards);
+                    // dealer needs to draw to 16, and stand on 17
+                    this.scene.drawDealerCards(dealerCards, cardIndex, cardInts, dealerCards.length);
+                    cardIndex = cardIndex + dealerCards.length - 2;
+                    this.scene.isWinOrLoss();
+                    //this.scene.resetBoard();
+                    nextRoundButton.visible = true;
+                    nextRoundButton.setInteractive({ useHandCursor: true });
+                }
             }
             else if (currentPlayer == 2)
             {
                 player3TurnIndicator.fillColor = 0xFFFFFF;
-                player4TurnIndicator.fillColor = 0x8E1600;
-                currentPlayer = currentPlayer + 1;
-            }
-            else if (currentPlayer == 3)
-            {
-                player4TurnIndicator.fillColor = 0xFFFFFF;
-                player5TurnIndicator.fillColor = 0x8E1600;
-                currentPlayer = currentPlayer + 1;
-            }
-            else if (currentPlayer == 4)
-            {
-                player5TurnIndicator.fillColor = 0xFFFFFF;
-                player6TurnIndicator.fillColor = 0x8E1600;
-                currentPlayer = currentPlayer + 1;
-            }
-            else if (currentPlayer == 5)
-            {
-                player6TurnIndicator.fillColor = 0xFFFFFF;
-                player7TurnIndicator.fillColor = 0x8E1600;
-                currentPlayer = currentPlayer + 1;
-            }
-            else if (currentPlayer == 6)
-            {
-                player7TurnIndicator.fillColor = 0xFFFFFF;
                 player1TurnIndicator.fillColor = 0x8E1600;
                 currentPlayer = 0;
-                // add more here since that means the round is over
+                dealerCard.visible = false;
+                shuffledDeck[cardInts[dealerIndex]].setDepth(1);
+                this.scene.revealDealerInfo(dealerCards);
+                // dealer needs to draw to 16, and stand on 17
+                this.scene.drawDealerCards(dealerCards, cardIndex, cardInts, dealerCards.length);
+                cardIndex = cardIndex + dealerCards.length - 2;
+                this.scene.isWinOrLoss();
+                //this.scene.resetBoard();
+                nextRoundButton.visible = true;
+                nextRoundButton.setInteractive({ useHandCursor: true });
             }
         })
 
+        nextRoundButton.on('pointerdown', function(){
+            this.scene.resetBoard();
+            this.scene.newRound();
+        })
 
 
     };
