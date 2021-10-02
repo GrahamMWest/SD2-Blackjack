@@ -34,9 +34,9 @@ let cardIndex = 0;
 
 
 // changeable settings
-let numDecks = 2;
+let numDecks = 1;
 let numPlayers = 3;
-let deckPen = .75;
+let deckPen = .25;
 let playerCurrency = 500;
 
 // global variables that were created in create function
@@ -75,8 +75,13 @@ let nextRoundButton;
 
 
 //TODO:
-// dealer needs to draw to 16, and stand on 17
-// reset the game for another round
+// next round button shouldnt be shown too fast
+// win/loss indicator shouldnt be shown too fast
+// make sure people cant hit when turn is over/theyre bust
+
+// updateinfo function not done yet
+
+// make an indicator that shuffling has been performed
 
 // add money, bets, and doubling
 
@@ -611,14 +616,28 @@ class GameScene extends Phaser.Scene {
 
     newRound() {
 
-        //playerHit.setInteractive(false);
-        //playerDouble.setInteractive(false);
-        //playerStand.setInteractive(false);
-        //playerSplit.setInteractive(false);
-        playerHit.fillColor = 0x808080;
-        playerDouble.fillColor = 0x808080;
-        playerStand.fillColor = 0x808080;
-        playerSplit.fillColor = 0x808080;
+        // change buttons to gray and make them non-clickable
+        playerHit.disableInteractive();
+        playerDouble.disableInteractive();
+        playerStand.disableInteractive();
+        playerSplit.disableInteractive();
+
+        playerHit.setTexture('lockedButton');
+        playerDouble.setTexture('lockedButton');
+        playerStand.setTexture('lockedButton');
+        playerSplit.setTexture('lockedButton');
+
+        // .75 pen = 3/4 of the decks are dealt
+        // 1 * 52 * .75 = 39 cards get played
+        // shuffling
+        if (cardIndex > Math.floor(numDecks * 52 * deckPen))
+        {
+            cardIndex = 0;
+            shuffledDeck = this.initializeDeck(numDecks);
+            cardInts = this.shuffleInts(numDecks);
+            runningCount = 0;
+            trueCount = 0;
+        }
 
         var timeline = this.tweens.createTimeline();
         
@@ -658,49 +677,64 @@ class GameScene extends Phaser.Scene {
         timeline.addListener("complete", function(){
             //Do something when tweens are complete
 
-            // dont need to do these actions yet
-            //dealerCard.destroy(true);
-            //shuffledDeck[dealerIndex].setDepth(7);
-
             // activate the buttons
             playerHit.setInteractive({ useHandCursor: true });
             playerDouble.setInteractive({ useHandCursor: true });
             playerStand.setInteractive({ useHandCursor: true });
             playerSplit.setInteractive({ useHandCursor: true });
-            playerHit.fillColor = 0xFFFFFF;
-            playerDouble.fillColor = 0xFFFFFF;
-            playerStand.fillColor = 0xFFFFFF;
-            playerSplit.fillColor = 0xFFFFFF;
+
+            playerHit.setTexture('normalButton');
+            playerDouble.setTexture('normalButton');
+            playerStand.setTexture('normalButton');
+            playerSplit.setTexture('normalButton');
+
             playerHit.on('pointerover', function(){
-                playerHit.fillColor = 0x808080;
+                playerHit.setTexture('hoveredButton');
             })
 
             playerDouble.on('pointerover', function(){
-                playerDouble.fillColor = 0x808080;
+                playerDouble.setTexture('hoveredButton');
             })
 
             playerStand.on('pointerover', function(){
-                playerStand.fillColor = 0x808080;
+                playerStand.setTexture('hoveredButton');
             })
 
             playerSplit.on('pointerover', function(){
-                playerSplit.fillColor = 0x808080;
+                playerSplit.setTexture('hoveredButton');
             })
 
             playerHit.on('pointerout', function(){
-                playerHit.fillColor = 0xFFFFFF;
+                playerHit.setTexture('normalButton');
             })
 
             playerDouble.on('pointerout', function(){
-                playerDouble.fillColor = 0xFFFFFF;
+                playerDouble.setTexture('normalButton');
             })
 
             playerStand.on('pointerout', function(){
-                playerStand.fillColor = 0xFFFFFF;
+                playerStand.setTexture('normalButton');
             })
 
             playerSplit.on('pointerout', function(){
-                playerSplit.fillColor = 0xFFFFFF;
+                playerSplit.setTexture('normalButton');
+            })
+
+            // idk if these below are needed
+            playerHit.on('pointerup', function(){
+                playerHit.setTexture('normalButton');
+            })
+
+            playerDouble.on('pointerup', function(){
+                playerDouble.setTexture('normalButton');
+            })
+
+            playerStand.on('pointerup', function(){
+                playerStand.setTexture('normalButton');
+            })
+
+            playerSplit.on('pointerup', function(){
+                playerSplit.setTexture('normalButton');
             })
 
             // check if any players have blackjack
@@ -735,6 +769,11 @@ class GameScene extends Phaser.Scene {
         this.load.image('face_down_card', '/static/assets/card_back.png');
 
         // action buttons
+        this.load.image('normalButton', '/static/assets/normalButton.png');
+        this.load.image('hoveredButton', '/static/assets/hoveredButton.png');
+        this.load.image('clickedButton', '/static/assets/clickedButton.png');
+        this.load.image('lockedButton', '/static/assets/lockedButton.png');
+        this.load.image('nextRoundButton', '/static/assets/nextRoundButton.png');
 
         // chips
         this.load.image('chip_1', '/static/assets/1Chip.png');
@@ -747,7 +786,6 @@ class GameScene extends Phaser.Scene {
         this.load.image('chip_25_angle', '/static/assets/25ChipAngle.png');
         this.load.image('chip_100', '/static/assets/100Chip.png');
         this.load.image('chip_100_angle', '/static/assets/100ChipAngle.png');
-        this.load.image('nextRoundButton', '/static/assets/nextRoundButton.png');
 
         // playing card spritesheet
         this.load.spritesheet("cards", "/static/assets/classicCards.png", {
@@ -785,6 +823,7 @@ class GameScene extends Phaser.Scene {
         // places deck on table, will get replaced by boot later on
         deck = this.add.image(900, 75, 'face_down_card');
         deck.scale = .13;
+        deck.setDepth(1000000);
 
         // places betting buttons
         whiteChip_1_Button = this.add.image(500, 925, 'chip_1');
@@ -811,14 +850,18 @@ class GameScene extends Phaser.Scene {
 
 
         // placing player action buttons
-        playerHit = this.add.rectangle(400, 845, 150, 50, 0x808080);
-        hitText = this.add.text(385, 833, "Hit", textStyle);
-        playerDouble = this.add.rectangle(600, 845, 150, 50, 0x808080);
-        doubleText = this.add.text(563, 833, "Double", textStyle);
-        playerStand = this.add.rectangle(800, 845, 150, 50, 0x808080);
-        standText = this.add.text(768, 833, "Stand", textStyle);
-        playerSplit = this.add.rectangle(1000, 845, 150, 50, 0x808080);
-        splitText = this.add.text(975, 833, "Split", textStyle);
+        playerHit = this.add.sprite(400, 845, 'lockedButton');
+        playerHit.scale = 2;
+        hitText = this.add.text(385, 830, "Hit", textStyle);
+        playerDouble = this.add.sprite(600, 845, 'lockedButton');
+        playerDouble.scale = 2;
+        doubleText = this.add.text(563, 830, "Double", textStyle);
+        playerStand = this.add.sprite(800, 845, 'lockedButton');
+        playerStand.scale = 2;
+        standText = this.add.text(768, 830, "Stand", textStyle);
+        playerSplit = this.add.sprite(1000, 845, 'lockedButton');
+        playerSplit.scale = 2;
+        splitText = this.add.text(975, 830, "Split", textStyle);
 
         // places gambling warning
         //let gamblingWarning = this.add.graphics();
@@ -849,6 +892,7 @@ class GameScene extends Phaser.Scene {
 
         // player chooses to hit
         playerHit.on('pointerdown', function(){
+            playerHit.setTexture('clickedButton');
             playerCards[currentPlayer][playerCards[currentPlayer].length] = (this.scene.getValue(cardInts, cardIndex, this));
             this.scene.hitCard(cardInts[cardIndex], shuffledDeck, playerCards[currentPlayer].length-1, currentPlayer, this);
             cardIndex++;
@@ -931,6 +975,8 @@ class GameScene extends Phaser.Scene {
 
         // player chooses to stand
         playerStand.on('pointerdown', function(){
+
+            playerStand.setTexture('clickedButton');
 
             if (currentPlayer == 0)
             {
