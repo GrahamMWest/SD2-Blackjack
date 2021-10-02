@@ -13,7 +13,7 @@ class StartScene extends Phaser.Scene {
         play.scale = .25;
         play.setPosition(1400/2, 1000/2);
 
-        play.setInteractive();
+        play.setInteractive({ useHandCursor: true });
 
         play.on('pointerover', function(pointer) {
             play.scale = .255;
