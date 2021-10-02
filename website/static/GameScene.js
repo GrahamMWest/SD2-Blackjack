@@ -36,7 +36,7 @@ let cardIndex = 0;
 // changeable settings
 let numDecks = 1;
 let numPlayers = 3;
-let deckPen = .25;
+let deckPen = .1;
 let playerCurrency = 500;
 
 // global variables that were created in create function
@@ -70,22 +70,20 @@ let playerSplit;
 let splitText;
 
 let disclaimer;
+let shuffleAnimation;
 
 let nextRoundButton;
 
 
 //TODO:
-// next round button shouldnt be shown too fast
-// win/loss indicator shouldnt be shown too fast
 // make sure people cant hit when turn is over/theyre bust
-
-// updateinfo function not done yet
-
-// make an indicator that shuffling has been performed
+// make sure peopel cant spam buttons
 
 // add money, bets, and doubling
 
 // add splits
+
+// updateinfo function not done yet (splits, 5 cards, ect)
 
 let gameOptions = {
  
@@ -243,11 +241,17 @@ class GameScene extends Phaser.Scene {
         }
 
         timeline.play();
+
+        timeline.addListener("complete", function(){
+            nextRoundButton.visible = true;
+            nextRoundButton.setInteractive({ useHandCursor: true });
+        })
     };
     
     hitCard(cardIndex, shuffledDeck, i, j) {
         
         // const updateInfo = this.updateInfo;
+        const isBust = this.isBust;
         this.tweens.add({
             targets: shuffledDeck[cardIndex],
             x: cardX[i][j],
@@ -263,6 +267,22 @@ class GameScene extends Phaser.Scene {
                 shuffledDeck[cardIndex].setDepth(i);
     
                 updateInfo(i, j);
+
+                if (isBust(playerCards[j]))
+                {
+                    if (j == 0)
+                    {
+                        player1CardDisplay.setTint(0x8E1600);
+                    }
+                    else if (j == 1)
+                    {
+                        player2CardDisplay.setTint(0x8E1600);
+                    }
+                    else if (j == 2)
+                    {
+                        player3CardDisplay.setTint(0x8E1600);
+                    }
+                }
             }
         })
     };
@@ -627,18 +647,6 @@ class GameScene extends Phaser.Scene {
         playerStand.setTexture('lockedButton');
         playerSplit.setTexture('lockedButton');
 
-        // .75 pen = 3/4 of the decks are dealt
-        // 1 * 52 * .75 = 39 cards get played
-        // shuffling
-        if (cardIndex > Math.floor(numDecks * 52 * deckPen))
-        {
-            cardIndex = 0;
-            shuffledDeck = this.initializeDeck(numDecks);
-            cardInts = this.shuffleInts(numDecks);
-            runningCount = 0;
-            trueCount = 0;
-        }
-
         var timeline = this.tweens.createTimeline();
         
         // i = card
@@ -792,6 +800,11 @@ class GameScene extends Phaser.Scene {
             frameWidth: gameOptions.cardWidth,
             frameHeight: gameOptions.cardHeight
         });
+
+        this.load.spritesheet('shufflingAnim', "/static/assets/Shuffling.png", {
+            frameWidth: 822, 
+            frameHeight: 850,
+        });
     };
 
     // called a single time after preload ends
@@ -872,11 +885,45 @@ class GameScene extends Phaser.Scene {
         // WIP Disclaimer
         disclaimer = this.add.text(25, 25, "Work In Progress", {fontSize: '20px', fill: '#fff'});
 
+        shuffleAnimation = this.add.sprite(700, 350, 'shufflingAnim');
+        shuffleAnimation.scale = .25;
+        shuffleAnimation.visible = false;
+
         // math and game logic starts here
 
         trueCount = Math.floor(runningCount / Math.ceil((numDecks * 52 - cardIndex) / 52));
 
-        this.newRound();
+        // if we need to shuffle, shuffle then call newRound on complete
+        // else, just normal newRound
+        // .75 pen = 3/4 of the decks are dealt
+        // 1 * 52 * .75 = 39 cards get played
+        // shuffling
+        if (cardIndex > Math.floor(numDecks * 52 * deckPen))
+        {
+            cardIndex = 0;
+            shuffledDeck = this.initializeDeck(numDecks);
+            cardInts = this.shuffleInts(numDecks);
+            runningCount = 0;
+            trueCount = 0;
+            
+            this.anims.create({
+                key: "shuffle",
+                frameRate: 3,
+                frames: this.anims.generateFrameNumbers("shufflingAnim", {start:0, end:2}),
+                repeat: 2,
+                showOnStart: true,
+                hideOnComplete: true
+            });
+    
+            // play a shuffle animation as a test
+            shuffleAnimation.play("shuffle");
+
+            shuffleAnimation.on('animationcomplete', () => {
+                this.newRound();
+            });
+        }
+        else
+            this.newRound();
        
         // 1. check if player has bj or is bust
         // 2. if bj, perform appropriate actions
@@ -900,13 +947,13 @@ class GameScene extends Phaser.Scene {
             // playerCards[currentPlayer][playerCards[currentPlayer].length + 1]
             // to dynamically hit cards
 
+            
             if (this.scene.isBust(playerCards[currentPlayer]))
             {
                 if (currentPlayer == 0)
                 {
                     if (numPlayers != 1)
                     {
-                        player1CardDisplay.setTint(0x8E1600);
                         player1TurnIndicator.fillColor = 0xFFFFFF;
                         player2TurnIndicator.fillColor = 0x8E1600;
                         currentPlayer = currentPlayer + 1;
@@ -921,16 +968,12 @@ class GameScene extends Phaser.Scene {
                         this.scene.drawDealerCards(dealerCards, cardIndex, cardInts, dealerCards.length);
                         cardIndex = cardIndex + dealerCards.length - 2;
                         this.scene.isWinOrLoss();
-                        //this.scene.resetBoard();
-                        nextRoundButton.visible = true;
-                        nextRoundButton.setInteractive({ useHandCursor: true });
                     }
                 }
                 else if (currentPlayer == 1)
                 {
                     if (numPlayers != 2)
                     {
-                        player2CardDisplay.setTint(0x8E1600);
                         player2TurnIndicator.fillColor = 0xFFFFFF;
                         player3TurnIndicator.fillColor = 0x8E1600;
                         currentPlayer = currentPlayer + 1;
@@ -945,14 +988,10 @@ class GameScene extends Phaser.Scene {
                         this.scene.drawDealerCards(dealerCards, cardIndex, cardInts, dealerCards.length);
                         cardIndex = cardIndex + dealerCards.length - 2;
                         this.scene.isWinOrLoss();
-                        //this.scene.resetBoard();
-                        nextRoundButton.visible = true;
-                        nextRoundButton.setInteractive({ useHandCursor: true });
                     }
                 }
                 else if (currentPlayer == 2)
                 {
-                    player3CardDisplay.setTint(0x8E1600);
                     player3TurnIndicator.fillColor = 0xFFFFFF;
                     player1TurnIndicator.fillColor = 0x8E1600;
                     currentPlayer = 0;
@@ -965,11 +1004,9 @@ class GameScene extends Phaser.Scene {
                     this.scene.drawDealerCards(dealerCards, cardIndex, cardInts, dealerCards.length);
                     cardIndex = cardIndex + dealerCards.length - 2;
                     this.scene.isWinOrLoss();
-                    //this.scene.resetBoard();
-                    nextRoundButton.visible = true;
-                    nextRoundButton.setInteractive({ useHandCursor: true });
                 }
             }
+            
 
         })
 
@@ -996,9 +1033,6 @@ class GameScene extends Phaser.Scene {
                     this.scene.drawDealerCards(dealerCards, cardIndex, cardInts, dealerCards.length);
                     cardIndex = cardIndex + dealerCards.length - 2;
                     this.scene.isWinOrLoss();
-                    //this.scene.resetBoard();
-                    nextRoundButton.visible = true;
-                    nextRoundButton.setInteractive({ useHandCursor: true });
                 }
             }
             else if (currentPlayer == 1)
@@ -1021,9 +1055,6 @@ class GameScene extends Phaser.Scene {
                     this.scene.drawDealerCards(dealerCards, cardIndex, cardInts, dealerCards.length);
                     cardIndex = cardIndex + dealerCards.length - 2;
                     this.scene.isWinOrLoss();
-                    //this.scene.resetBoard();
-                    nextRoundButton.visible = true;
-                    nextRoundButton.setInteractive({ useHandCursor: true });
                 }
             }
             else if (currentPlayer == 2)
@@ -1038,15 +1069,40 @@ class GameScene extends Phaser.Scene {
                 this.scene.drawDealerCards(dealerCards, cardIndex, cardInts, dealerCards.length);
                 cardIndex = cardIndex + dealerCards.length - 2;
                 this.scene.isWinOrLoss();
-                //this.scene.resetBoard();
-                nextRoundButton.visible = true;
-                nextRoundButton.setInteractive({ useHandCursor: true });
             }
         })
 
         nextRoundButton.on('pointerdown', function(){
             this.scene.resetBoard();
-            this.scene.newRound();
+            // .75 pen = 3/4 of the decks are dealt
+            // 1 * 52 * .75 = 39 cards get played
+            // shuffling
+            if (cardIndex > Math.floor(numDecks * 52 * deckPen))
+            {
+                cardIndex = 0;
+                shuffledDeck = this.scene.initializeDeck(numDecks);
+                cardInts = this.scene.shuffleInts(numDecks);
+                runningCount = 0;
+                trueCount = 0;
+                
+                this.scene.anims.create({
+                    key: "shuffle",
+                    frameRate: 3,
+                    frames: this.scene.anims.generateFrameNumbers("shufflingAnim", {start:0, end:2}),
+                    repeat: 2,
+                    showOnStart: true,
+                    hideOnComplete: true
+                });
+        
+                // play a shuffle animation as a test
+                shuffleAnimation.play("shuffle");
+
+                shuffleAnimation.on('animationcomplete', () => {
+                    this.scene.newRound();
+                });
+            }
+            else
+                this.scene.newRound();
         })
 
 
