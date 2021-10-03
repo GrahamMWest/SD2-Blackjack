@@ -35,7 +35,7 @@ let cardIndex = 0;
 
 // changeable settings
 let numDecks = 1;
-let numPlayers = 3;
+let numPlayers = 2;
 let deckPen = .1;
 let playerCurrency = 500;
 
@@ -76,14 +76,12 @@ let nextRoundButton;
 
 
 //TODO:
-// make sure people cant hit when turn is over/theyre bust
-// make sure peopel cant spam buttons
 
 // add money, bets, and doubling
 
 // add splits
 
-// updateinfo function not done yet (splits, 5 cards, ect)
+// updateinfo function not done yet (splits, ect)
 
 let gameOptions = {
  
@@ -167,6 +165,15 @@ function updateInfo(i, j) {
                 player2CardDisplay.setText("Player" + (j + 1) + " Cards:\n[" + playerCards[j][i-3] + "," + playerCards[j][i-2] + "," + playerCards[j][i-1] + "," + playerCards[j][i] + "]");
             else if (j == 2)
                 player3CardDisplay.setText("Player" + (j + 1) + " Cards:\n[" + playerCards[j][i-3] + "," + playerCards[j][i-2] + "," + playerCards[j][i-1] + "," + playerCards[j][i] + "]");
+        }
+        else if (i == 4)
+        {
+            if (j == 0)
+                player1CardDisplay.setText("Player" + (j + 1) + " Cards:\n[" + playerCards[j][i-4] + "," + playerCards[j][i-3] + "," + playerCards[j][i-2] + "," + playerCards[j][i-1] + "," + playerCards[j][i] + "]");
+            else if (j == 1)
+                player2CardDisplay.setText("Player" + (j + 1) + " Cards:\n[" + playerCards[j][i-4] + "," + playerCards[j][i-3] + "," + playerCards[j][i-2] + "," + playerCards[j][i-1] + "," + playerCards[j][i] + "]");
+            else if (j == 2)
+                player3CardDisplay.setText("Player" + (j + 1) + " Cards:\n[" + playerCards[j][i-4] + "," + playerCards[j][i-3] + "," + playerCards[j][i-2] + "," + playerCards[j][i-1] + "," + playerCards[j][i] + "]");
         }
         // gonna have to continue this if/else for all card combinations, 
         // such as having 5 cards, also need to take splits into consideration
@@ -302,6 +309,8 @@ class GameScene extends Phaser.Scene {
         // i = card
         // j = player
         // [card][player]
+
+        // console.log(cardInts[cardIndex]);
     
         if (isDealerCard)
         {
@@ -350,29 +359,35 @@ class GameScene extends Phaser.Scene {
     initializeDeck(numDecks) {
 
         // create an array with 52 * numDecks, with one row for card sprites, and one row for card values
-        this.deckOfCards = Phaser.Utils.Array.NumberArray((0, (51 * numDecks) + (numDecks - 1)));
+        // this.deckOfCards = Phaser.Utils.Array.NumberArray((0, (51 * numDecks) + (numDecks - 1)));
+        shuffledDeck = Phaser.Utils.Array.NumberArray((0, (51 * numDecks) + (numDecks - 1)));
 
         for (let i = 0; i < ((51 * numDecks) + (numDecks - 1)); i++)
         {
-            this.deckOfCards[i] = this.add.sprite(900, 75, "cards", i % 52);
-            this.deckOfCards[i].setScale(gameOptions.cardScale);
-            //this.deckOfCards[i].smoothed = false;
+            // this.deckOfCards[i] = this.add.sprite(900, 75, "cards", i % 52);
+            // this.deckOfCards[i].setScale(gameOptions.cardScale);
+            
+            shuffledDeck[i] = this.add.sprite(900, 75, "cards", i % 52);
+            shuffledDeck[i].setScale(gameOptions.cardScale);
         }
 
-        return this.deckOfCards;
+        // return this.deckOfCards;
     }
 
     shuffleInts(numDecks){
-        this.cardInts = Phaser.Utils.Array.NumberArray((0, (51 * numDecks) + (numDecks - 1)));
+        // this.cardInts = Phaser.Utils.Array.NumberArray((0, (51 * numDecks) + (numDecks - 1)));
+        cardInts = Phaser.Utils.Array.NumberArray((0, (51 * numDecks) + (numDecks - 1)));
 
         for (let i = 0; i < ((51 * numDecks) + (numDecks - 1)); i++)
         {
-            this.cardInts[i] = i;
+           //  this.cardInts[i] = i;
+           cardInts[i] = i;
         }
 
-        Phaser.Utils.Array.Shuffle(this.cardInts);
+        // Phaser.Utils.Array.Shuffle(this.cardInts);
+        Phaser.Utils.Array.Shuffle(cardInts);
 
-        return this.cardInts;
+        // return this.cardInts;
     };
 
     // finds the values of each sprite
@@ -511,7 +526,39 @@ class GameScene extends Phaser.Scene {
         {
             let handValue = this.getHandValue(playerCards[i]);
             
-            if (this.isBlackjack(playerCards[i]))
+            if (this.isBust(playerCards[i]))
+            {
+                // hand loses
+                if (i == 0)
+                {
+                    player1CardDisplay.setTint(0x8E1600);
+                }
+                else if (i == 1)
+                {
+                    player2CardDisplay.setTint(0x8E1600);
+                }
+                else if (i == 2)
+                {
+                    player3CardDisplay.setTint(0x8E1600);
+                }
+            }
+            else if (this.isBlackjack(playerCards[i]) && this.isBlackjack(dealerCards))
+            {
+                //push
+                if (i == 0)
+                {
+                    player1CardDisplay.setTint(0xFFFFFF);
+                }
+                else if (i == 1)
+                {
+                    player2CardDisplay.setTint(0xFFFFFF);
+                }
+                else if (i == 2)
+                {
+                    player3CardDisplay.setTint(0xFFFFFF);
+                }
+            }
+            else if (this.isBlackjack(playerCards[i]))
             {
                 // blackjack
                 if (i == 0)
@@ -611,14 +658,152 @@ class GameScene extends Phaser.Scene {
 
     };
 
+    disableButtons(){
+        playerHit.disableInteractive();
+        playerDouble.disableInteractive();
+        playerStand.disableInteractive();
+        playerSplit.disableInteractive();
+
+        playerHit.setTexture('lockedButton');
+        playerDouble.setTexture('lockedButton');
+        playerStand.setTexture('lockedButton');
+        playerSplit.setTexture('lockedButton');
+
+        playerHit.on('pointerover', function(){
+            playerHit.setTexture('lockedButton');
+        })
+
+        playerDouble.on('pointerover', function(){
+            playerDouble.setTexture('lockedButton');
+        })
+
+        playerStand.on('pointerover', function(){
+            playerStand.setTexture('lockedButton');
+        })
+
+        playerSplit.on('pointerover', function(){
+            playerSplit.setTexture('lockedButton');
+        })
+
+        playerHit.on('pointerout', function(){
+            playerHit.setTexture('lockedButton');
+        })
+
+        playerDouble.on('pointerout', function(){
+            playerDouble.setTexture('lockedButton');
+        })
+
+        playerStand.on('pointerout', function(){
+            playerStand.setTexture('lockedButton');
+        })
+
+        playerSplit.on('pointerout', function(){
+            playerSplit.setTexture('lockedButton');
+        })
+
+        // idk if these below are needed
+        playerHit.on('pointerup', function(){
+            playerHit.setTexture('lockedButton');
+        })
+
+        playerDouble.on('pointerup', function(){
+            playerDouble.setTexture('lockedButton');
+        })
+
+        playerStand.on('pointerup', function(){
+            playerStand.setTexture('lockedButton');
+        })
+
+        playerSplit.on('pointerup', function(){
+            playerSplit.setTexture('lockedButton');
+        })
+    };
+
+    enableButtons(){
+        playerHit.setInteractive({ useHandCursor: true });
+        playerDouble.setInteractive({ useHandCursor: true });
+        playerStand.setInteractive({ useHandCursor: true });
+        playerSplit.setInteractive({ useHandCursor: true });
+
+        playerHit.setTexture('normalButton');
+        playerDouble.setTexture('normalButton');
+        playerStand.setTexture('normalButton');
+        playerSplit.setTexture('normalButton');
+
+        playerHit.on('pointerover', function(){
+            playerHit.setTexture('hoveredButton');
+        })
+
+        playerDouble.on('pointerover', function(){
+            playerDouble.setTexture('hoveredButton');
+        })
+
+        playerStand.on('pointerover', function(){
+            playerStand.setTexture('hoveredButton');
+        })
+
+        playerSplit.on('pointerover', function(){
+            playerSplit.setTexture('hoveredButton');
+        })
+
+        playerHit.on('pointerout', function(){
+            playerHit.setTexture('normalButton');
+        })
+
+        playerDouble.on('pointerout', function(){
+            playerDouble.setTexture('normalButton');
+        })
+
+        playerStand.on('pointerout', function(){
+            playerStand.setTexture('normalButton');
+        })
+
+        playerSplit.on('pointerout', function(){
+            playerSplit.setTexture('normalButton');
+        })
+
+        // idk if these below are needed
+        playerHit.on('pointerup', function(){
+            playerHit.setTexture('hoveredButton');
+        })
+
+        playerDouble.on('pointerup', function(){
+            playerDouble.setTexture('hoveredButton');
+        })
+
+        playerStand.on('pointerup', function(){
+            playerStand.setTexture('hoveredButton');
+        })
+
+        playerSplit.on('pointerup', function(){
+            playerSplit.setTexture('hoveredButton');
+        })
+    };
+
     resetBoard() {
         dealerCardDisplay.setText("Dealer Cards: \n");
-        player1CardDisplay.setText("Player1 Cards: \n");
-        player2CardDisplay.setText("Player2 Cards: \n");
-        player3CardDisplay.setText("Player3 Cards: \n");
-        player1CardDisplay.setTint(0xFFFFFF);
-        player2CardDisplay.setTint(0xFFFFFF);
-        player3CardDisplay.setTint(0xFFFFFF);
+        if (numPlayers == 1)
+        {
+            player1CardDisplay.setText("Player1 Cards: \n");
+            player1CardDisplay.setTint(0xFFFFFF);
+        }
+        else if (numPlayers == 2)
+        {
+            player1CardDisplay.setText("Player1 Cards: \n");
+            player2CardDisplay.setText("Player2 Cards: \n");
+            player1CardDisplay.setTint(0xFFFFFF);
+            player2CardDisplay.setTint(0xFFFFFF);
+        }
+        else if (numPlayers == 3)
+        {
+            player1CardDisplay.setText("Player1 Cards: \n");
+            player2CardDisplay.setText("Player2 Cards: \n");
+            player3CardDisplay.setText("Player3 Cards: \n");
+            player1CardDisplay.setTint(0xFFFFFF);
+            player2CardDisplay.setTint(0xFFFFFF);
+            player3CardDisplay.setTint(0xFFFFFF);
+        }
+
         nextRoundButton.visible = false;
 
         dealerCard.setPosition(900, 75);
@@ -630,22 +815,15 @@ class GameScene extends Phaser.Scene {
         // destroy sprites
         for (let i = 0; i < cardIndex; i++)
         {
+            // shuffledDeck[cardInts[i]].visible = false;
+            // shuffledDeck[cardInts[i]].setPosition(900, 75);
             shuffledDeck[cardInts[i]].destroy(true);
         }
     };
 
     newRound() {
 
-        // change buttons to gray and make them non-clickable
-        playerHit.disableInteractive();
-        playerDouble.disableInteractive();
-        playerStand.disableInteractive();
-        playerSplit.disableInteractive();
-
-        playerHit.setTexture('lockedButton');
-        playerDouble.setTexture('lockedButton');
-        playerStand.setTexture('lockedButton');
-        playerSplit.setTexture('lockedButton');
+        this.disableButtons();
 
         var timeline = this.tweens.createTimeline();
         
@@ -663,6 +841,7 @@ class GameScene extends Phaser.Scene {
 
             // deals to the dealer
             dealerCards[i] = (this.getValue(cardInts, cardIndex));
+
             //console.log(dealerCards[i]);
             if (i == 0)
             {
@@ -686,64 +865,7 @@ class GameScene extends Phaser.Scene {
             //Do something when tweens are complete
 
             // activate the buttons
-            playerHit.setInteractive({ useHandCursor: true });
-            playerDouble.setInteractive({ useHandCursor: true });
-            playerStand.setInteractive({ useHandCursor: true });
-            playerSplit.setInteractive({ useHandCursor: true });
-
-            playerHit.setTexture('normalButton');
-            playerDouble.setTexture('normalButton');
-            playerStand.setTexture('normalButton');
-            playerSplit.setTexture('normalButton');
-
-            playerHit.on('pointerover', function(){
-                playerHit.setTexture('hoveredButton');
-            })
-
-            playerDouble.on('pointerover', function(){
-                playerDouble.setTexture('hoveredButton');
-            })
-
-            playerStand.on('pointerover', function(){
-                playerStand.setTexture('hoveredButton');
-            })
-
-            playerSplit.on('pointerover', function(){
-                playerSplit.setTexture('hoveredButton');
-            })
-
-            playerHit.on('pointerout', function(){
-                playerHit.setTexture('normalButton');
-            })
-
-            playerDouble.on('pointerout', function(){
-                playerDouble.setTexture('normalButton');
-            })
-
-            playerStand.on('pointerout', function(){
-                playerStand.setTexture('normalButton');
-            })
-
-            playerSplit.on('pointerout', function(){
-                playerSplit.setTexture('normalButton');
-            })
-
-            // idk if these below are needed
-            playerHit.on('pointerup', function(){
-                playerHit.setTexture('normalButton');
-            })
-
-            playerDouble.on('pointerup', function(){
-                playerDouble.setTexture('normalButton');
-            })
-
-            playerStand.on('pointerup', function(){
-                playerStand.setTexture('normalButton');
-            })
-
-            playerSplit.on('pointerup', function(){
-                playerSplit.setTexture('normalButton');
-            })
+            this.enableButtons();
 
             // check if any players have blackjack
             for (let i = 0; i < numPlayers; i++)
@@ -819,16 +941,32 @@ class GameScene extends Phaser.Scene {
         runningCountScoreBoard = this.add.text(1175, 25, "Running Count: 0", {fontSize: '20px', fill: '#fff'});
         trueCountScoreBoard = this.add.text(1175, 50, "True Count: 0", {fontSize: '20px', fill: '#fff'});
         dealerCardDisplay = this.add.text(1175, 75, "Dealer Cards: \n", {fontSize: '20px', fill: '#fff'});
-        player1CardDisplay = this.add.text(1175, 175, "Player1 Cards: \n", {fontSize: '20px', fill: '#fff'});
-        player2CardDisplay = this.add.text(1175, 275, "Player2 Cards: \n", {fontSize: '20px', fill: '#fff'});
-        player3CardDisplay = this.add.text(1175, 375, "Player3 Cards: \n", {fontSize: '20px', fill: '#fff'});
+
+        if (numPlayers == 1)
+        {
+            player1CardDisplay = this.add.text(1175, 175, "Player1 Cards: \n", {fontSize: '20px', fill: '#fff'});
+        }
+        else if(numPlayers == 2)
+        {
+            player1CardDisplay = this.add.text(1175, 175, "Player1 Cards: \n", {fontSize: '20px', fill: '#fff'});
+            player2CardDisplay = this.add.text(1175, 275, "Player2 Cards: \n", {fontSize: '20px', fill: '#fff'});
+        }
+        else if (numPlayers == 3)
+        {
+            player1CardDisplay = this.add.text(1175, 175, "Player1 Cards: \n", {fontSize: '20px', fill: '#fff'});
+            player2CardDisplay = this.add.text(1175, 275, "Player2 Cards: \n", {fontSize: '20px', fill: '#fff'});
+            player3CardDisplay = this.add.text(1175, 375, "Player3 Cards: \n", {fontSize: '20px', fill: '#fff'});
+        }
 
         // places controlPanel
         controlPanel = this.add.rectangle(700, 875, 1400, 275, 0x008b8b);
 
         // gets a shuffled deck
-        shuffledDeck = this.initializeDeck(numDecks);
-        cardInts = this.shuffleInts(numDecks);
+        //shuffledDeck = this.initializeDeck(numDecks);
+        // cardInts = this.shuffleInts(numDecks);
+
+        this.initializeDeck(numDecks);
+        this.shuffleInts(numDecks);
 
         dealerCard = this.add.image(900, 75, 'face_down_card');
         dealerCard.scale = .13;
@@ -885,45 +1023,16 @@ class GameScene extends Phaser.Scene {
         // WIP Disclaimer
         disclaimer = this.add.text(25, 25, "Work In Progress", {fontSize: '20px', fill: '#fff'});
 
-        shuffleAnimation = this.add.sprite(700, 350, 'shufflingAnim');
-        shuffleAnimation.scale = .25;
+        shuffleAnimation = this.add.sprite(700, 300, 'shufflingAnim');
+        shuffleAnimation.scale = .2;
         shuffleAnimation.visible = false;
 
         // math and game logic starts here
 
         trueCount = Math.floor(runningCount / Math.ceil((numDecks * 52 - cardIndex) / 52));
 
-        // if we need to shuffle, shuffle then call newRound on complete
-        // else, just normal newRound
-        // .75 pen = 3/4 of the decks are dealt
-        // 1 * 52 * .75 = 39 cards get played
-        // shuffling
-        if (cardIndex > Math.floor(numDecks * 52 * deckPen))
-        {
-            cardIndex = 0;
-            shuffledDeck = this.initializeDeck(numDecks);
-            cardInts = this.shuffleInts(numDecks);
-            runningCount = 0;
-            trueCount = 0;
-            
-            this.anims.create({
-                key: "shuffle",
-                frameRate: 3,
-                frames: this.anims.generateFrameNumbers("shufflingAnim", {start:0, end:2}),
-                repeat: 2,
-                showOnStart: true,
-                hideOnComplete: true
-            });
-    
-            // play a shuffle animation as a test
-            shuffleAnimation.play("shuffle");
-
-            shuffleAnimation.on('animationcomplete', () => {
-                this.newRound();
-            });
-        }
-        else
-            this.newRound();
+        
+        this.newRound();
        
         // 1. check if player has bj or is bust
         // 2. if bj, perform appropriate actions
@@ -939,47 +1048,68 @@ class GameScene extends Phaser.Scene {
 
         // player chooses to hit
         playerHit.on('pointerdown', function(){
-            playerHit.setTexture('clickedButton');
-            playerCards[currentPlayer][playerCards[currentPlayer].length] = (this.scene.getValue(cardInts, cardIndex, this));
-            this.scene.hitCard(cardInts[cardIndex], shuffledDeck, playerCards[currentPlayer].length-1, currentPlayer, this);
-            cardIndex++;
 
-            // playerCards[currentPlayer][playerCards[currentPlayer].length + 1]
-            // to dynamically hit cards
-
-            
-            if (this.scene.isBust(playerCards[currentPlayer]))
+            if(!this.scene.isBust(playerCards[currentPlayer]))
             {
-                if (currentPlayer == 0)
+                playerHit.setTexture('clickedButton');
+                playerCards[currentPlayer][playerCards[currentPlayer].length] = (this.scene.getValue(cardInts, cardIndex, this));
+                this.scene.hitCard(cardInts[cardIndex], shuffledDeck, playerCards[currentPlayer].length-1, currentPlayer, this);
+                cardIndex++;
+
+                // playerCards[currentPlayer][playerCards[currentPlayer].length + 1]
+                // to dynamically hit cards
+
+                
+                if (this.scene.isBust(playerCards[currentPlayer]))
                 {
-                    if (numPlayers != 1)
+                    if (currentPlayer == 0)
                     {
-                        player1TurnIndicator.fillColor = 0xFFFFFF;
-                        player2TurnIndicator.fillColor = 0x8E1600;
-                        currentPlayer = currentPlayer + 1;
+                        if (numPlayers != 1)
+                        {
+                            player1TurnIndicator.fillColor = 0xFFFFFF;
+                            player2TurnIndicator.fillColor = 0x8E1600;
+                            currentPlayer = currentPlayer + 1;
+                        }
+                        else
+                        {
+                            // plus more stuff since if its the last player
+                            dealerCard.visible = false;
+                            shuffledDeck[cardInts[dealerIndex]].setDepth(7);
+                            this.scene.revealDealerInfo(dealerCards);
+                            // dealer needs to draw to 16, and stand on 17
+                            this.scene.drawDealerCards(dealerCards, cardIndex, cardInts, dealerCards.length);
+                            cardIndex = cardIndex + dealerCards.length - 2;
+                            this.scene.isWinOrLoss();
+                            this.scene.disableButtons();
+                        }
                     }
-                    else
+                    else if (currentPlayer == 1)
                     {
-                        // plus more stuff since if its the last player
-                        dealerCard.visible = false;
-                        shuffledDeck[cardInts[dealerIndex]].setDepth(7);
-                        this.scene.revealDealerInfo(dealerCards);
-                        // dealer needs to draw to 16, and stand on 17
-                        this.scene.drawDealerCards(dealerCards, cardIndex, cardInts, dealerCards.length);
-                        cardIndex = cardIndex + dealerCards.length - 2;
-                        this.scene.isWinOrLoss();
+                        if (numPlayers != 2)
+                        {
+                            player2TurnIndicator.fillColor = 0xFFFFFF;
+                            player3TurnIndicator.fillColor = 0x8E1600;
+                            currentPlayer = currentPlayer + 1;
+                        }
+                        else
+                        {
+                            // plus more stuff since if its the last player
+                            dealerCard.visible = false;
+                            shuffledDeck[cardInts[dealerIndex]].setDepth(1);
+                            this.scene.revealDealerInfo(dealerCards);
+                            // dealer needs to draw to 16, and stand on 17
+                            this.scene.drawDealerCards(dealerCards, cardIndex, cardInts, dealerCards.length);
+                            cardIndex = cardIndex + dealerCards.length - 2;
+                            this.scene.isWinOrLoss();
+                            this.scene.disableButtons();
+                        }
                     }
-                }
-                else if (currentPlayer == 1)
-                {
-                    if (numPlayers != 2)
+                    else if (currentPlayer == 2)
                     {
-                        player2TurnIndicator.fillColor = 0xFFFFFF;
-                        player3TurnIndicator.fillColor = 0x8E1600;
-                        currentPlayer = currentPlayer + 1;
-                    }
-                    else
-                    {
+                        player3TurnIndicator.fillColor = 0xFFFFFF;
+                        player1TurnIndicator.fillColor = 0x8E1600;
+                        currentPlayer = 0;
+
                         // plus more stuff since if its the last player
                         dealerCard.visible = false;
                         shuffledDeck[cardInts[dealerIndex]].setDepth(1);
@@ -988,25 +1118,11 @@ class GameScene extends Phaser.Scene {
                         this.scene.drawDealerCards(dealerCards, cardIndex, cardInts, dealerCards.length);
                         cardIndex = cardIndex + dealerCards.length - 2;
                         this.scene.isWinOrLoss();
+                        this.scene.disableButtons();
                     }
                 }
-                else if (currentPlayer == 2)
-                {
-                    player3TurnIndicator.fillColor = 0xFFFFFF;
-                    player1TurnIndicator.fillColor = 0x8E1600;
-                    currentPlayer = 0;
 
-                    // plus more stuff since if its the last player
-                    dealerCard.visible = false;
-                    shuffledDeck[cardInts[dealerIndex]].setDepth(1);
-                    this.scene.revealDealerInfo(dealerCards);
-                    // dealer needs to draw to 16, and stand on 17
-                    this.scene.drawDealerCards(dealerCards, cardIndex, cardInts, dealerCards.length);
-                    cardIndex = cardIndex + dealerCards.length - 2;
-                    this.scene.isWinOrLoss();
-                }
             }
-            
 
         })
 
@@ -1033,6 +1149,7 @@ class GameScene extends Phaser.Scene {
                     this.scene.drawDealerCards(dealerCards, cardIndex, cardInts, dealerCards.length);
                     cardIndex = cardIndex + dealerCards.length - 2;
                     this.scene.isWinOrLoss();
+                    this.scene.disableButtons();
                 }
             }
             else if (currentPlayer == 1)
@@ -1055,6 +1172,7 @@ class GameScene extends Phaser.Scene {
                     this.scene.drawDealerCards(dealerCards, cardIndex, cardInts, dealerCards.length);
                     cardIndex = cardIndex + dealerCards.length - 2;
                     this.scene.isWinOrLoss();
+                    this.scene.disableButtons();
                 }
             }
             else if (currentPlayer == 2)
@@ -1069,6 +1187,7 @@ class GameScene extends Phaser.Scene {
                 this.scene.drawDealerCards(dealerCards, cardIndex, cardInts, dealerCards.length);
                 cardIndex = cardIndex + dealerCards.length - 2;
                 this.scene.isWinOrLoss();
+                this.scene.disableButtons();
             }
         })
 
@@ -1080,10 +1199,15 @@ class GameScene extends Phaser.Scene {
             if (cardIndex > Math.floor(numDecks * 52 * deckPen))
             {
                 cardIndex = 0;
-                shuffledDeck = this.scene.initializeDeck(numDecks);
-                cardInts = this.scene.shuffleInts(numDecks);
+                // shuffledDeck = this.scene.initializeDeck(numDecks);
+                // cardInts = this.scene.shuffleInts(numDecks);
+                this.scene.initializeDeck(numDecks);
+                this.scene.shuffleInts(numDecks);
                 runningCount = 0;
                 trueCount = 0;
+                runningCountScoreBoard.setText('Running Count: 0');
+                trueCountScoreBoard.setText('True Count: 0');
+
                 
                 this.scene.anims.create({
                     key: "shuffle",
@@ -1096,14 +1220,10 @@ class GameScene extends Phaser.Scene {
         
                 // play a shuffle animation as a test
                 shuffleAnimation.play("shuffle");
-
-                shuffleAnimation.on('animationcomplete', () => {
-                    this.scene.newRound();
-                });
             }
-            else
-                this.scene.newRound();
-        })
+            
+            this.scene.newRound();
+        });
 
 
     };
