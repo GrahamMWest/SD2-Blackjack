@@ -217,8 +217,8 @@ function updateInfo(i, j) {
             runningCountScoreBoard.setText('Running Count: ' + runningCount);
             trueCountScoreBoard.setText('True Count: ' + trueCount);
         }
-        else if (playerCards[i] === "2" || playerCards[i] === "3" || playerCards[i] === "4" || 
-        playerCards[i] === "5" || playerCards[i] === "6")
+        else if (dealerCards[i] === "2" || dealerCards[i] === "3" || dealerCards[i] === "4" || 
+        dealerCards[i] === "5" || dealerCards[i] === "6")
         {
             runningCount = runningCount + 1;
             trueCount = Math.floor(runningCount / Math.ceil((numDecks * 52 - cardIndex) / 52));
@@ -316,15 +316,10 @@ class GameScene extends Phaser.Scene {
         })
     };
 
-    doubleCard() {
-
-    };
-
     splitCard() {
 
     };
     
-    // done i think
     // plays card dealing animations
     dealCard(cardIndex, shuffledDeck, timeline, i, j, isDealerCard, dealerCard) {
     
@@ -376,7 +371,6 @@ class GameScene extends Phaser.Scene {
         }
     };
 
-    // done i think
     // creates deck
     initializeDeck(numDecks) {
 
