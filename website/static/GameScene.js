@@ -90,9 +90,9 @@ let nextBettorButton;
 
 
 //TODO:
-// add double button
-// figure out how to do payouts
-// replace lower value chips with higher value
+// add double button (pretty much the same as hit, just add 2x the amount of chips)
+// figure out how to do payouts (win/loss function)
+// replace lower value chips with higher value (gonna be a PITA)
 
 // add money, bets, and doubling
 
@@ -1360,16 +1360,19 @@ class GameScene extends Phaser.Scene {
                 {
                     player1ChipCount[numChips] = this.scene.add.image(1025, 450 - (numChips * 5), 'chip_1');
                     player1ChipCount[numChips].scale = .075;
+                    player1ChipCount[numChips].setDepth(100 + numChips);
                 }
                 else if (currentPlayer == 1)
                 {
                     player2ChipCount[numChips] = this.scene.add.image(705, 550 - (numChips * 5), 'chip_1');
                     player2ChipCount[numChips].scale = .075;
+                    player2ChipCount[numChips].setDepth(100 + numChips);
                 }
                 else if (currentPlayer == 2)
                 {
                     player3ChipCount[numChips] = this.scene.add.image(355, 450 - (numChips * 5), 'chip_1');
                     player3ChipCount[numChips].scale = .075;
+                    player3ChipCount[numChips].setDepth(100 + numChips);
                 }
                 numChips = numChips + 1;
             }
@@ -1396,16 +1399,19 @@ class GameScene extends Phaser.Scene {
                 {
                     player1ChipCount[numChips] = this.scene.add.image(1025, 450 - (numChips * 5), 'chip_5');
                     player1ChipCount[numChips].scale = .075;
+                    player1ChipCount[numChips].setDepth(100 + numChips);
                 }
                 else if (currentPlayer == 1)
                 {
                     player2ChipCount[numChips] = this.scene.add.image(705, 550 - (numChips * 5), 'chip_5');
                     player2ChipCount[numChips].scale = .075;
+                    player2ChipCount[numChips].setDepth(100 + numChips);
                 }
                 else if (currentPlayer == 2)
                 {
                     player3ChipCount[numChips] = this.scene.add.image(355, 450 - (numChips * 5), 'chip_5');
                     player3ChipCount[numChips].scale = .075;
+                    player3ChipCount[numChips].setDepth(100 + numChips);
                 }
                 numChips = numChips + 1;
             }
@@ -1432,16 +1438,19 @@ class GameScene extends Phaser.Scene {
                 {
                     player1ChipCount[numChips] = this.scene.add.image(1025, 450 - (numChips * 5), 'chip_10');
                     player1ChipCount[numChips].scale = .075;
+                    player1ChipCount[numChips].setDepth(100 + numChips);
                 }
                 else if (currentPlayer == 1)
                 {
                     player2ChipCount[numChips] = this.scene.add.image(705, 550 - (numChips * 5), 'chip_10');
                     player2ChipCount[numChips].scale = .075;
+                    player2ChipCount[numChips].setDepth(100 + numChips);
                 }
                 else if (currentPlayer == 2)
                 {
                     player3ChipCount[numChips] = this.scene.add.image(355, 450 - (numChips * 5), 'chip_10');
                     player3ChipCount[numChips].scale = .075;
+                    player3ChipCount[numChips].setDepth(100 + numChips);
                 }
                 numChips = numChips + 1;
             }
@@ -1468,16 +1477,19 @@ class GameScene extends Phaser.Scene {
                 {
                     player1ChipCount[numChips] = this.scene.add.image(1025, 450 - (numChips * 5), 'chip_25');
                     player1ChipCount[numChips].scale = .075;
+                    player1ChipCount[numChips].setDepth(100 + numChips);
                 }
                 else if (currentPlayer == 1)
                 {
                     player2ChipCount[numChips] = this.scene.add.image(705, 550 - (numChips * 5), 'chip_25');
                     player2ChipCount[numChips].scale = .075;
+                    player2ChipCount[numChips].setDepth(100 + numChips);
                 }
                 else if (currentPlayer == 2)
                 {
                     player3ChipCount[numChips] = this.scene.add.image(355, 450 - (numChips * 5), 'chip_25');
                     player3ChipCount[numChips].scale = .075;
+                    player3ChipCount[numChips].setDepth(100 + numChips);
                 }
                 numChips = numChips + 1;
             }
@@ -1504,16 +1516,19 @@ class GameScene extends Phaser.Scene {
                 {
                     player1ChipCount[numChips] = this.scene.add.image(1025, 450 - (numChips * 5), 'chip_100');
                     player1ChipCount[numChips].scale = .075;
+                    player1ChipCount[numChips].setDepth(100 + numChips);
                 }
                 else if (currentPlayer == 1)
                 {
                     player2ChipCount[numChips] = this.scene.add.image(705, 550 - (numChips * 5), 'chip_100');
                     player2ChipCount[numChips].scale = .075;
+                    player2ChipCount[numChips].setDepth(100 + numChips);
                 }
                 else if (currentPlayer == 2)
                 {
                     player3ChipCount[numChips] = this.scene.add.image(355, 450 - (numChips * 5), 'chip_100');
                     player3ChipCount[numChips].scale = .075;
+                    player3ChipCount[numChips].setDepth(100 + numChips);
                 }
                 numChips = numChips + 1;
             }
