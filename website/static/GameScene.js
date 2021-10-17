@@ -65,6 +65,7 @@ let player1TurnIndicator;
 
 let currentPlayer;
 let currentBet;
+let placeholderBet;
 let numChips;
 let player1Bet;
 let player2Bet;
@@ -72,6 +73,10 @@ let player3Bet;
 let player1ChipCount = [];
 let player2ChipCount = [];
 let player3ChipCount = [];
+let player1DoubleChipCount = [];
+let player2DoubleChipCount = [];
+let player3DoubleChipCount = [];
+let placeholderChipArray = [];
 
 let playerHit;
 let hitText;
@@ -90,13 +95,9 @@ let nextBettorButton;
 
 
 //TODO:
-// add double button (pretty much the same as hit, just add 2x the amount of chips)
-// figure out how to do payouts (win/loss function)
-// replace lower value chips with higher value (gonna be a PITA)
-
-// add money, bets, and doubling
-
-// add splits
+// get user info
+// update user currencies in iswinorloss function
+// add splits :(
 
 // updateinfo function not done yet (splits, ect)
 
@@ -564,14 +565,17 @@ class GameScene extends Phaser.Scene {
                 if (i == 0)
                 {
                     player1CardDisplay.setTint(0xFFFFFF);
+                    playerCurrency = playerCurrency + player1Bet;
                 }
                 else if (i == 1)
                 {
                     player2CardDisplay.setTint(0xFFFFFF);
+                    playerCurrency = playerCurrency + player2Bet;
                 }
                 else if (i == 2)
                 {
                     player3CardDisplay.setTint(0xFFFFFF);
+                    playerCurrency = playerCurrency + player3Bet;
                 }
             }
             else if (this.isBlackjack(playerCards[i]))
@@ -580,14 +584,17 @@ class GameScene extends Phaser.Scene {
                 if (i == 0)
                 {
                     player1CardDisplay.setTint(0xFFD700);
+                    playerCurrency = playerCurrency + (1.5 * player1Bet) + player1Bet;
                 }
                 else if (i == 1)
                 {
                     player2CardDisplay.setTint(0xFFD700);
+                    playerCurrency = playerCurrency + (1.5 * player2Bet) + player2Bet;
                 }
                 else if (i == 2)
                 {
                     player3CardDisplay.setTint(0xFFD700);
+                    playerCurrency = playerCurrency + (1.5 * player3Bet) + player3Bet;
                 }
             }
             else if ((handValue > dealerHandValue && handValue < 22) || (handValue < 22 && dealerHandValue > 21))
@@ -596,14 +603,17 @@ class GameScene extends Phaser.Scene {
                 if (i == 0)
                 {
                     player1CardDisplay.setTint(0x00FF00);
+                    playerCurrency = playerCurrency + (2 * player1Bet);
                 }
                 else if (i == 1)
                 {
                     player2CardDisplay.setTint(0x00FF00);
+                    playerCurrency = playerCurrency + (2 * player2Bet);
                 }
                 else if (i == 2)
                 {
                     player3CardDisplay.setTint(0x00FF00);
+                    playerCurrency = playerCurrency + (2 * player3Bet);
                 }
             }
             else if (handValue == dealerHandValue)
@@ -612,14 +622,17 @@ class GameScene extends Phaser.Scene {
                 if (i == 0)
                 {
                     player1CardDisplay.setTint(0xFFFFFF);
+                    playerCurrency = playerCurrency + player1Bet;
                 }
                 else if (i == 1)
                 {
                     player2CardDisplay.setTint(0xFFFFFF);
+                    playerCurrency = playerCurrency + player2Bet;
                 }
                 else if (i == 2)
                 {
                     player3CardDisplay.setTint(0xFFFFFF);
+                    playerCurrency = playerCurrency + player3Bet;
                 }
             }
             else
@@ -1026,12 +1039,30 @@ class GameScene extends Phaser.Scene {
             player3ChipCount[i].destroy(true);
         }
 
+        for (let i = 0; i < player1DoubleChipCount.length; i++)
+        {
+            player1DoubleChipCount[i].destroy(true);
+        }
+
+        for (let i = 0; i < player2DoubleChipCount.length; i++)
+        {
+            player2DoubleChipCount[i].destroy(true);
+        }
+
+        for (let i = 0; i < player3DoubleChipCount.length; i++)
+        {
+            player3DoubleChipCount[i].destroy(true);
+        }
+
         player1Bet = 0;
         player2Bet = 0;
         player3Bet = 0;
         player1ChipCount = [];
         player2ChipCount = [];
         player3ChipCount = [];
+        player1DoubleChipCount = [];
+        player2DoubleChipCount = [];
+        player3DoubleChipCount = [];
         numChips = 0;
         currentBet = 0;
     };
@@ -1308,6 +1339,7 @@ class GameScene extends Phaser.Scene {
                     player2TurnIndicator.fillColor = 0x8E1600;
                     currentPlayer = currentPlayer + 1;
                     player1Bet = currentBet;
+                    this.scene.enableBettingButtons();
                 }
                 else
                 {
@@ -1324,6 +1356,7 @@ class GameScene extends Phaser.Scene {
                     player3TurnIndicator.fillColor = 0x8E1600;
                     currentPlayer = currentPlayer + 1;
                     player2Bet = currentBet;
+                    this.scene.enableBettingButtons();
                 }
                 else
                 {
@@ -1346,12 +1379,12 @@ class GameScene extends Phaser.Scene {
             currentBet = 0;
             numChips = 0;
             this.scene.disableNextBettorButton();
-            this.scene.enableBettingButtons();
+            // this.scene.enableBettingButtons();
         });
 
         whiteChip_1_Button.on('pointerdown', function(){
 
-            if (!(currentBet + 1 > maxBet) && (playerCurrency - 1 > 0) && (numChips < 5))
+            if (!(currentBet + 1 > maxBet) && (playerCurrency - 1 > 0))
             {
                 currentBet = currentBet + 1;
                 playerCurrency = playerCurrency - 1;
@@ -1377,9 +1410,229 @@ class GameScene extends Phaser.Scene {
                 numChips = numChips + 1;
             }
 
-            if (numChips == 5)
+            // make loop that finds highest value chips 
+            
+            placeholderBet = currentBet;
+            var k = 0;
+
+            if (currentPlayer == 0)
             {
-                this.scene.disableBettingButtons();
+                while (placeholderBet > 0)
+                {
+                    for (let i = 0; i < player1ChipCount.length; i++)
+                    {
+                        player1ChipCount[i].destroy(true);
+                    }
+
+                    numChips = player1ChipCount.length;
+
+                    while (placeholderBet - 100 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(1025, 450 - (k * 5), 'chip_100');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 100;
+
+                        player1ChipCount = placeholderChipArray;
+                        numChips = player1ChipCount.length;
+                        k++;
+                    }
+
+                    while (placeholderBet - 25 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(1025, 450 - (k * 5), 'chip_25');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 25;
+
+                        player1ChipCount = placeholderChipArray;
+                        numChips = player1ChipCount.length;
+                        k++;
+                    }
+
+                    while (placeholderBet - 10 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(1025, 450 - (k * 5), 'chip_10');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 10;
+
+                        player1ChipCount = placeholderChipArray;
+                        numChips = player1ChipCount.length;
+                        k++;
+                    }
+
+                    while (placeholderBet - 5 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(1025, 450 - (k * 5), 'chip_5');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 5;
+
+                        player1ChipCount = placeholderChipArray;
+                        numChips = player1ChipCount.length;
+                        k++;
+                    }
+
+                    while (placeholderBet - 1 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(1025, 450 - (k * 5), 'chip_1');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 1;
+
+                        player1ChipCount = placeholderChipArray;
+                        numChips = player1ChipCount.length;
+                        k++;
+                    }
+                }
+                placeholderChipArray = [];
+            }
+            else if (currentPlayer == 1)
+            {
+                while (placeholderBet > 0)
+                {
+                    for (let i = 0; i < player2ChipCount.length; i++)
+                    {
+                        player2ChipCount[i].destroy(true);
+                    }
+
+                    numChips = player2ChipCount.length;
+
+                    while (placeholderBet - 100 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(705, 550 - (k * 5), 'chip_100');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 100;
+
+                        player2ChipCount = placeholderChipArray;
+                        numChips = player2ChipCount.length;
+                        k++;
+                    }
+
+                    while (placeholderBet - 25 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(705, 550 - (k * 5), 'chip_25');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 25;
+
+                        player2ChipCount = placeholderChipArray;
+                        numChips = player2ChipCount.length;
+                        k++;
+                    }
+
+                    while (placeholderBet - 10 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(705, 550 - (k * 5), 'chip_10');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 10;
+
+                        player2ChipCount = placeholderChipArray;
+                        numChips = player2ChipCount.length;
+                        k++;
+                    }
+
+                    while (placeholderBet - 5 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(705, 550 - (k * 5), 'chip_5');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 5;
+
+                        player2ChipCount = placeholderChipArray;
+                        numChips = player2ChipCount.length;
+                        k++;
+                    }
+
+                    while (placeholderBet - 1 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(705, 550 - (k * 5), 'chip_1');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 1;
+
+                        player2ChipCount = placeholderChipArray;
+                        numChips = player2ChipCount.length;
+                        k++;
+                    }
+                }
+                placeholderChipArray = [];
+            }
+            else if (currentPlayer == 2)
+            {
+                while (placeholderBet > 0)
+                {
+                    for (let i = 0; i < player3ChipCount.length; i++)
+                    {
+                        player3ChipCount[i].destroy(true);
+                    }
+
+                    numChips = player3ChipCount.length;
+
+                    while (placeholderBet - 100 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(355, 450 - (k * 5), 'chip_100');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 100;
+
+                        player3ChipCount = placeholderChipArray;
+                        numChips = player3ChipCount.length;
+                        k++;
+                    }
+
+                    while (placeholderBet - 25 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(355, 450 - (k * 5), 'chip_25');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 25;
+
+                        player3ChipCount = placeholderChipArray;
+                        numChips = player3ChipCount.length;
+                        k++;
+                    }
+
+                    while (placeholderBet - 10 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(355, 450 - (k * 5), 'chip_10');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 10;
+
+                        player3ChipCount = placeholderChipArray;
+                        numChips = player3ChipCount.length;
+                        k++;
+                    }
+
+                    while (placeholderBet - 5 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(355, 450 - (k * 5), 'chip_5');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 5;
+
+                        player3ChipCount = placeholderChipArray;
+                        numChips = player3ChipCount.length;
+                        k++;
+                    }
+
+                    while (placeholderBet - 1 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(355, 450 - (k * 5), 'chip_1');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 1;
+
+                        player3ChipCount = placeholderChipArray;
+                        numChips = player3ChipCount.length;
+                        k++;
+                    }
+                }
+                placeholderChipArray = [];
             }
 
             if (currentBet >= minBet)
@@ -1390,7 +1643,7 @@ class GameScene extends Phaser.Scene {
 
         redChip_5_Button.on('pointerdown', function(){
 
-            if (!(currentBet + 5 > maxBet) && (playerCurrency - 5 > 0) && (numChips < 5))
+            if (!(currentBet + 5 > maxBet) && (playerCurrency - 5 > 0))
             {
                 currentBet = currentBet + 5;
                 playerCurrency = playerCurrency - 5;
@@ -1416,9 +1669,227 @@ class GameScene extends Phaser.Scene {
                 numChips = numChips + 1;
             }
 
-            if (numChips == 5)
+            placeholderBet = currentBet;
+            var k = 0;
+
+            if (currentPlayer == 0)
             {
-                this.scene.disableBettingButtons();
+                while (placeholderBet > 0)
+                {
+                    for (let i = 0; i < player1ChipCount.length; i++)
+                    {
+                        player1ChipCount[i].destroy(true);
+                    }
+
+                    numChips = player1ChipCount.length;
+
+                    while (placeholderBet - 100 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(1025, 450 - (k * 5), 'chip_100');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 100;
+
+                        player1ChipCount = placeholderChipArray;
+                        numChips = player1ChipCount.length;
+                        k++;
+                    }
+
+                    while (placeholderBet - 25 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(1025, 450 - (k * 5), 'chip_25');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 25;
+
+                        player1ChipCount = placeholderChipArray;
+                        numChips = player1ChipCount.length;
+                        k++;
+                    }
+
+                    while (placeholderBet - 10 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(1025, 450 - (k * 5), 'chip_10');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 10;
+
+                        player1ChipCount = placeholderChipArray;
+                        numChips = player1ChipCount.length;
+                        k++;
+                    }
+
+                    while (placeholderBet - 5 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(1025, 450 - (k * 5), 'chip_5');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 5;
+
+                        player1ChipCount = placeholderChipArray;
+                        numChips = player1ChipCount.length;
+                        k++;
+                    }
+
+                    while (placeholderBet - 1 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(1025, 450 - (k * 5), 'chip_1');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 1;
+
+                        player1ChipCount = placeholderChipArray;
+                        numChips = player1ChipCount.length;
+                        k++;
+                    }
+                }
+                placeholderChipArray = [];
+            }
+            else if (currentPlayer == 1)
+            {
+                while (placeholderBet > 0)
+                {
+                    for (let i = 0; i < player2ChipCount.length; i++)
+                    {
+                        player2ChipCount[i].destroy(true);
+                    }
+
+                    numChips = player2ChipCount.length;
+
+                    while (placeholderBet - 100 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(705, 550 - (k * 5), 'chip_100');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 100;
+
+                        player2ChipCount = placeholderChipArray;
+                        numChips = player2ChipCount.length;
+                        k++;
+                    }
+
+                    while (placeholderBet - 25 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(705, 550 - (k * 5), 'chip_25');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 25;
+
+                        player2ChipCount = placeholderChipArray;
+                        numChips = player2ChipCount.length;
+                        k++;
+                    }
+
+                    while (placeholderBet - 10 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(705, 550 - (k * 5), 'chip_10');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 10;
+
+                        player2ChipCount = placeholderChipArray;
+                        numChips = player2ChipCount.length;
+                        k++;
+                    }
+
+                    while (placeholderBet - 5 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(705, 550 - (k * 5), 'chip_5');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 5;
+
+                        player2ChipCount = placeholderChipArray;
+                        numChips = player2ChipCount.length;
+                        k++;
+                    }
+
+                    while (placeholderBet - 1 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(705, 550 - (k * 5), 'chip_1');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 1;
+
+                        player2ChipCount = placeholderChipArray;
+                        numChips = player2ChipCount.length;
+                        k++;
+                    }
+                }
+                placeholderChipArray = [];
+            }
+            else if (currentPlayer == 2)
+            {
+                while (placeholderBet > 0)
+                {
+                    for (let i = 0; i < player3ChipCount.length; i++)
+                    {
+                        player3ChipCount[i].destroy(true);
+                    }
+
+                    numChips = player3ChipCount.length;
+
+                    while (placeholderBet - 100 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(355, 450 - (k * 5), 'chip_100');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 100;
+
+                        player3ChipCount = placeholderChipArray;
+                        numChips = player3ChipCount.length;
+                        k++;
+                    }
+
+                    while (placeholderBet - 25 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(355, 450 - (k * 5), 'chip_25');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 25;
+
+                        player3ChipCount = placeholderChipArray;
+                        numChips = player3ChipCount.length;
+                        k++;
+                    }
+
+                    while (placeholderBet - 10 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(355, 450 - (k * 5), 'chip_10');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 10;
+
+                        player3ChipCount = placeholderChipArray;
+                        numChips = player3ChipCount.length;
+                        k++;
+                    }
+
+                    while (placeholderBet - 5 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(355, 450 - (k * 5), 'chip_5');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 5;
+
+                        player3ChipCount = placeholderChipArray;
+                        numChips = player3ChipCount.length;
+                        k++;
+                    }
+
+                    while (placeholderBet - 1 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(355, 450 - (k * 5), 'chip_1');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 1;
+
+                        player3ChipCount = placeholderChipArray;
+                        numChips = player3ChipCount.length;
+                        k++;
+                    }
+                }
+                placeholderChipArray = [];
             }
 
             if (currentBet >= minBet)
@@ -1429,7 +1900,7 @@ class GameScene extends Phaser.Scene {
 
         blueChip_10_Button.on('pointerdown', function(){
 
-            if (!(currentBet + 10 > maxBet) && (playerCurrency - 10 > 0) && (numChips < 5))
+            if (!(currentBet + 10 > maxBet) && (playerCurrency - 10 > 0))
             {
                 currentBet = currentBet + 10;
                 playerCurrency = playerCurrency - 10;
@@ -1455,9 +1926,227 @@ class GameScene extends Phaser.Scene {
                 numChips = numChips + 1;
             }
 
-            if (numChips == 5)
+            placeholderBet = currentBet;
+            var k = 0;
+
+            if (currentPlayer == 0)
             {
-                this.scene.disableBettingButtons();
+                while (placeholderBet > 0)
+                {
+                    for (let i = 0; i < player1ChipCount.length; i++)
+                    {
+                        player1ChipCount[i].destroy(true);
+                    }
+
+                    numChips = player1ChipCount.length;
+
+                    while (placeholderBet - 100 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(1025, 450 - (k * 5), 'chip_100');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 100;
+
+                        player1ChipCount = placeholderChipArray;
+                        numChips = player1ChipCount.length;
+                        k++;
+                    }
+
+                    while (placeholderBet - 25 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(1025, 450 - (k * 5), 'chip_25');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 25;
+
+                        player1ChipCount = placeholderChipArray;
+                        numChips = player1ChipCount.length;
+                        k++;
+                    }
+
+                    while (placeholderBet - 10 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(1025, 450 - (k * 5), 'chip_10');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 10;
+
+                        player1ChipCount = placeholderChipArray;
+                        numChips = player1ChipCount.length;
+                        k++;
+                    }
+
+                    while (placeholderBet - 5 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(1025, 450 - (k * 5), 'chip_5');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 5;
+
+                        player1ChipCount = placeholderChipArray;
+                        numChips = player1ChipCount.length;
+                        k++;
+                    }
+
+                    while (placeholderBet - 1 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(1025, 450 - (k * 5), 'chip_1');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 1;
+
+                        player1ChipCount = placeholderChipArray;
+                        numChips = player1ChipCount.length;
+                        k++;
+                    }
+                }
+                placeholderChipArray = [];
+            }
+            else if (currentPlayer == 1)
+            {
+                while (placeholderBet > 0)
+                {
+                    for (let i = 0; i < player2ChipCount.length; i++)
+                    {
+                        player2ChipCount[i].destroy(true);
+                    }
+
+                    numChips = player2ChipCount.length;
+
+                    while (placeholderBet - 100 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(705, 550 - (k * 5), 'chip_100');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 100;
+
+                        player2ChipCount = placeholderChipArray;
+                        numChips = player2ChipCount.length;
+                        k++;
+                    }
+
+                    while (placeholderBet - 25 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(705, 550 - (k * 5), 'chip_25');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 25;
+
+                        player2ChipCount = placeholderChipArray;
+                        numChips = player2ChipCount.length;
+                        k++;
+                    }
+
+                    while (placeholderBet - 10 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(705, 550 - (k * 5), 'chip_10');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 10;
+
+                        player2ChipCount = placeholderChipArray;
+                        numChips = player2ChipCount.length;
+                        k++;
+                    }
+
+                    while (placeholderBet - 5 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(705, 550 - (k * 5), 'chip_5');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 5;
+
+                        player2ChipCount = placeholderChipArray;
+                        numChips = player2ChipCount.length;
+                        k++;
+                    }
+
+                    while (placeholderBet - 1 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(705, 550 - (k * 5), 'chip_1');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 1;
+
+                        player2ChipCount = placeholderChipArray;
+                        numChips = player2ChipCount.length;
+                        k++;
+                    }
+                }
+                placeholderChipArray = [];
+            }
+            else if (currentPlayer == 2)
+            {
+                while (placeholderBet > 0)
+                {
+                    for (let i = 0; i < player3ChipCount.length; i++)
+                    {
+                        player3ChipCount[i].destroy(true);
+                    }
+
+                    numChips = player3ChipCount.length;
+
+                    while (placeholderBet - 100 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(355, 450 - (k * 5), 'chip_100');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 100;
+
+                        player3ChipCount = placeholderChipArray;
+                        numChips = player3ChipCount.length;
+                        k++;
+                    }
+
+                    while (placeholderBet - 25 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(355, 450 - (k * 5), 'chip_25');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 25;
+
+                        player3ChipCount = placeholderChipArray;
+                        numChips = player3ChipCount.length;
+                        k++;
+                    }
+
+                    while (placeholderBet - 10 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(355, 450 - (k * 5), 'chip_10');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 10;
+
+                        player3ChipCount = placeholderChipArray;
+                        numChips = player3ChipCount.length;
+                        k++;
+                    }
+
+                    while (placeholderBet - 5 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(355, 450 - (k * 5), 'chip_5');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 5;
+
+                        player3ChipCount = placeholderChipArray;
+                        numChips = player3ChipCount.length;
+                        k++;
+                    }
+
+                    while (placeholderBet - 1 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(355, 450 - (k * 5), 'chip_1');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 1;
+
+                        player3ChipCount = placeholderChipArray;
+                        numChips = player3ChipCount.length;
+                        k++;
+                    }
+                }
+                placeholderChipArray = [];
             }
 
             if (currentBet >= minBet)
@@ -1468,7 +2157,7 @@ class GameScene extends Phaser.Scene {
 
         greenChip_25_Button.on('pointerdown', function(){
 
-            if (!(currentBet + 25 > maxBet) && (playerCurrency - 25 > 0) && (numChips < 5))
+            if (!(currentBet + 25 > maxBet) && (playerCurrency - 25 > 0))
             {
                 currentBet = currentBet + 25;
                 playerCurrency = playerCurrency - 25;
@@ -1494,10 +2183,228 @@ class GameScene extends Phaser.Scene {
                 numChips = numChips + 1;
             }
 
-            if (numChips == 5)
+            placeholderBet = currentBet;
+            var k = 0;
+
+            if (currentPlayer == 0)
             {
-                this.scene.disableBettingButtons();
+                while (placeholderBet > 0)
+                {
+                    for (let i = 0; i < player1ChipCount.length; i++)
+                    {
+                        player1ChipCount[i].destroy(true);
+                    }
+
+                    numChips = player1ChipCount.length;
+
+                    while (placeholderBet - 100 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(1025, 450 - (k * 5), 'chip_100');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 100;
+
+                        player1ChipCount = placeholderChipArray;
+                        numChips = player1ChipCount.length;
+                        k++;
+                    }
+
+                    while (placeholderBet - 25 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(1025, 450 - (k * 5), 'chip_25');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 25;
+
+                        player1ChipCount = placeholderChipArray;
+                        numChips = player1ChipCount.length;
+                        k++;
+                    }
+
+                    while (placeholderBet - 10 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(1025, 450 - (k * 5), 'chip_10');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 10;
+
+                        player1ChipCount = placeholderChipArray;
+                        numChips = player1ChipCount.length;
+                        k++;
+                    }
+
+                    while (placeholderBet - 5 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(1025, 450 - (k * 5), 'chip_5');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 5;
+
+                        player1ChipCount = placeholderChipArray;
+                        numChips = player1ChipCount.length;
+                        k++;
+                    }
+
+                    while (placeholderBet - 1 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(1025, 450 - (k * 5), 'chip_1');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 1;
+
+                        player1ChipCount = placeholderChipArray;
+                        numChips = player1ChipCount.length;
+                        k++;
+                    }
+                }
+                placeholderChipArray = [];
             }
+            else if (currentPlayer == 1)
+            {
+                while (placeholderBet > 0)
+                {
+                    for (let i = 0; i < player2ChipCount.length; i++)
+                    {
+                        player2ChipCount[i].destroy(true);
+                    }
+
+                    numChips = player2ChipCount.length;
+
+                    while (placeholderBet - 100 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(705, 550 - (k * 5), 'chip_100');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 100;
+
+                        player2ChipCount = placeholderChipArray;
+                        numChips = player2ChipCount.length;
+                        k++;
+                    }
+
+                    while (placeholderBet - 25 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(705, 550 - (k * 5), 'chip_25');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 25;
+
+                        player2ChipCount = placeholderChipArray;
+                        numChips = player2ChipCount.length;
+                        k++;
+                    }
+
+                    while (placeholderBet - 10 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(705, 550 - (k * 5), 'chip_10');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 10;
+
+                        player2ChipCount = placeholderChipArray;
+                        numChips = player2ChipCount.length;
+                        k++;
+                    }
+
+                    while (placeholderBet - 5 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(705, 550 - (k * 5), 'chip_5');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 5;
+
+                        player2ChipCount = placeholderChipArray;
+                        numChips = player2ChipCount.length;
+                        k++;
+                    }
+
+                    while (placeholderBet - 1 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(705, 550 - (k * 5), 'chip_1');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 1;
+
+                        player2ChipCount = placeholderChipArray;
+                        numChips = player2ChipCount.length;
+                        k++;
+                    }
+                }
+                placeholderChipArray = [];
+            }
+            else if (currentPlayer == 2)
+            {
+                while (placeholderBet > 0)
+                {
+                    for (let i = 0; i < player3ChipCount.length; i++)
+                    {
+                        player3ChipCount[i].destroy(true);
+                    }
+
+                    numChips = player3ChipCount.length;
+
+                    while (placeholderBet - 100 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(355, 450 - (k * 5), 'chip_100');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 100;
+
+                        player3ChipCount = placeholderChipArray;
+                        numChips = player3ChipCount.length;
+                        k++;
+                    }
+
+                    while (placeholderBet - 25 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(355, 450 - (k * 5), 'chip_25');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 25;
+
+                        player3ChipCount = placeholderChipArray;
+                        numChips = player3ChipCount.length;
+                        k++;
+                    }
+
+                    while (placeholderBet - 10 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(355, 450 - (k * 5), 'chip_10');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 10;
+
+                        player3ChipCount = placeholderChipArray;
+                        numChips = player3ChipCount.length;
+                        k++;
+                    }
+
+                    while (placeholderBet - 5 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(355, 450 - (k * 5), 'chip_5');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 5;
+
+                        player3ChipCount = placeholderChipArray;
+                        numChips = player3ChipCount.length;
+                        k++;
+                    }
+
+                    while (placeholderBet - 1 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(355, 450 - (k * 5), 'chip_1');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 1;
+
+                        player3ChipCount = placeholderChipArray;
+                        numChips = player3ChipCount.length;
+                        k++;
+                    }
+                }
+                placeholderChipArray = [];
+            }           
 
             if (currentBet >= minBet)
             {
@@ -1507,7 +2414,7 @@ class GameScene extends Phaser.Scene {
 
         blackChip_100_Button.on('pointerdown', function(){
 
-            if (!(currentBet + 100 > maxBet) && (playerCurrency - 100 > 0) && (numChips < 5))
+            if (!(currentBet + 100 > maxBet) && (playerCurrency - 100 > 0))
             {
                 currentBet = currentBet + 100;
                 playerCurrency = playerCurrency - 100;
@@ -1533,9 +2440,227 @@ class GameScene extends Phaser.Scene {
                 numChips = numChips + 1;
             }
 
-            if (numChips == 5)
+            placeholderBet = currentBet;
+            var k = 0;
+
+            if (currentPlayer == 0)
             {
-                this.scene.disableBettingButtons();
+                while (placeholderBet > 0)
+                {
+                    for (let i = 0; i < player1ChipCount.length; i++)
+                    {
+                        player1ChipCount[i].destroy(true);
+                    }
+
+                    numChips = player1ChipCount.length;
+
+                    while (placeholderBet - 100 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(1025, 450 - (k * 5), 'chip_100');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 100;
+
+                        player1ChipCount = placeholderChipArray;
+                        numChips = player1ChipCount.length;
+                        k++;
+                    }
+
+                    while (placeholderBet - 25 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(1025, 450 - (k * 5), 'chip_25');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 25;
+
+                        player1ChipCount = placeholderChipArray;
+                        numChips = player1ChipCount.length;
+                        k++;
+                    }
+
+                    while (placeholderBet - 10 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(1025, 450 - (k * 5), 'chip_10');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 10;
+
+                        player1ChipCount = placeholderChipArray;
+                        numChips = player1ChipCount.length;
+                        k++;
+                    }
+
+                    while (placeholderBet - 5 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(1025, 450 - (k * 5), 'chip_5');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 5;
+
+                        player1ChipCount = placeholderChipArray;
+                        numChips = player1ChipCount.length;
+                        k++;
+                    }
+
+                    while (placeholderBet - 1 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(1025, 450 - (k * 5), 'chip_1');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 1;
+
+                        player1ChipCount = placeholderChipArray;
+                        numChips = player1ChipCount.length;
+                        k++;
+                    }
+                }
+                placeholderChipArray = [];
+            }
+            else if (currentPlayer == 1)
+            {
+                while (placeholderBet > 0)
+                {
+                    for (let i = 0; i < player2ChipCount.length; i++)
+                    {
+                        player2ChipCount[i].destroy(true);
+                    }
+
+                    numChips = player2ChipCount.length;
+
+                    while (placeholderBet - 100 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(705, 550 - (k * 5), 'chip_100');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 100;
+
+                        player2ChipCount = placeholderChipArray;
+                        numChips = player2ChipCount.length;
+                        k++;
+                    }
+
+                    while (placeholderBet - 25 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(705, 550 - (k * 5), 'chip_25');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 25;
+
+                        player2ChipCount = placeholderChipArray;
+                        numChips = player2ChipCount.length;
+                        k++;
+                    }
+
+                    while (placeholderBet - 10 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(705, 550 - (k * 5), 'chip_10');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 10;
+
+                        player2ChipCount = placeholderChipArray;
+                        numChips = player2ChipCount.length;
+                        k++;
+                    }
+
+                    while (placeholderBet - 5 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(705, 550 - (k * 5), 'chip_5');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 5;
+
+                        player2ChipCount = placeholderChipArray;
+                        numChips = player2ChipCount.length;
+                        k++;
+                    }
+
+                    while (placeholderBet - 1 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(705, 550 - (k * 5), 'chip_1');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 1;
+
+                        player2ChipCount = placeholderChipArray;
+                        numChips = player2ChipCount.length;
+                        k++;
+                    }
+                }
+                placeholderChipArray = [];
+            }
+            else if (currentPlayer == 2)
+            {
+                while (placeholderBet > 0)
+                {
+                    for (let i = 0; i < player3ChipCount.length; i++)
+                    {
+                        player3ChipCount[i].destroy(true);
+                    }
+
+                    numChips = player3ChipCount.length;
+
+                    while (placeholderBet - 100 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(355, 450 - (k * 5), 'chip_100');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 100;
+
+                        player3ChipCount = placeholderChipArray;
+                        numChips = player3ChipCount.length;
+                        k++;
+                    }
+
+                    while (placeholderBet - 25 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(355, 450 - (k * 5), 'chip_25');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 25;
+
+                        player3ChipCount = placeholderChipArray;
+                        numChips = player3ChipCount.length;
+                        k++;
+                    }
+
+                    while (placeholderBet - 10 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(355, 450 - (k * 5), 'chip_10');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 10;
+
+                        player3ChipCount = placeholderChipArray;
+                        numChips = player3ChipCount.length;
+                        k++;
+                    }
+
+                    while (placeholderBet - 5 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(355, 450 - (k * 5), 'chip_5');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 5;
+
+                        player3ChipCount = placeholderChipArray;
+                        numChips = player3ChipCount.length;
+                        k++;
+                    }
+
+                    while (placeholderBet - 1 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(355, 450 - (k * 5), 'chip_1');
+                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 1;
+
+                        player3ChipCount = placeholderChipArray;
+                        numChips = player3ChipCount.length;
+                        k++;
+                    }
+                }
+                placeholderChipArray = [];
             }
 
             if (currentBet >= minBet)
@@ -1622,7 +2747,317 @@ class GameScene extends Phaser.Scene {
 
             }
 
-        })
+        });
+
+        // player chooses to double
+        playerDouble.on('pointerdown', function(){
+
+            if(!this.scene.isBust(playerCards[currentPlayer]))
+            {
+                playerDouble.setTexture('clickedButton');
+                playerCards[currentPlayer][playerCards[currentPlayer].length] = (this.scene.getValue(cardInts, cardIndex, this));
+                this.scene.hitCard(cardInts[cardIndex], shuffledDeck, playerCards[currentPlayer].length-1, currentPlayer, this);
+                cardIndex++;
+
+                // playerCards[currentPlayer][playerCards[currentPlayer].length + 1]
+                // to dynamically hit cards
+
+                // since this is a double, player can only hit once and their turn is over
+                // still need to implement the duplicating chips
+                if (currentPlayer == 0)
+                {
+                    placeholderBet = player1Bet;
+                    playerCurrency = playerCurrency - player1Bet;
+                    var k = 0;
+        
+                    while (placeholderBet > 0)
+                    {
+                        for (let i = 0; i < player1DoubleChipCount.length; i++)
+                        {
+                            player1DoubleChipCount[i].destroy(true);
+                        }
+    
+                        numChips = player1DoubleChipCount.length;
+    
+                        while (placeholderBet - 100 >= 0)
+                        {
+                            placeholderChipArray[k] = this.scene.add.image(1075, 400 - (k * 5), 'chip_100');
+                            placeholderChipArray[k].scale = .075;
+                            placeholderChipArray[k].setDepth(100 + k);
+                            placeholderBet = placeholderBet - 100;
+    
+                            player1DoubleChipCount = placeholderChipArray;
+                            numChips = player1DoubleChipCount.length;
+                            k++;
+                        }
+    
+                        while (placeholderBet - 25 >= 0)
+                        {
+                            placeholderChipArray[k] = this.scene.add.image(1075, 400 - (k * 5), 'chip_25');
+                            placeholderChipArray[k].scale = .075;
+                            placeholderChipArray[k].setDepth(100 + k);
+                            placeholderBet = placeholderBet - 25;
+    
+                            player1DoubleChipCount = placeholderChipArray;
+                            numChips = player1DoubleChipCount.length;
+                            k++;
+                        }
+    
+                        while (placeholderBet - 10 >= 0)
+                        {
+                            placeholderChipArray[k] = this.scene.add.image(1075, 400 - (k * 5), 'chip_10');
+                            placeholderChipArray[k].scale = .075;
+                            placeholderChipArray[k].setDepth(100 + k);
+                            placeholderBet = placeholderBet - 10;
+    
+                            player1DoubleChipCount = placeholderChipArray;
+                            numChips = player1DoubleChipCount.length;
+                            k++;
+                        }
+    
+                        while (placeholderBet - 5 >= 0)
+                        {
+                            placeholderChipArray[k] = this.scene.add.image(1075, 400 - (k * 5), 'chip_5');
+                            placeholderChipArray[k].scale = .075;
+                            placeholderChipArray[k].setDepth(100 + k);
+                            placeholderBet = placeholderBet - 5;
+    
+                            player1DoubleChipCount = placeholderChipArray;
+                            numChips = player1DoubleChipCount.length;
+                            k++;
+                        }
+    
+                        while (placeholderBet - 1 >= 0)
+                        {
+                            placeholderChipArray[k] = this.scene.add.image(1075, 400 - (k * 5), 'chip_1');
+                            placeholderChipArray[k].scale = .075;
+                            placeholderChipArray[k].setDepth(100 + k);
+                            placeholderBet = placeholderBet - 1;
+    
+                            player1DoubleChipCount = placeholderChipArray;
+                            numChips = player1DoubleChipCount.length;
+                            k++;
+                        }
+                    }
+                    placeholderChipArray = [];
+
+                    player1Bet = player1Bet * 2;
+
+                    if (numPlayers != 1)
+                    {
+                        player1TurnIndicator.fillColor = 0xFFFFFF;
+                        player2TurnIndicator.fillColor = 0x8E1600;
+                        currentPlayer = currentPlayer + 1;
+                    }
+                    else
+                    {
+                        // plus more stuff since if its the last player
+                        dealerCard.visible = false;
+                        shuffledDeck[cardInts[dealerIndex]].setDepth(7);
+                        this.scene.revealDealerInfo(dealerCards);
+                        // dealer needs to draw to 16, and stand on 17
+                        this.scene.drawDealerCards(dealerCards, cardIndex, cardInts, dealerCards.length);
+                        cardIndex = cardIndex + dealerCards.length - 2;
+                        this.scene.isWinOrLoss();
+                        this.scene.disableActionButtons();
+                    }
+                }
+                else if (currentPlayer == 1)
+                {
+
+                    placeholderBet = player2Bet;
+                    playerCurrency = playerCurrency - player2Bet;
+                    var k = 0;
+        
+                    while (placeholderBet > 0)
+                    {
+                        for (let i = 0; i < player2DoubleChipCount.length; i++)
+                        {
+                            player2DoubleChipCount[i].destroy(true);
+                        }
+    
+                        numChips = player2DoubleChipCount.length;
+    
+                        while (placeholderBet - 100 >= 0)
+                        {
+                            placeholderChipArray[k] = this.scene.add.image(775, 525 - (k * 5), 'chip_100');
+                            placeholderChipArray[k].scale = .075;
+                            placeholderChipArray[k].setDepth(100 + k);
+                            placeholderBet = placeholderBet - 100;
+    
+                            player2DoubleChipCount = placeholderChipArray;
+                            numChips = player2DoubleChipCount.length;
+                            k++;
+                        }
+    
+                        while (placeholderBet - 25 >= 0)
+                        {
+                            placeholderChipArray[k] = this.scene.add.image(775, 525 - (k * 5), 'chip_25');
+                            placeholderChipArray[k].scale = .075;
+                            placeholderChipArray[k].setDepth(100 + k);
+                            placeholderBet = placeholderBet - 25;
+    
+                            player2DoubleChipCount = placeholderChipArray;
+                            numChips = player2DoubleChipCount.length;
+                            k++;
+                        }
+    
+                        while (placeholderBet - 10 >= 0)
+                        {
+                            placeholderChipArray[k] = this.scene.add.image(775, 525 - (k * 5), 'chip_10');
+                            placeholderChipArray[k].scale = .075;
+                            placeholderChipArray[k].setDepth(100 + k);
+                            placeholderBet = placeholderBet - 10;
+    
+                            player2DoubleChipCount = placeholderChipArray;
+                            numChips = player2DoubleChipCount.length;
+                            k++;
+                        }
+    
+                        while (placeholderBet - 5 >= 0)
+                        {
+                            placeholderChipArray[k] = this.scene.add.image(775, 525 - (k * 5), 'chip_5');
+                            placeholderChipArray[k].scale = .075;
+                            placeholderChipArray[k].setDepth(100 + k);
+                            placeholderBet = placeholderBet - 5;
+    
+                            player2DoubleChipCount = placeholderChipArray;
+                            numChips = player2DoubleChipCount.length;
+                            k++;
+                        }
+    
+                        while (placeholderBet - 1 >= 0)
+                        {
+                            placeholderChipArray[k] = this.scene.add.image(775, 525 - (k * 5), 'chip_1');
+                            placeholderChipArray[k].scale = .075;
+                            placeholderChipArray[k].setDepth(100 + k);
+                            placeholderBet = placeholderBet - 1;
+    
+                            player2DoubleChipCount = placeholderChipArray;
+                            numChips = player2DoubleChipCount.length;
+                            k++;
+                        }
+                    }
+                    placeholderChipArray = [];
+
+                    player2Bet = player2Bet * 2;
+
+                    if (numPlayers != 2)
+                    {
+                        player2TurnIndicator.fillColor = 0xFFFFFF;
+                        player3TurnIndicator.fillColor = 0x8E1600;
+                        currentPlayer = currentPlayer + 1;
+                    }
+                    else
+                    {
+                        // plus more stuff since if its the last player
+                        dealerCard.visible = false;
+                        shuffledDeck[cardInts[dealerIndex]].setDepth(1);
+                        this.scene.revealDealerInfo(dealerCards);
+                        // dealer needs to draw to 16, and stand on 17
+                        this.scene.drawDealerCards(dealerCards, cardIndex, cardInts, dealerCards.length);
+                        cardIndex = cardIndex + dealerCards.length - 2;
+                        this.scene.isWinOrLoss();
+                        this.scene.disableActionButtons();
+                    }
+                }
+                else if (currentPlayer == 2)
+                {
+
+                    placeholderBet = player3Bet;
+                    playerCurrency = playerCurrency - player3Bet;
+                    var k = 0;
+        
+                    while (placeholderBet > 0)
+                    {
+                        for (let i = 0; i < player3DoubleChipCount.length; i++)
+                        {
+                            player3DoubleChipCount[i].destroy(true);
+                        }
+    
+                        numChips = player3DoubleChipCount.length;
+    
+                        while (placeholderBet - 100 >= 0)
+                        {
+                            placeholderChipArray[k] = this.scene.add.image(305, 400 - (k * 5), 'chip_100');
+                            placeholderChipArray[k].scale = .075;
+                            placeholderChipArray[k].setDepth(100 + k);
+                            placeholderBet = placeholderBet - 100;
+    
+                            player3DoubleChipCount = placeholderChipArray;
+                            numChips = player3DoubleChipCount.length;
+                            k++;
+                        }
+    
+                        while (placeholderBet - 25 >= 0)
+                        {
+                            placeholderChipArray[k] = this.scene.add.image(305, 400 - (k * 5), 'chip_25');
+                            placeholderChipArray[k].scale = .075;
+                            placeholderChipArray[k].setDepth(100 + k);
+                            placeholderBet = placeholderBet - 25;
+    
+                            player3DoubleChipCount = placeholderChipArray;
+                            numChips = player3DoubleChipCount.length;
+                            k++;
+                        }
+    
+                        while (placeholderBet - 10 >= 0)
+                        {
+                            placeholderChipArray[k] = this.scene.add.image(305, 400 - (k * 5), 'chip_10');
+                            placeholderChipArray[k].scale = .075;
+                            placeholderChipArray[k].setDepth(100 + k);
+                            placeholderBet = placeholderBet - 10;
+    
+                            player3DoubleChipCount = placeholderChipArray;
+                            numChips = player3DoubleChipCount.length;
+                            k++;
+                        }
+    
+                        while (placeholderBet - 5 >= 0)
+                        {
+                            placeholderChipArray[k] = this.scene.add.image(305, 400 - (k * 5), 'chip_5');
+                            placeholderChipArray[k].scale = .075;
+                            placeholderChipArray[k].setDepth(100 + k);
+                            placeholderBet = placeholderBet - 5;
+    
+                            player3DoubleChipCount = placeholderChipArray;
+                            numChips = player3DoubleChipCount.length;
+                            k++;
+                        }
+    
+                        while (placeholderBet - 1 >= 0)
+                        {
+                            placeholderChipArray[k] = this.scene.add.image(305, 400 - (k * 5), 'chip_1');
+                            placeholderChipArray[k].scale = .075;
+                            placeholderChipArray[k].setDepth(100 + k);
+                            placeholderBet = placeholderBet - 1;
+    
+                            player3DoubleChipCount = placeholderChipArray;
+                            numChips = player3DoubleChipCount.length;
+                            k++;
+                        }
+                    }
+                    placeholderChipArray = [];
+
+                    player3Bet = player3Bet * 2;
+
+                    player3TurnIndicator.fillColor = 0xFFFFFF;
+                    player1TurnIndicator.fillColor = 0x8E1600;
+                    currentPlayer = 0;
+
+                    // plus more stuff since if its the last player
+                    dealerCard.visible = false;
+                    shuffledDeck[cardInts[dealerIndex]].setDepth(1);
+                    this.scene.revealDealerInfo(dealerCards);
+                    // dealer needs to draw to 16, and stand on 17
+                    this.scene.drawDealerCards(dealerCards, cardIndex, cardInts, dealerCards.length);
+                    cardIndex = cardIndex + dealerCards.length - 2;
+                    this.scene.isWinOrLoss();
+                    this.scene.disableActionButtons();
+                }
+
+            }
+        });
 
         // player chooses to stand
         playerStand.on('pointerdown', function(){
@@ -1687,7 +3122,7 @@ class GameScene extends Phaser.Scene {
                 this.scene.isWinOrLoss();
                 this.scene.disableActionButtons();
             }
-        })
+        });
 
         nextRoundButton.on('pointerdown', function(){
             nextRoundButton.setTexture('nextRoundButtonClicked');
