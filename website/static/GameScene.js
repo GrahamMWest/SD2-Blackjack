@@ -77,6 +77,7 @@ let player1DoubleChipCount = [];
 let player2DoubleChipCount = [];
 let player3DoubleChipCount = [];
 let placeholderChipArray = [];
+let didPlayersSurrender = [0, 0, 0];
 
 let playerHit;
 let hitText;
@@ -84,6 +85,10 @@ let playerDouble;
 let doubleText;
 let playerStand;
 let standText;
+let playerSurrender;
+let surrenderText;
+let playerInsurance;
+let insuranceText;
 let playerSplit;
 let splitText;
 
@@ -95,11 +100,33 @@ let nextBettorButton;
 
 
 //TODO:
-// get user info
-// update user currencies in iswinorloss function
+// change to un-overlayed background
+// update card X,Y values (remove angles)
+// add insurance
+// add a points function
+// update user points
 // add splits :(
 
+
+// (WHAT GRAHAM SHOULD BE DOING)
+// get user info
+// update user currencies in iswinorloss function (database wise)
+// give users 500 currency a day
+
+
+
+// BUGS:
+// if all players bust, dealer shouldnt draw more cards
+
+
+
+
+// make setting sliders
 // updateinfo function not done yet (splits, ect)
+
+// NOTES:
+// early surrender is currently implemented, will add a toggle to only allow late surrender (after dealer checks for BJ)
+// should only take insurance at a TRUE 3 or above
 
 let gameOptions = {
  
@@ -542,8 +569,24 @@ class GameScene extends Phaser.Scene {
         for (let i = 0; i < numPlayers; i++)
         {
             let handValue = this.getHandValue(playerCards[i]);
-            
-            if (this.isBust(playerCards[i]))
+
+            if (didPlayersSurrender[i])
+            {
+                // hand loses (surrender) (money already handled earlier)
+                if (i == 0)
+                {
+                    player1CardDisplay.setTint(0xFFA500);
+                }
+                else if (i == 1)
+                {
+                    player2CardDisplay.setTint(0xFFA500);
+                }
+                else if (i == 2)
+                {
+                    player3CardDisplay.setTint(0xFFA500);
+                }
+            }
+            else if (this.isBust(playerCards[i]))
             {
                 // hand loses
                 if (i == 0)
@@ -691,12 +734,12 @@ class GameScene extends Phaser.Scene {
         playerHit.disableInteractive();
         playerDouble.disableInteractive();
         playerStand.disableInteractive();
-        playerSplit.disableInteractive();
+        playerSurrender.disableInteractive();
 
         playerHit.setTexture('lockedButton');
         playerDouble.setTexture('lockedButton');
         playerStand.setTexture('lockedButton');
-        playerSplit.setTexture('lockedButton');
+        playerSurrender.setTexture('lockedButton');
 
         playerHit.on('pointerover', function(){
             playerHit.setTexture('lockedButton');
@@ -710,8 +753,8 @@ class GameScene extends Phaser.Scene {
             playerStand.setTexture('lockedButton');
         })
 
-        playerSplit.on('pointerover', function(){
-            playerSplit.setTexture('lockedButton');
+        playerSurrender.on('pointerover', function(){
+            playerSurrender.setTexture('lockedButton');
         })
 
         playerHit.on('pointerout', function(){
@@ -726,8 +769,8 @@ class GameScene extends Phaser.Scene {
             playerStand.setTexture('lockedButton');
         })
 
-        playerSplit.on('pointerout', function(){
-            playerSplit.setTexture('lockedButton');
+        playerSurrender.on('pointerout', function(){
+            playerSurrender.setTexture('lockedButton');
         })
 
         // idk if these below are needed
@@ -743,8 +786,8 @@ class GameScene extends Phaser.Scene {
             playerStand.setTexture('lockedButton');
         })
 
-        playerSplit.on('pointerup', function(){
-            playerSplit.setTexture('lockedButton');
+        playerSurrender.on('pointerup', function(){
+            playerSurrender.setTexture('lockedButton');
         })
     };
 
@@ -752,12 +795,12 @@ class GameScene extends Phaser.Scene {
         playerHit.setInteractive({ useHandCursor: true });
         playerDouble.setInteractive({ useHandCursor: true });
         playerStand.setInteractive({ useHandCursor: true });
-        playerSplit.setInteractive({ useHandCursor: true });
+        playerSurrender.setInteractive({ useHandCursor: true});
 
         playerHit.setTexture('normalButton');
         playerDouble.setTexture('normalButton');
         playerStand.setTexture('normalButton');
-        playerSplit.setTexture('normalButton');
+        playerSurrender.setTexture('normalButton');
 
         playerHit.on('pointerover', function(){
             playerHit.setTexture('hoveredButton');
@@ -771,8 +814,8 @@ class GameScene extends Phaser.Scene {
             playerStand.setTexture('hoveredButton');
         })
 
-        playerSplit.on('pointerover', function(){
-            playerSplit.setTexture('hoveredButton');
+        playerSurrender.on('pointerover', function(){
+            playerSurrender.setTexture('hoveredButton');
         })
 
         playerHit.on('pointerout', function(){
@@ -787,8 +830,8 @@ class GameScene extends Phaser.Scene {
             playerStand.setTexture('normalButton');
         })
 
-        playerSplit.on('pointerout', function(){
-            playerSplit.setTexture('normalButton');
+        playerSurrender.on('pointerout', function(){
+            playerSurrender.setTexture('normalButton');
         })
 
         // idk if these below are needed
@@ -804,6 +847,127 @@ class GameScene extends Phaser.Scene {
             playerStand.setTexture('hoveredButton');
         })
 
+        playerSurrender.on('pointerup', function(){
+            playerSurrender.setTexture('hoveredButton');
+        })
+    };
+
+    disableSurrenderButton(){
+
+        playerSurrender.disableInteractive();
+
+        playerSurrender.setTexture('lockedButton');
+
+        playerSurrender.on('pointerover', function(){
+            playerSurrender.setTexture('lockedButton');
+        })
+
+        playerSurrender.on('pointerout', function(){
+            playerSurrender.setTexture('lockedButton');
+        })
+
+        // idk if these below are needed
+        playerSurrender.on('pointerup', function(){
+            playerSurrender.setTexture('lockedButton');
+        })
+    };
+
+    enableSurrenderButton(){
+
+        playerSurrender.setInteractive({ useHandCursor: true});
+
+        playerSurrender.setTexture('normalButton');
+
+        playerSurrender.on('pointerover', function(){
+            playerSurrender.setTexture('hoveredButton');
+        })
+
+        playerSurrender.on('pointerout', function(){
+            playerSurrender.setTexture('normalButton');
+        })
+
+        // idk if these below are needed
+        playerSurrender.on('pointerup', function(){
+            playerSurrender.setTexture('hoveredButton');
+        })
+    };
+
+    disableInsuranceButton(){
+
+        playerInsurance.disableInteractive();
+
+        playerInsurance.setTexture('lockedButton');
+
+        playerInsurance.on('pointerover', function(){
+            playerInsurance.setTexture('lockedButton');
+        })
+
+        playerSurrender.on('pointerout', function(){
+            playerInsurance.setTexture('lockedButton');
+        })
+
+        // idk if these below are needed
+        playerInsurance.on('pointerup', function(){
+            playerInsurance.setTexture('lockedButton');
+        })
+    };
+
+    enableInsuranceButton(){
+
+        playerInsurance.setInteractive({ useHandCursor: true});
+
+        playerInsurance.setTexture('normalButton');
+
+        playerInsurance.on('pointerover', function(){
+            playerInsurance.setTexture('hoveredButton');
+        })
+
+        playerInsurance.on('pointerout', function(){
+            playerInsurance.setTexture('normalButton');
+        })
+
+        // idk if these below are needed
+        playerInsurance.on('pointerup', function(){
+            playerInsurance.setTexture('hoveredButton');
+        })
+    };
+
+    disableSplitButton(){
+
+        playerSplit.disableInteractive();
+
+        playerSplit.setTexture('lockedButton');
+
+        playerSplit.on('pointerover', function(){
+            playerSplit.setTexture('lockedButton');
+        })
+
+        playerSplit.on('pointerout', function(){
+            playerSplit.setTexture('lockedButton');
+        })
+
+        // idk if these below are needed
+        playerSplit.on('pointerup', function(){
+            playerSplit.setTexture('lockedButton');
+        })
+
+    };
+
+    enableSplitButton(){
+
+        playerSplit.setInteractive({ useHandCursor: true});
+
+        playerSplit.setTexture('normalButton');
+
+        playerSplit.on('pointerover', function(){
+            playerSplit.setTexture('hoveredButton');
+        })
+
+        playerSplit.on('pointerout', function(){
+            playerSplit.setTexture('normalButton');
+        })
+
+        // idk if these below are needed
         playerSplit.on('pointerup', function(){
             playerSplit.setTexture('hoveredButton');
         })
@@ -1014,6 +1178,7 @@ class GameScene extends Phaser.Scene {
 
         playerCards = [[], [], []];
         dealerCards = [];
+        didPlayersSurrender = [0, 0, 0];
 
         // destroy sprites
         for (let i = 0; i < cardIndex; i++)
@@ -1091,7 +1256,7 @@ class GameScene extends Phaser.Scene {
             // deals to the dealer
             dealerCards[i] = (this.getValue(cardInts, cardIndex));
 
-            //console.log(dealerCards[i]);
+            console.log(dealerCards[i]);
             if (i == 0)
             {
                 this.dealCard(cardInts[cardIndex], shuffledDeck, timeline, i, 3, 1, dealerCard);
@@ -1135,6 +1300,12 @@ class GameScene extends Phaser.Scene {
                     }
                 }
             }
+
+            // check if dealers upcard is an Ace
+            if (dealerCards[1] === "A")
+            {
+                this.enableInsuranceButton();
+            } 
 
         }, this);
 
@@ -1266,18 +1437,29 @@ class GameScene extends Phaser.Scene {
 
 
         // placing player action buttons
-        playerHit = this.add.sprite(400, 845, 'lockedButton');
+        playerHit = this.add.sprite(200, 845, 'lockedButton');
         playerHit.scale = 2;
-        hitText = this.add.text(385, 830, "Hit", textStyle);
-        playerDouble = this.add.sprite(600, 845, 'lockedButton');
+        hitText = this.add.text(185, 830, "Hit", textStyle);
+
+        playerDouble = this.add.sprite(400, 845, 'lockedButton');
         playerDouble.scale = 2;
-        doubleText = this.add.text(563, 830, "Double", textStyle);
-        playerStand = this.add.sprite(800, 845, 'lockedButton');
+        doubleText = this.add.text(363, 830, "Double", textStyle);
+
+        playerStand = this.add.sprite(600, 845, 'lockedButton');
         playerStand.scale = 2;
-        standText = this.add.text(768, 830, "Stand", textStyle);
-        playerSplit = this.add.sprite(1000, 845, 'lockedButton');
+        standText = this.add.text(568, 830, "Stand", textStyle);
+
+        playerSurrender = this.add.sprite(800, 845, 'lockedButton');
+        playerSurrender.scale = 2;
+        surrenderText = this.add.text(748, 830, "Surrender", textStyle);
+
+        playerInsurance = this.add.sprite(1000, 845, 'lockedButton');
+        playerInsurance.scale = 2;
+        insuranceText = this.add.text(948, 830, "Insurance", textStyle);
+
+        playerSplit = this.add.sprite(1200, 845, 'lockedButton');
         playerSplit.scale = 2;
-        splitText = this.add.text(975, 830, "Split", textStyle);
+        splitText = this.add.text(1178, 830, "Split", textStyle);
 
         // places gambling warning
         //let gamblingWarning = this.add.graphics();
@@ -2679,6 +2861,7 @@ class GameScene extends Phaser.Scene {
                 this.scene.hitCard(cardInts[cardIndex], shuffledDeck, playerCards[currentPlayer].length-1, currentPlayer, this);
                 cardIndex++;
 
+                this.scene.disableSurrenderButton();
                 // playerCards[currentPlayer][playerCards[currentPlayer].length + 1]
                 // to dynamically hit cards
 
@@ -2692,6 +2875,7 @@ class GameScene extends Phaser.Scene {
                             player1TurnIndicator.fillColor = 0xFFFFFF;
                             player2TurnIndicator.fillColor = 0x8E1600;
                             currentPlayer = currentPlayer + 1;
+                            this.scene.enableSurrenderButton();
                         }
                         else
                         {
@@ -2704,6 +2888,8 @@ class GameScene extends Phaser.Scene {
                             cardIndex = cardIndex + dealerCards.length - 2;
                             this.scene.isWinOrLoss();
                             this.scene.disableActionButtons();
+                            this.scene.disableInsuranceButton();
+                            this.scene.disableSplitButton();
                         }
                     }
                     else if (currentPlayer == 1)
@@ -2713,6 +2899,7 @@ class GameScene extends Phaser.Scene {
                             player2TurnIndicator.fillColor = 0xFFFFFF;
                             player3TurnIndicator.fillColor = 0x8E1600;
                             currentPlayer = currentPlayer + 1;
+                            this.scene.enableSurrenderButton();
                         }
                         else
                         {
@@ -2725,6 +2912,8 @@ class GameScene extends Phaser.Scene {
                             cardIndex = cardIndex + dealerCards.length - 2;
                             this.scene.isWinOrLoss();
                             this.scene.disableActionButtons();
+                            this.scene.disableInsuranceButton();
+                            this.scene.disableSplitButton();
                         }
                     }
                     else if (currentPlayer == 2)
@@ -2742,6 +2931,8 @@ class GameScene extends Phaser.Scene {
                         cardIndex = cardIndex + dealerCards.length - 2;
                         this.scene.isWinOrLoss();
                         this.scene.disableActionButtons();
+                        this.scene.disableInsuranceButton();
+                        this.scene.disableSplitButton();
                     }
                 }
 
@@ -2848,6 +3039,7 @@ class GameScene extends Phaser.Scene {
                         player1TurnIndicator.fillColor = 0xFFFFFF;
                         player2TurnIndicator.fillColor = 0x8E1600;
                         currentPlayer = currentPlayer + 1;
+                        this.scene.enableSurrenderButton();
                     }
                     else
                     {
@@ -2860,6 +3052,8 @@ class GameScene extends Phaser.Scene {
                         cardIndex = cardIndex + dealerCards.length - 2;
                         this.scene.isWinOrLoss();
                         this.scene.disableActionButtons();
+                        this.scene.disableInsuranceButton();
+                        this.scene.disableSplitButton();
                     }
                 }
                 else if (currentPlayer == 1)
@@ -2947,6 +3141,7 @@ class GameScene extends Phaser.Scene {
                         player2TurnIndicator.fillColor = 0xFFFFFF;
                         player3TurnIndicator.fillColor = 0x8E1600;
                         currentPlayer = currentPlayer + 1;
+                        this.scene.enableSurrenderButton();
                     }
                     else
                     {
@@ -2959,6 +3154,8 @@ class GameScene extends Phaser.Scene {
                         cardIndex = cardIndex + dealerCards.length - 2;
                         this.scene.isWinOrLoss();
                         this.scene.disableActionButtons();
+                        this.scene.disableInsuranceButton();
+                        this.scene.disableSplitButton();
                     }
                 }
                 else if (currentPlayer == 2)
@@ -3054,6 +3251,8 @@ class GameScene extends Phaser.Scene {
                     cardIndex = cardIndex + dealerCards.length - 2;
                     this.scene.isWinOrLoss();
                     this.scene.disableActionButtons();
+                    this.scene.disableInsuranceButton();
+                    this.scene.disableSplitButton();
                 }
 
             }
@@ -3071,6 +3270,7 @@ class GameScene extends Phaser.Scene {
                     player1TurnIndicator.fillColor = 0xFFFFFF;
                     player2TurnIndicator.fillColor = 0x8E1600;
                     currentPlayer = currentPlayer + 1;
+                    this.scene.enableSurrenderButton();
                 }
                 else
                 {
@@ -3083,6 +3283,8 @@ class GameScene extends Phaser.Scene {
                     cardIndex = cardIndex + dealerCards.length - 2;
                     this.scene.isWinOrLoss();
                     this.scene.disableActionButtons();
+                    this.scene.disableInsuranceButton();
+                    this.scene.disableSplitButton();
                 }
             }
             else if (currentPlayer == 1)
@@ -3092,6 +3294,7 @@ class GameScene extends Phaser.Scene {
                     player2TurnIndicator.fillColor = 0xFFFFFF;
                     player3TurnIndicator.fillColor = 0x8E1600;
                     currentPlayer = currentPlayer + 1;
+                    this.scene.enableSurrenderButton();
                 }
                 else
                 {
@@ -3106,6 +3309,8 @@ class GameScene extends Phaser.Scene {
                     cardIndex = cardIndex + dealerCards.length - 2;
                     this.scene.isWinOrLoss();
                     this.scene.disableActionButtons();
+                    this.scene.disableInsuranceButton();
+                    this.scene.disableSplitButton();
                 }
             }
             else if (currentPlayer == 2)
@@ -3121,7 +3326,116 @@ class GameScene extends Phaser.Scene {
                 cardIndex = cardIndex + dealerCards.length - 2;
                 this.scene.isWinOrLoss();
                 this.scene.disableActionButtons();
+                this.scene.disableInsuranceButton();
+                this.scene.disableSplitButton();
             }
+        });
+
+        // player chooses to surrender
+        playerSurrender.on('pointerdown', function(){
+
+            playerSurrender.setTexture('clickedButton');
+
+            if (currentPlayer == 0)
+            {
+                if (numPlayers != 1)
+                {
+                    playerCurrency = playerCurrency + (.5 * player1Bet);
+                    didPlayersSurrender[0] = 1;
+                    player1CardDisplay.setTint(0xFFA500);
+                    updateInfo();
+                    player1TurnIndicator.fillColor = 0xFFFFFF;
+                    player2TurnIndicator.fillColor = 0x8E1600;
+                    currentPlayer = currentPlayer + 1;
+                }
+                else
+                {
+                    playerCurrency = playerCurrency + (.5 * player1Bet);
+                    didPlayersSurrender[0] = 1;
+                    player1CardDisplay.setTint(0xFFA500);
+                    updateInfo();
+                    // plus more stuff since if its the last player
+                    dealerCard.visible = false;
+                    shuffledDeck[cardInts[dealerIndex]].setDepth(1);
+                    this.scene.revealDealerInfo(dealerCards);
+                    // dealer needs to draw to 16, and stand on 17
+                    this.scene.drawDealerCards(dealerCards, cardIndex, cardInts, dealerCards.length);
+                    cardIndex = cardIndex + dealerCards.length - 2;
+                    this.scene.isWinOrLoss();
+                    this.scene.disableActionButtons();
+                    this.scene.disableInsuranceButton();
+                    this.scene.disableSplitButton();
+                }
+            }
+            else if (currentPlayer == 1)
+            {
+                if (numPlayers != 2)
+                {
+                    playerCurrency = playerCurrency + (.5 * player2Bet);
+                    didPlayersSurrender[1] = 1;
+                    player2CardDisplay.setTint(0xFFA500);
+                    updateInfo();
+                    player2TurnIndicator.fillColor = 0xFFFFFF;
+                    player3TurnIndicator.fillColor = 0x8E1600;
+                    currentPlayer = currentPlayer + 1;
+                }
+                else
+                {
+                    playerCurrency = playerCurrency + (.5 * player2Bet);
+                    didPlayersSurrender[1] = 1;
+                    player2CardDisplay.setTint(0xFFA500);
+                    updateInfo();
+                    player2TurnIndicator.fillColor = 0xFFFFFF;
+                    player1TurnIndicator.fillColor = 0x8E1600;
+                    currentPlayer = 0;
+                    dealerCard.visible = false;
+                    shuffledDeck[cardInts[dealerIndex]].setDepth(1);
+                    this.scene.revealDealerInfo(dealerCards);
+                    // dealer needs to draw to 16, and stand on 17
+                    this.scene.drawDealerCards(dealerCards, cardIndex, cardInts, dealerCards.length);
+                    cardIndex = cardIndex + dealerCards.length - 2;
+                    this.scene.isWinOrLoss();
+                    this.scene.disableActionButtons();
+                    this.scene.disableInsuranceButton();
+                    this.scene.disableSplitButton();
+                }
+            }
+            else if (currentPlayer == 2)
+            {
+                playerCurrency = playerCurrency + (.5 * player3Bet);
+                didPlayersSurrender[2] = 1;
+                player3CardDisplay.setTint(0xFFA500);
+                updateInfo();
+                player3TurnIndicator.fillColor = 0xFFFFFF;
+                player1TurnIndicator.fillColor = 0x8E1600;
+                currentPlayer = 0;
+                dealerCard.visible = false;
+                shuffledDeck[cardInts[dealerIndex]].setDepth(1);
+                this.scene.revealDealerInfo(dealerCards);
+                // dealer needs to draw to 16, and stand on 17
+                this.scene.drawDealerCards(dealerCards, cardIndex, cardInts, dealerCards.length);
+                cardIndex = cardIndex + dealerCards.length - 2;
+                this.scene.isWinOrLoss();
+                this.scene.disableActionButtons();
+                this.scene.disableInsuranceButton();
+                this.scene.disableSplitButton();
+            }
+
+        });
+
+        // player chooses insurance
+        playerInsurance.on('pointerdown', function(){
+
+            playerInsurance.setTexture('clickedButton');
+
+
+
+
+
+
+
+
+
         });
 
         nextRoundButton.on('pointerdown', function(){
