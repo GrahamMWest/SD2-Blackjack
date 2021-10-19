@@ -902,7 +902,7 @@ class GameScene extends Phaser.Scene {
             playerInsurance.setTexture('lockedButton');
         })
 
-        playerSurrender.on('pointerout', function(){
+        playerInsurance.on('pointerout', function(){
             playerInsurance.setTexture('lockedButton');
         })
 
