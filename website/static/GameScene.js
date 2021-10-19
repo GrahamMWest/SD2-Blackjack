@@ -1256,7 +1256,7 @@ class GameScene extends Phaser.Scene {
             // deals to the dealer
             dealerCards[i] = (this.getValue(cardInts, cardIndex));
 
-            console.log(dealerCards[i]);
+            // console.log(dealerCards[i]);
             if (i == 0)
             {
                 this.dealCard(cardInts[cardIndex], shuffledDeck, timeline, i, 3, 1, dealerCard);
