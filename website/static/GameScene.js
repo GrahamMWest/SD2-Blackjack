@@ -120,24 +120,33 @@ let nextBettorButton;
 
 
 //TODO:
-// add a points function
-// update user points
-// add splits :(
+// add splits
+
+// space out player displays more (to account for possible splits)
+// make suggestion displays on the right side (same y-level as corresponding player displays), also
+// show "Correct" or "Incorrect" for the users actions, as well as how much each hand profited/lost that round
+// add surrender and insurance actions to basic strategy point chart
 
 // make warning to user that they cant play if they dont have minbet * numplayers amount of currency
 // write profit/loss from each hand for each round in bottom right
 
 // (WHAT GRAHAM SHOULD BE DOING)
-// get user info
+// get email auth and password reset working (including the drop down)
+// add new columns to database (isAuthenticated, acceptedDisclaimer, didTutorial)
+// change currency column in database to float if it isnt already
+// send user info to GameScene.js (username, currency, points)
 // update user currencies in iswinorloss function (database wise)
-// give users 500 currency a day
+// give all authenticated users 500 currency a day
 
 
+// iron out kinks in the account creation and login process
+//    * when logging in, should say "login failed" rather than specifying username or password being bad
+//    * check for valid date when creating account
+// make a gambling disclaimer (show example pic)
+// fix up navbar (make bigger and bold the current users page)
 
-// BUGS:
-// when logging in, should say "login failed" rather than specifying username or password being bad
-// check for valid date when creating account
 
+// BUGS/TESTING:
 
 
 // make setting sliders
@@ -797,7 +806,737 @@ class GameScene extends Phaser.Scene {
             playerCurrency = playerCurrency + (3 * player3InsuranceBet);
         }
 
+
         currencyScoreBoard.setText("Currency: $" + playerCurrency);
+    };
+
+    // pass true count, can split or not
+    baseGameBasicStrategy(currentPlayer, action) {
+
+        // soft = has ace
+        var isSoft = 0;
+
+        var isPair = 0;
+
+        // action should be: Hit, Double, Stand, Surrender, Insurance, or Split
+
+        for (let i = 0; i < playerCards[currentPlayer].length; i++)
+            if (playerCards[currentPlayer][i] === "A")
+                isSoft = 1;
+
+        if (playerCards[currentPlayer][0] === playerCards[currentPlayer][1] && playerCards[currentPlayer].length == 2)
+            isPair = 1;
+
+        if (isPair == 1)
+        {
+            // covers pairs of 2's
+            if (playerCards[currentPlayer][0] === "2" && dealerCards[1] === "2" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "2" && dealerCards[1] === "3" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "2" && dealerCards[1] === "4" && action === "Split")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "2" && dealerCards[1] === "5" && action === "Split")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "2" && dealerCards[1] === "6" && action === "Split")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "2" && dealerCards[1] === "7" && action === "Split")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "2" && dealerCards[1] === "8" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "2" && dealerCards[1] === "9" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "2" && dealerCards[1] === "10" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "2" && dealerCards[1] === "J" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "2" && dealerCards[1] === "Q" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "2" && dealerCards[1] === "K" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "2" && dealerCards[1] === "A" && action === "Hit")
+                playerPoints = playerPoints + 1;
+
+
+            // covers pairs of 3's
+            else if (playerCards[currentPlayer][0] === "3" && dealerCards[1] === "2" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "3" && dealerCards[1] === "3" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "3" && dealerCards[1] === "4" && action === "Split")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "3" && dealerCards[1] === "5" && action === "Split")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "3" && dealerCards[1] === "6" && action === "Split")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "3" && dealerCards[1] === "7" && action === "Split")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "3" && dealerCards[1] === "8" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "3" && dealerCards[1] === "9" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "3" && dealerCards[1] === "10" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "3" && dealerCards[1] === "J" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "3" && dealerCards[1] === "Q" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "3" && dealerCards[1] === "K" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "3" && dealerCards[1] === "A" && action === "Hit")
+                playerPoints = playerPoints + 1;
+
+
+            // covers pairs of 4's
+            else if (playerCards[currentPlayer][0] === "4" && dealerCards[1] === "2" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "4" && dealerCards[1] === "3" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "4" && dealerCards[1] === "4" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "4" && dealerCards[1] === "5" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "4" && dealerCards[1] === "6" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "4" && dealerCards[1] === "7" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "4" && dealerCards[1] === "8" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "4" && dealerCards[1] === "9" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "4" && dealerCards[1] === "10" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "4" && dealerCards[1] === "J" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "4" && dealerCards[1] === "Q" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "4" && dealerCards[1] === "K" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "4" && dealerCards[1] === "A" && action === "Hit")
+                playerPoints = playerPoints + 1;
+
+
+            // covers pairs of 5's
+            else if (playerCards[currentPlayer][0] === "5" && dealerCards[1] === "2" && action === "Double")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "5" && dealerCards[1] === "3" && action === "Double")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "5" && dealerCards[1] === "4" && action === "Double")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "5" && dealerCards[1] === "5" && action === "Double")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "5" && dealerCards[1] === "6" && action === "Double")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "5" && dealerCards[1] === "7" && action === "Double")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "5" && dealerCards[1] === "8" && action === "Double")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "5" && dealerCards[1] === "9" && action === "Double")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "5" && dealerCards[1] === "10" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "5" && dealerCards[1] === "J" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "5" && dealerCards[1] === "Q" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "5" && dealerCards[1] === "K" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "5" && dealerCards[1] === "A" && action === "Hit")
+                playerPoints = playerPoints + 1;
+
+
+            // covers pairs of 6's
+            else if (playerCards[currentPlayer][0] === "6" && dealerCards[1] === "2" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "6" && dealerCards[1] === "3" && action === "Split")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "6" && dealerCards[1] === "4" && action === "Split")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "6" && dealerCards[1] === "5" && action === "Split")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "6" && dealerCards[1] === "6" && action === "Split")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "6" && dealerCards[1] === "7" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "6" && dealerCards[1] === "8" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "6" && dealerCards[1] === "9" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "6" && dealerCards[1] === "10" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "6" && dealerCards[1] === "J" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "6" && dealerCards[1] === "Q" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "6" && dealerCards[1] === "K" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "6" && dealerCards[1] === "A" && action === "Hit")
+                playerPoints = playerPoints + 1;
+
+
+            // covers pairs of 7's
+            else if (playerCards[currentPlayer][0] === "7" && dealerCards[1] === "2" && action === "Split")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "7" && dealerCards[1] === "3" && action === "Split")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "7" && dealerCards[1] === "4" && action === "Split")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "7" && dealerCards[1] === "5" && action === "Split")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "7" && dealerCards[1] === "6" && action === "Split")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "7" && dealerCards[1] === "7" && action === "Split")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "7" && dealerCards[1] === "8" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "7" && dealerCards[1] === "9" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "7" && dealerCards[1] === "10" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "7" && dealerCards[1] === "J" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "7" && dealerCards[1] === "Q" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "7" && dealerCards[1] === "K" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "7" && dealerCards[1] === "A" && action === "Hit")
+                playerPoints = playerPoints + 1;
+
+
+            // covers pairs of 8's (always split)
+            else if (playerCards[currentPlayer][0] === "8" && action === "Split")
+                playerPoints = playerPoints + 1;
+
+
+            // covers pairs of 9's
+            else if (playerCards[currentPlayer][0] === "9" && dealerCards[1] === "2" && action === "Split")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "9" && dealerCards[1] === "3" && action === "Split")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "9" && dealerCards[1] === "4" && action === "Split")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "9" && dealerCards[1] === "5" && action === "Split")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "9" && dealerCards[1] === "6" && action === "Split")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "9" && dealerCards[1] === "7" && action === "Stand")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "9" && dealerCards[1] === "8" && action === "Split")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "9" && dealerCards[1] === "9" && action === "Split")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "9" && dealerCards[1] === "10" && action === "Stand")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "9" && dealerCards[1] === "J" && action === "Stand")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "9" && dealerCards[1] === "Q" && action === "Stand")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "9" && dealerCards[1] === "K" && action === "Stand")
+                playerPoints = playerPoints + 1;
+            else if (playerCards[currentPlayer][0] === "9" && dealerCards[1] === "A" && action === "Stand")
+                playerPoints = playerPoints + 1;
+
+
+            // covers pairs of 10's (or equivalent) (always stand)
+            else if ((playerCards[currentPlayer][0] === "10" || playerCards[currentPlayer][0] === "J" ||
+                playerCards[currentPlayer][0] === "Q" || playerCards[currentPlayer][0] === "K") && action === "Stand")
+                playerPoints = playerPoints + 1;
+
+
+
+            // covers pairs of A's (always split)
+            else if (playerCards[currentPlayer][0] === "A" && action === "Split")
+                playerPoints = playerPoints + 1;
+
+            else
+                playerPoints = playerPoints - 1;
+
+        }
+        else if (isSoft == 1)
+        {
+            // soft 12's (always hit)
+            if (this.getHandValue(playerCards[currentPlayer]) == 12 && action === "Hit")
+                playerPoints = playerPoints + 1;
+            
+
+            // soft 13's
+            else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "2" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "3" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "4" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "5" && action === "Double")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "6" && action === "Double")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "7" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "8" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "9" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "10" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "J" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "Q" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "K" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "A" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            
+
+            // soft 14's
+            else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "2" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "3" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "4" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "5" && action === "Double")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "6" && action === "Double")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "7" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "8" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "9" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "10" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "J" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "Q" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "K" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "A" && action === "Hit")
+                playerPoints = playerPoints + 1;
+
+
+
+            // soft 15's
+            else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "2" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "3" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "4" && action === "Double")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "5" && action === "Double")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "6" && action === "Double")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "7" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "8" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "9" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "10" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "J" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "Q" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "K" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "A" && action === "Hit")
+                playerPoints = playerPoints + 1;
+
+
+            // soft 16's
+            else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "2" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "3" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "4" && action === "Double")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "5" && action === "Double")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "6" && action === "Double")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "7" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "8" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "9" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "10" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "J" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "Q" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "K" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "A" && action === "Hit")
+                playerPoints = playerPoints + 1;
+
+
+            // soft 17's
+            else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "2" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "3" && action === "Double")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "4" && action === "Double")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "5" && action === "Double")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "6" && action === "Double")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "7" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "8" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "9" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "10" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "J" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "Q" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "K" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "A" && action === "Hit")
+                playerPoints = playerPoints + 1;
+
+
+            // soft 18's
+            else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "2" && action === "Stand")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "3" && action === "Double")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "4" && action === "Double")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "5" && action === "Double")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "6" && action === "Double")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "7" && action === "Stand")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "8" && action === "Stand")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "9" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "10" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "J" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "Q" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "K" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "A" && action === "Hit")
+                playerPoints = playerPoints + 1;
+
+
+            // soft 19's (always stand)
+            else if (this.getHandValue(playerCards[currentPlayer]) == 19 && action === "Stand")
+                playerPoints = playerPoints + 1;
+
+
+            // soft 20's (always stand)
+            else if (this.getHandValue(playerCards[currentPlayer]) == 20 && action === "Stand")
+                playerPoints = playerPoints + 1;
+
+
+            // soft 21's (always stand (BJ))
+            else if (this.getHandValue(playerCards[currentPlayer]) == 21 && action === "Stand")
+                playerPoints = playerPoints + 1;
+
+            else
+                playerPoints = playerPoints - 1;
+        }
+        else
+        {
+            // idk if hard 4's are possible
+
+
+            // hard 5's (always hit)
+            if (this.getHandValue(playerCards[currentPlayer]) == 5 && action === "Hit")
+                playerPoints = playerPoints + 1;
+
+            // hard 6's (always hit)
+            else if (this.getHandValue(playerCards[currentPlayer]) == 6 && action === "Hit")
+                playerPoints = playerPoints + 1;
+
+
+            // hard 7's (always hit)
+            else if (this.getHandValue(playerCards[currentPlayer]) == 7 && action === "Hit")
+                playerPoints = playerPoints + 1;
+
+
+            // hard 8's (always hit)
+            else if (this.getHandValue(playerCards[currentPlayer]) == 8 && action === "Hit")
+                playerPoints = playerPoints + 1;
+  
+
+            // hard 9's
+            else if (this.getHandValue(playerCards[currentPlayer]) == 9 && dealerCards[1] === "2" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 9 && dealerCards[1] === "3" && action === "Double")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 9 && dealerCards[1] === "4" && action === "Double")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 9 && dealerCards[1] === "5" && action === "Double")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 9 && dealerCards[1] === "6" && action === "Double")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 9 && dealerCards[1] === "7" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 9 && dealerCards[1] === "8" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 9 && dealerCards[1] === "9" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 9 && dealerCards[1] === "10" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 9 && dealerCards[1] === "J" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 9 && dealerCards[1] === "Q" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 9 && dealerCards[1] === "K" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 9 && dealerCards[1] === "A" && action === "Hit")
+                playerPoints = playerPoints + 1;
+
+
+            // hard 10's
+            else if (this.getHandValue(playerCards[currentPlayer]) == 10 && dealerCards[1] === "2" && action === "Double")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 10 && dealerCards[1] === "3" && action === "Double")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 10 && dealerCards[1] === "4" && action === "Double")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 10 && dealerCards[1] === "5" && action === "Double")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 10 && dealerCards[1] === "6" && action === "Double")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 10 && dealerCards[1] === "7" && action === "Double")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 10 && dealerCards[1] === "8" && action === "Double")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 10 && dealerCards[1] === "9" && action === "Double")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 10 && dealerCards[1] === "10" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 10 && dealerCards[1] === "J" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 10 && dealerCards[1] === "Q" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 10 && dealerCards[1] === "K" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 10 && dealerCards[1] === "A" && action === "Hit")
+                playerPoints = playerPoints + 1;
+
+
+            // hard 11's
+            else if (this.getHandValue(playerCards[currentPlayer]) == 11 && dealerCards[1] === "2" && action === "Double")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 11 && dealerCards[1] === "3" && action === "Double")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 11 && dealerCards[1] === "4" && action === "Double")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 11 && dealerCards[1] === "5" && action === "Double")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 11 && dealerCards[1] === "6" && action === "Double")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 11 && dealerCards[1] === "7" && action === "Double")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 11 && dealerCards[1] === "8" && action === "Double")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 11 && dealerCards[1] === "9" && action === "Double")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 11 && dealerCards[1] === "10" && action === "Double")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 11 && dealerCards[1] === "J" && action === "Double")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 11 && dealerCards[1] === "Q" && action === "Double")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 11 && dealerCards[1] === "K" && action === "Double")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 11 && dealerCards[1] === "A" && action === "Hit")
+                playerPoints = playerPoints + 1;
+
+
+            // hard 12's
+            else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "2" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "3" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else  if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "4" && action === "Stand")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "5" && action === "Stand")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "6" && action === "Stand")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "7" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "8" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "9" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "10" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "J" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "Q" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "K" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "A" && action === "Hit")
+                playerPoints = playerPoints + 1;
+
+
+            // hard 13's
+            else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "2" && action === "Stand")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "3" && action === "Stand")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "4" && action === "Stand")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "5" && action === "Stand")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "6" && action === "Stand")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "7" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "8" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "9" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "10" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "J" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "Q" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "K" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "A" && action === "Hit")
+                playerPoints = playerPoints + 1;
+
+
+            // hard 14's
+            else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "2" && action === "Stand")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "3" && action === "Stand")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "4" && action === "Stand")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "5" && action === "Stand")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "6" && action === "Stand")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "7" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "8" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "9" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "10" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "J" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "Q" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "K" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "A" && action === "Hit")
+                playerPoints = playerPoints + 1;
+
+
+            // hard 15's
+            else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "2" && action === "Stand")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "3" && action === "Stand")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "4" && action === "Stand")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "5" && action === "Stand")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "6" && action === "Stand")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "7" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "8" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "9" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "10" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "J" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "Q" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "K" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "A" && action === "Hit")
+                playerPoints = playerPoints + 1;
+
+
+            // hard 16's
+            else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "2" && action === "Stand")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "3" && action === "Stand")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "4" && action === "Stand")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "5" && action === "Stand")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "6" && action === "Stand")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "7" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "8" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "9" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "10" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "J" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "Q" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "K" && action === "Hit")
+                playerPoints = playerPoints + 1;
+            else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "A" && action === "Hit")
+                playerPoints = playerPoints + 1;
+
+
+            // hard 17's (always stand)
+            else if (this.getHandValue(playerCards[currentPlayer]) == 17 && action === "Stand")
+                playerPoints = playerPoints + 1;
+
+
+            // hard 18's (always stand)
+            else if (this.getHandValue(playerCards[currentPlayer]) == 18 && action === "Stand")
+                playerPoints = playerPoints + 1;
+
+
+            // hard 19's (always stand)
+            else if (this.getHandValue(playerCards[currentPlayer]) == 19 && action === "Stand")
+                playerPoints = playerPoints + 1;
+
+
+
+            // hard 20's (always stand)
+            else if (this.getHandValue(playerCards[currentPlayer]) == 20 && action === "Stand")
+                playerPoints = playerPoints + 1;
+
+
+
+            // hard 21's (always stand)
+            else if (this.getHandValue(playerCards[currentPlayer]) == 21 && action === "Stand")
+                playerPoints = playerPoints + 1;
+
+
+            else
+                playerPoints = playerPoints - 1;
+        }
     };
 
     revealDealerInfo(dealerCards) {
@@ -1545,22 +2284,29 @@ class GameScene extends Phaser.Scene {
         pointScoreBoard = this.add.text(1175, 50, "Points: " + playerPoints, {fontSize: '20px', fill: '#fff'});
         runningCountScoreBoard = this.add.text(1175, 75, "Running Count: 0", {fontSize: '20px', fill: '#fff'});
         trueCountScoreBoard = this.add.text(1175, 100, "True Count: 0", {fontSize: '20px', fill: '#fff'});
-        dealerCardDisplay = this.add.text(1175, 125, "Dealer Cards: \n", {fontSize: '20px', fill: '#fff'});
+        // dealerCardDisplay = this.add.text(1175, 125, "Dealer Cards: \n", {fontSize: '20px', fill: '#fff'});
+        dealerCardDisplay = this.add.text(25, 125, "Dealer Cards: \n", {fontSize: '20px', fill: '#fff'});
 
         if (numPlayers == 1)
         {
-            player1CardDisplay = this.add.text(1175, 225, "Player1 Cards: \n", {fontSize: '20px', fill: '#fff'});
+            // player1CardDisplay = this.add.text(1175, 225, "Player1 Cards: \n", {fontSize: '20px', fill: '#fff'});
+            player1CardDisplay = this.add.text(25, 225, "Player1 Cards: \n", {fontSize: '20px', fill: '#fff'});
         }
         else if(numPlayers == 2)
         {
-            player1CardDisplay = this.add.text(1175, 225, "Player1 Cards: \n", {fontSize: '20px', fill: '#fff'});
-            player2CardDisplay = this.add.text(1175, 325, "Player2 Cards: \n", {fontSize: '20px', fill: '#fff'});
+            // player1CardDisplay = this.add.text(1175, 225, "Player1 Cards: \n", {fontSize: '20px', fill: '#fff'});
+            // player2CardDisplay = this.add.text(1175, 325, "Player2 Cards: \n", {fontSize: '20px', fill: '#fff'});
+            player1CardDisplay = this.add.text(25, 225, "Player1 Cards: \n", {fontSize: '20px', fill: '#fff'});
+            player2CardDisplay = this.add.text(25, 325, "Player2 Cards: \n", {fontSize: '20px', fill: '#fff'});
         }
         else if (numPlayers == 3)
         {
-            player1CardDisplay = this.add.text(1175, 225, "Player1 Cards: \n", {fontSize: '20px', fill: '#fff'});
-            player2CardDisplay = this.add.text(1175, 325, "Player2 Cards: \n", {fontSize: '20px', fill: '#fff'});
-            player3CardDisplay = this.add.text(1175, 425, "Player3 Cards: \n", {fontSize: '20px', fill: '#fff'});
+            // player1CardDisplay = this.add.text(1175, 225, "Player1 Cards: \n", {fontSize: '20px', fill: '#fff'});
+            // player2CardDisplay = this.add.text(1175, 325, "Player2 Cards: \n", {fontSize: '20px', fill: '#fff'});
+            // player3CardDisplay = this.add.text(1175, 425, "Player3 Cards: \n", {fontSize: '20px', fill: '#fff'});
+            player1CardDisplay = this.add.text(25, 225, "Player1 Cards: \n", {fontSize: '20px', fill: '#fff'});
+            player2CardDisplay = this.add.text(25, 325, "Player2 Cards: \n", {fontSize: '20px', fill: '#fff'});
+            player3CardDisplay = this.add.text(25, 425, "Player3 Cards: \n", {fontSize: '20px', fill: '#fff'});
         }
 
         // places controlPanel
@@ -3035,6 +3781,8 @@ class GameScene extends Phaser.Scene {
             if(!this.scene.isBust(playerCards[currentPlayer]))
             {
                 playerHit.setTexture('clickedButton');
+                // ADDING THIS NEW LINE RIGHT HERE BELOW THIS COMMENT
+                this.scene.baseGameBasicStrategy(currentPlayer, "Hit");
                 playerCards[currentPlayer][playerCards[currentPlayer].length] = (this.scene.getValue(cardInts, cardIndex, this));
                 this.scene.hitCard(cardInts[cardIndex], shuffledDeck, playerCards[currentPlayer].length-1, currentPlayer, this);
                 cardIndex++;
@@ -3083,7 +3831,7 @@ class GameScene extends Phaser.Scene {
                             else
                                 this.scene.disableDoubleButton();
 
-                            if (playerCurrency >= player2Bet * .5)
+                            if (playerCurrency >= player2Bet * .5 && dealerCards[1] === "A")
                                 this.scene.enableInsuranceButton();
                             else
                                 this.scene.disableInsuranceButton();
@@ -3092,7 +3840,7 @@ class GameScene extends Phaser.Scene {
                         {
                             // plus more stuff since if its the last player
                             dealerCard.visible = false;
-                            shuffledDeck[cardInts[dealerIndex]].setDepth(7);
+                            shuffledDeck[cardInts[dealerIndex]].setDepth(1);
                             this.scene.revealDealerInfo(dealerCards);
                             // dealer needs to draw to 16, and stand on 17
                             this.scene.drawDealerCards(dealerCards, cardIndex, cardInts, dealerCards.length);
@@ -3117,13 +3865,17 @@ class GameScene extends Phaser.Scene {
                             else
                                 this.scene.disableDoubleButton();
 
-                            if (playerCurrency >= player3Bet * .5)
+                            if (playerCurrency >= player3Bet * .5 && dealerCards[1] === "A")
                                 this.scene.enableInsuranceButton();
                             else
                                 this.scene.disableInsuranceButton();
                         }
                         else
                         {
+                            player2TurnIndicator.fillColor = 0xFFFFFF;
+                            player1TurnIndicator.fillColor = 0x8E1600;
+                            currentPlayer = 0;
+
                             // plus more stuff since if its the last player
                             dealerCard.visible = false;
                             shuffledDeck[cardInts[dealerIndex]].setDepth(1);
@@ -3167,6 +3919,8 @@ class GameScene extends Phaser.Scene {
             if(!this.scene.isBust(playerCards[currentPlayer]))
             {
                 playerDouble.setTexture('clickedButton');
+                // ADDING THIS NEW LINE RIGHT HERE BELOW THIS COMMENT
+                this.scene.baseGameBasicStrategy(currentPlayer, "Double");
                 playerCards[currentPlayer][playerCards[currentPlayer].length] = (this.scene.getValue(cardInts, cardIndex, this));
                 this.scene.hitCard(cardInts[cardIndex], shuffledDeck, playerCards[currentPlayer].length-1, currentPlayer, this);
                 cardIndex++;
@@ -3289,7 +4043,7 @@ class GameScene extends Phaser.Scene {
                         else
                             this.scene.disableDoubleButton();
 
-                        if (playerCurrency >= player2Bet * .5)
+                        if (playerCurrency >= player2Bet * .5 && dealerCards[1] === "A")
                             this.scene.enableInsuranceButton();
                         else
                             this.scene.disableInsuranceButton();
@@ -3298,7 +4052,7 @@ class GameScene extends Phaser.Scene {
                     {
                         // plus more stuff since if its the last player
                         dealerCard.visible = false;
-                        shuffledDeck[cardInts[dealerIndex]].setDepth(7);
+                        shuffledDeck[cardInts[dealerIndex]].setDepth(1);
                         this.scene.revealDealerInfo(dealerCards);
                         // dealer needs to draw to 16, and stand on 17
                         this.scene.drawDealerCards(dealerCards, cardIndex, cardInts, dealerCards.length);
@@ -3401,13 +4155,17 @@ class GameScene extends Phaser.Scene {
                         else
                             this.scene.disableDoubleButton();
 
-                        if (playerCurrency >= player3Bet * .5)
+                        if (playerCurrency >= player3Bet * .5 && dealerCards[1] === "A")
                             this.scene.enableInsuranceButton();
                         else
                             this.scene.disableInsuranceButton();
                     }
                     else
                     {
+                        player2TurnIndicator.fillColor = 0xFFFFFF;
+                        player1TurnIndicator.fillColor = 0x8E1600;
+                        currentPlayer = 0;
+
                         // plus more stuff since if its the last player
                         dealerCard.visible = false;
                         shuffledDeck[cardInts[dealerIndex]].setDepth(1);
@@ -3525,6 +4283,9 @@ class GameScene extends Phaser.Scene {
         playerStand.on('pointerdown', function(){
 
             playerStand.setTexture('clickedButton');
+            // ADDING THIS NEW LINE RIGHT HERE BELOW THIS COMMENT
+            this.scene.baseGameBasicStrategy(currentPlayer, "Stand");
+            updateInfo();
 
             if (currentPlayer == 0)
             {
@@ -3540,7 +4301,7 @@ class GameScene extends Phaser.Scene {
                     else
                         this.scene.disableDoubleButton();
 
-                    if (playerCurrency >= player2Bet * .5)
+                    if (playerCurrency >= player2Bet * .5 && dealerCards[1] === "A")
                         this.scene.enableInsuranceButton();
                     else
                         this.scene.disableInsuranceButton();
@@ -3574,7 +4335,7 @@ class GameScene extends Phaser.Scene {
                     else
                         this.scene.disableDoubleButton();
 
-                    if (playerCurrency >= player3Bet * .5)
+                    if (playerCurrency >= player3Bet * .5 && dealerCards[1] === "A")
                         this.scene.enableInsuranceButton();
                     else
                         this.scene.disableInsuranceButton();
@@ -3584,6 +4345,7 @@ class GameScene extends Phaser.Scene {
                     player2TurnIndicator.fillColor = 0xFFFFFF;
                     player1TurnIndicator.fillColor = 0x8E1600;
                     currentPlayer = 0;
+
                     dealerCard.visible = false;
                     shuffledDeck[cardInts[dealerIndex]].setDepth(1);
                     this.scene.revealDealerInfo(dealerCards);
@@ -3636,7 +4398,7 @@ class GameScene extends Phaser.Scene {
                     else
                         this.scene.disableDoubleButton();
 
-                    if (playerCurrency >= player2Bet * .5)
+                    if (playerCurrency >= player2Bet * .5 && dealerCards[1] === "A")
                         this.scene.enableInsuranceButton();
                     else
                         this.scene.disableInsuranceButton();
@@ -3677,7 +4439,7 @@ class GameScene extends Phaser.Scene {
                     else
                         this.scene.disableDoubleButton();
 
-                    if (playerCurrency >= player3Bet * .5)
+                    if (playerCurrency >= player3Bet * .5 && dealerCards[1] === "A")
                         this.scene.enableInsuranceButton();
                     else
                         this.scene.disableInsuranceButton();
