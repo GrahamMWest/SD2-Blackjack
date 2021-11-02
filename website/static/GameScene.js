@@ -1,8 +1,8 @@
 "use strict";
 
-// cards x & y positions 1-5 for players 1-7 + dealer 
-const cardX = [[965, 705, 425, 705], [955, 695, 415, 715], [945, 685, 405, 725], [935, 675, 395, 735], [925, 665, 385, 745], [915, 655, 375, 755]];
-const cardY = [[425, 425, 425, 95], [405, 405, 405, 115], [385, 385, 385, 135], [365, 365, 365, 155], [345, 345, 345, 175], [325, 325, 325, 195]];
+// cards x & y positions 1-6 for players 1-3 + dealer 
+const cardX = [[965, 705, 425, 705], [945, 685, 405, 725], [925, 665, 385, 745], [905, 645, 365, 765], [885, 625, 345, 785], [865, 605, 325, 805]];
+const cardY = [[425, 425, 425, 65], [415, 415, 415, 75], [405, 405, 405, 85], [395, 395, 395, 95], [385, 385, 385, 105], [375, 375, 375, 115]];
 const cardA = [0, 0, 0, 0];
 
 // const cardX = [[965, 705, 428, 705], [950, 685, 405, 725], [925, 660, 385, 745], [910, 640, 365, 765], [895, 620, 345, 785]];
@@ -21,7 +21,8 @@ const spriteValues = [11, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10,
 
 // doesnt handle splits right now
 let playerCards = [[], [], []];
-// displays info on right side
+
+// displays info on left side
 let player1CardDisplay;
 let player2CardDisplay;
 let player3CardDisplay;
@@ -29,6 +30,8 @@ let player3CardDisplay;
 let dealerCards = [];
 let dealerCardDisplay;
 
+
+// displays info on right side
 let currencyScoreBoard;
 let pointScoreBoard;
 let runningCountScoreBoard;
@@ -36,12 +39,13 @@ let runningCount = 0;
 let trueCountScoreBoard;
 let trueCount = 0;
 
-let cardIndex = 0;
 
+
+let cardIndex = 0;
 
 // changeable settings
 let numDecks = 1;
-let numPlayers = 3;
+let numPlayers = 2;
 let deckPen = .1;
 let playerCurrency = 500;
 let playerPoints = 0;
@@ -57,6 +61,7 @@ let dealerCard;
 let dealerIndex
 let deck;
 
+// buttons and GUI
 let whiteChip_1_Button;
 let redChip_5_Button;
 let blueChip_10_Button;
@@ -73,9 +78,9 @@ let player1TurnIndicator;
 let player1ChipXCoords = 965;
 let player2ChipXCoords = 705;
 let player3ChipXCoords = 425;
-let playerChipYCoords = 525;
+let playerChipYCoords = 505;
 
-
+// variables related to betting and chips
 let currentPlayer;
 let currentBet;
 let placeholderBet;
@@ -99,6 +104,7 @@ let placeholderChipArray = [];
 let didPlayersSurrender = [0, 0, 0];
 let isPlayerInsured = [0,0,0];
 
+// actions and displays
 let playerHit;
 let hitText;
 let playerDouble;
@@ -117,6 +123,10 @@ let shuffleAnimation;
 
 let nextRoundButton;
 let nextBettorButton;
+
+// variables used for splits
+let spriteIndex = [[],[],[]];
+let numSplits = [0,0,0];
 
 
 //TODO:
@@ -165,8 +175,10 @@ let gameOptions = {
     cardHeight: 780,
  
     // card scale. 1 = original size, 0.5 half size and so on
-    cardScale: 0.14
+    cardScale: 0.1325
 }
+
+let chipScaling = .055;
 
 let textStyle = {
     font: "normal 24px Arial",
@@ -2156,6 +2168,8 @@ class GameScene extends Phaser.Scene {
                 playerCards[j][i] = (this.getValue(cardInts, cardIndex));
                 this.dealCard(cardInts[cardIndex], shuffledDeck, timeline, i, j, 0, dealerCard);
 
+                spriteIndex[j][i] = shuffledDeck[cardInts[cardIndex]];
+
                 cardIndex++;
             }
 
@@ -2218,6 +2232,11 @@ class GameScene extends Phaser.Scene {
                 this.enableDoubleButton();
             else
                 this.disableDoubleButton();
+
+            if (playerCards[0][0] === playerCards[0][1])
+                this.enableSplitButton();
+            else
+                this.disableSplitButton();
 
         }, this);
 
@@ -2320,11 +2339,11 @@ class GameScene extends Phaser.Scene {
         this.shuffleInts(numDecks);
 
         dealerCard = this.add.image(900, 75, 'face_down_card');
-        dealerCard.scale = .15;
+        dealerCard.scale = .14;
 
         // places deck on table, will get replaced by boot later on
         deck = this.add.image(900, 75, 'face_down_card');
-        deck.scale = .15;
+        deck.scale = .14;
         deck.setDepth(1000000);
 
         // places betting buttons
@@ -2490,7 +2509,7 @@ class GameScene extends Phaser.Scene {
 
         whiteChip_1_Button.on('pointerdown', function(){
 
-            if (!(currentBet + 1 > maxBet) && (playerCurrency - 1 > 0))
+            if (!(currentBet + 1 > maxBet) && ((playerCurrency - 1 > 0 && currentPlayer != numPlayers) || (playerCurrency - 1 >= 0 && currentPlayer + 1 === numPlayers)))
             {
                 currentBet = currentBet + 1;
                 playerCurrency = playerCurrency - 1;
@@ -2498,19 +2517,19 @@ class GameScene extends Phaser.Scene {
                 if (currentPlayer == 0)
                 {
                     player1ChipCount[numChips] = this.scene.add.image(player1ChipXCoords, playerChipYCoords - (numChips * 5), 'chip_1');
-                    player1ChipCount[numChips].scale = .075;
+                    player1ChipCount[numChips].scale = chipScaling;
                     player1ChipCount[numChips].setDepth(100 + numChips);
                 }
                 else if (currentPlayer == 1)
                 {
                     player2ChipCount[numChips] = this.scene.add.image(player2ChipXCoords, playerChipYCoords - (numChips * 5), 'chip_1');
-                    player2ChipCount[numChips].scale = .075;
+                    player2ChipCount[numChips].scale = chipScaling;
                     player2ChipCount[numChips].setDepth(100 + numChips);
                 }
                 else if (currentPlayer == 2)
                 {
                     player3ChipCount[numChips] = this.scene.add.image(player3ChipXCoords, playerChipYCoords - (numChips * 5), 'chip_1');
-                    player3ChipCount[numChips].scale = .075;
+                    player3ChipCount[numChips].scale = chipScaling;
                     player3ChipCount[numChips].setDepth(100 + numChips);
                 }
                 numChips = numChips + 1;
@@ -2535,7 +2554,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 100 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords, playerChipYCoords - (k * 5), 'chip_100');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 100;
 
@@ -2547,7 +2566,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 25 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords, playerChipYCoords - (k * 5), 'chip_25');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 25;
 
@@ -2559,7 +2578,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 10 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords, playerChipYCoords - (k * 5), 'chip_10');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 10;
 
@@ -2571,7 +2590,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 5 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords, playerChipYCoords - (k * 5), 'chip_5');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 5;
 
@@ -2583,7 +2602,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 1 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords, playerChipYCoords - (k * 5), 'chip_1');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 1;
 
@@ -2608,7 +2627,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 100 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords, playerChipYCoords - (k * 5), 'chip_100');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 100;
 
@@ -2620,7 +2639,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 25 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords, playerChipYCoords - (k * 5), 'chip_25');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 25;
 
@@ -2632,7 +2651,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 10 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords, playerChipYCoords - (k * 5), 'chip_10');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 10;
 
@@ -2644,7 +2663,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 5 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords, playerChipYCoords - (k * 5), 'chip_5');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 5;
 
@@ -2656,7 +2675,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 1 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords, playerChipYCoords - (k * 5), 'chip_1');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 1;
 
@@ -2681,7 +2700,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 100 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords, playerChipYCoords - (k * 5), 'chip_100');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 100;
 
@@ -2693,7 +2712,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 25 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords, playerChipYCoords - (k * 5), 'chip_25');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 25;
 
@@ -2705,7 +2724,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 10 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords, playerChipYCoords - (k * 5), 'chip_10');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 10;
 
@@ -2717,7 +2736,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 5 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords, playerChipYCoords - (k * 5), 'chip_5');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 5;
 
@@ -2729,7 +2748,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 1 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords, playerChipYCoords - (k * 5), 'chip_1');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 1;
 
@@ -2749,7 +2768,7 @@ class GameScene extends Phaser.Scene {
 
         redChip_5_Button.on('pointerdown', function(){
 
-            if (!(currentBet + 5 > maxBet) && (playerCurrency - 5 > 0))
+            if (!(currentBet + 5 > maxBet) && ((playerCurrency - 5 > 0 && currentPlayer != numPlayers) || (playerCurrency - 5 >= 0 && currentPlayer + 1 === numPlayers)))
             {
                 currentBet = currentBet + 5;
                 playerCurrency = playerCurrency - 5;
@@ -2757,19 +2776,19 @@ class GameScene extends Phaser.Scene {
                 if (currentPlayer == 0)
                 {
                     player1ChipCount[numChips] = this.scene.add.image(player1ChipXCoords, playerChipYCoords - (numChips * 5), 'chip_5');
-                    player1ChipCount[numChips].scale = .075;
+                    player1ChipCount[numChips].scale = chipScaling;
                     player1ChipCount[numChips].setDepth(100 + numChips);
                 }
                 else if (currentPlayer == 1)
                 {
                     player2ChipCount[numChips] = this.scene.add.image(player2ChipXCoords, playerChipYCoords - (numChips * 5), 'chip_5');
-                    player2ChipCount[numChips].scale = .075;
+                    player2ChipCount[numChips].scale = chipScaling;
                     player2ChipCount[numChips].setDepth(100 + numChips);
                 }
                 else if (currentPlayer == 2)
                 {
                     player3ChipCount[numChips] = this.scene.add.image(player3ChipXCoords, playerChipYCoords - (numChips * 5), 'chip_5');
-                    player3ChipCount[numChips].scale = .075;
+                    player3ChipCount[numChips].scale = chipScaling;
                     player3ChipCount[numChips].setDepth(100 + numChips);
                 }
                 numChips = numChips + 1;
@@ -2792,7 +2811,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 100 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords, playerChipYCoords - (k * 5), 'chip_100');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 100;
 
@@ -2804,7 +2823,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 25 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords, playerChipYCoords - (k * 5), 'chip_25');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 25;
 
@@ -2816,7 +2835,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 10 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords, playerChipYCoords - (k * 5), 'chip_10');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 10;
 
@@ -2828,7 +2847,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 5 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords, playerChipYCoords - (k * 5), 'chip_5');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 5;
 
@@ -2840,7 +2859,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 1 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords, playerChipYCoords - (k * 5), 'chip_1');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 1;
 
@@ -2865,7 +2884,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 100 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords, playerChipYCoords - (k * 5), 'chip_100');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 100;
 
@@ -2877,7 +2896,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 25 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords, playerChipYCoords - (k * 5), 'chip_25');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 25;
 
@@ -2889,7 +2908,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 10 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords, playerChipYCoords - (k * 5), 'chip_10');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 10;
 
@@ -2901,7 +2920,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 5 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords, playerChipYCoords - (k * 5), 'chip_5');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 5;
 
@@ -2913,7 +2932,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 1 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords, playerChipYCoords - (k * 5), 'chip_1');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 1;
 
@@ -2938,7 +2957,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 100 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords, playerChipYCoords - (k * 5), 'chip_100');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 100;
 
@@ -2950,7 +2969,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 25 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords, playerChipYCoords - (k * 5), 'chip_25');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 25;
 
@@ -2962,7 +2981,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 10 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords, playerChipYCoords - (k * 5), 'chip_10');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 10;
 
@@ -2974,7 +2993,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 5 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords, playerChipYCoords - (k * 5), 'chip_5');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 5;
 
@@ -2986,7 +3005,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 1 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords, playerChipYCoords - (k * 5), 'chip_1');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 1;
 
@@ -3006,7 +3025,7 @@ class GameScene extends Phaser.Scene {
 
         blueChip_10_Button.on('pointerdown', function(){
 
-            if (!(currentBet + 10 > maxBet) && (playerCurrency - 10 > 0))
+            if (!(currentBet + 10 > maxBet) && ((playerCurrency - 10 > 0 && currentPlayer != numPlayers) || (playerCurrency - 10 >= 0 && currentPlayer + 1 === numPlayers)))
             {
                 currentBet = currentBet + 10;
                 playerCurrency = playerCurrency - 10;
@@ -3014,19 +3033,19 @@ class GameScene extends Phaser.Scene {
                 if (currentPlayer == 0)
                 {
                     player1ChipCount[numChips] = this.scene.add.image(player1ChipXCoords, playerChipYCoords - (numChips * 5), 'chip_10');
-                    player1ChipCount[numChips].scale = .075;
+                    player1ChipCount[numChips].scale = chipScaling;
                     player1ChipCount[numChips].setDepth(100 + numChips);
                 }
                 else if (currentPlayer == 1)
                 {
                     player2ChipCount[numChips] = this.scene.add.image(player2ChipXCoords, playerChipYCoords - (numChips * 5), 'chip_10');
-                    player2ChipCount[numChips].scale = .075;
+                    player2ChipCount[numChips].scale = chipScaling;
                     player2ChipCount[numChips].setDepth(100 + numChips);
                 }
                 else if (currentPlayer == 2)
                 {
                     player3ChipCount[numChips] = this.scene.add.image(player3ChipXCoords, playerChipYCoords - (numChips * 5), 'chip_10');
-                    player3ChipCount[numChips].scale = .075;
+                    player3ChipCount[numChips].scale = chipScaling;
                     player3ChipCount[numChips].setDepth(100 + numChips);
                 }
                 numChips = numChips + 1;
@@ -3049,7 +3068,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 100 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords, playerChipYCoords - (k * 5), 'chip_100');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 100;
 
@@ -3061,7 +3080,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 25 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords, playerChipYCoords - (k * 5), 'chip_25');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 25;
 
@@ -3073,7 +3092,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 10 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords, playerChipYCoords - (k * 5), 'chip_10');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 10;
 
@@ -3085,7 +3104,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 5 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords, playerChipYCoords - (k * 5), 'chip_5');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 5;
 
@@ -3097,7 +3116,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 1 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords, playerChipYCoords - (k * 5), 'chip_1');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 1;
 
@@ -3122,7 +3141,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 100 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords, playerChipYCoords - (k * 5), 'chip_100');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 100;
 
@@ -3134,7 +3153,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 25 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords, playerChipYCoords - (k * 5), 'chip_25');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 25;
 
@@ -3146,7 +3165,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 10 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords, playerChipYCoords - (k * 5), 'chip_10');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 10;
 
@@ -3158,7 +3177,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 5 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords, playerChipYCoords - (k * 5), 'chip_5');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 5;
 
@@ -3170,7 +3189,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 1 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords, playerChipYCoords - (k * 5), 'chip_1');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 1;
 
@@ -3195,7 +3214,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 100 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords, playerChipYCoords - (k * 5), 'chip_100');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 100;
 
@@ -3207,7 +3226,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 25 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords, playerChipYCoords - (k * 5), 'chip_25');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 25;
 
@@ -3219,7 +3238,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 10 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords, playerChipYCoords - (k * 5), 'chip_10');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 10;
 
@@ -3231,7 +3250,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 5 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords, playerChipYCoords - (k * 5), 'chip_5');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 5;
 
@@ -3243,7 +3262,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 1 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords, playerChipYCoords - (k * 5), 'chip_1');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 1;
 
@@ -3263,7 +3282,7 @@ class GameScene extends Phaser.Scene {
 
         greenChip_25_Button.on('pointerdown', function(){
 
-            if (!(currentBet + 25 > maxBet) && (playerCurrency - 25 > 0))
+            if (!(currentBet + 25 > maxBet) && ((playerCurrency - 25 > 0 && currentPlayer != numPlayers) || (playerCurrency - 25 >= 0 && currentPlayer + 1 === numPlayers)))
             {
                 currentBet = currentBet + 25;
                 playerCurrency = playerCurrency - 25;
@@ -3271,19 +3290,19 @@ class GameScene extends Phaser.Scene {
                 if (currentPlayer == 0)
                 {
                     player1ChipCount[numChips] = this.scene.add.image(player1ChipXCoords, playerChipYCoords - (numChips * 5), 'chip_25');
-                    player1ChipCount[numChips].scale = .075;
+                    player1ChipCount[numChips].scale = chipScaling;
                     player1ChipCount[numChips].setDepth(100 + numChips);
                 }
                 else if (currentPlayer == 1)
                 {
                     player2ChipCount[numChips] = this.scene.add.image(player2ChipXCoords, playerChipYCoords - (numChips * 5), 'chip_25');
-                    player2ChipCount[numChips].scale = .075;
+                    player2ChipCount[numChips].scale = chipScaling;
                     player2ChipCount[numChips].setDepth(100 + numChips);
                 }
                 else if (currentPlayer == 2)
                 {
                     player3ChipCount[numChips] = this.scene.add.image(player3ChipXCoords, playerChipYCoords - (numChips * 5), 'chip_25');
-                    player3ChipCount[numChips].scale = .075;
+                    player3ChipCount[numChips].scale = chipScaling;
                     player3ChipCount[numChips].setDepth(100 + numChips);
                 }
                 numChips = numChips + 1;
@@ -3306,7 +3325,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 100 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords, playerChipYCoords - (k * 5), 'chip_100');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 100;
 
@@ -3318,7 +3337,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 25 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords, playerChipYCoords - (k * 5), 'chip_25');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 25;
 
@@ -3330,7 +3349,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 10 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords, playerChipYCoords - (k * 5), 'chip_10');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 10;
 
@@ -3342,7 +3361,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 5 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords, playerChipYCoords - (k * 5), 'chip_5');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 5;
 
@@ -3354,7 +3373,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 1 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords, playerChipYCoords - (k * 5), 'chip_1');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 1;
 
@@ -3379,7 +3398,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 100 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords, playerChipYCoords - (k * 5), 'chip_100');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 100;
 
@@ -3391,7 +3410,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 25 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords, playerChipYCoords - (k * 5), 'chip_25');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 25;
 
@@ -3403,7 +3422,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 10 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords, playerChipYCoords - (k * 5), 'chip_10');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 10;
 
@@ -3415,7 +3434,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 5 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords, playerChipYCoords - (k * 5), 'chip_5');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 5;
 
@@ -3427,7 +3446,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 1 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords, playerChipYCoords - (k * 5), 'chip_1');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 1;
 
@@ -3452,7 +3471,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 100 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords, playerChipYCoords - (k * 5), 'chip_100');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 100;
 
@@ -3464,7 +3483,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 25 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords, playerChipYCoords - (k * 5), 'chip_25');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 25;
 
@@ -3476,7 +3495,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 10 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords, playerChipYCoords - (k * 5), 'chip_10');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 10;
 
@@ -3488,7 +3507,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 5 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords, playerChipYCoords - (k * 5), 'chip_5');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 5;
 
@@ -3500,7 +3519,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 1 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords, playerChipYCoords - (k * 5), 'chip_1');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 1;
 
@@ -3520,7 +3539,7 @@ class GameScene extends Phaser.Scene {
 
         blackChip_100_Button.on('pointerdown', function(){
 
-            if (!(currentBet + 100 > maxBet) && (playerCurrency - 100 > 0))
+            if (!(currentBet + 100 > maxBet) && ((playerCurrency - 100 > 0 && currentPlayer != numPlayers) || (playerCurrency - 100 >= 0 && currentPlayer + 1 === numPlayers)))
             {
                 currentBet = currentBet + 100;
                 playerCurrency = playerCurrency - 100;
@@ -3528,19 +3547,19 @@ class GameScene extends Phaser.Scene {
                 if (currentPlayer == 0)
                 {
                     player1ChipCount[numChips] = this.scene.add.image(player1ChipXCoords, playerChipYCoords - (numChips * 5), 'chip_100');
-                    player1ChipCount[numChips].scale = .075;
+                    player1ChipCount[numChips].scale = chipScaling;
                     player1ChipCount[numChips].setDepth(100 + numChips);
                 }
                 else if (currentPlayer == 1)
                 {
                     player2ChipCount[numChips] = this.scene.add.image(player2ChipXCoords, playerChipYCoords - (numChips * 5), 'chip_100');
-                    player2ChipCount[numChips].scale = .075;
+                    player2ChipCount[numChips].scale = chipScaling;
                     player2ChipCount[numChips].setDepth(100 + numChips);
                 }
                 else if (currentPlayer == 2)
                 {
                     player3ChipCount[numChips] = this.scene.add.image(player3ChipXCoords, playerChipYCoords - (numChips * 5), 'chip_100');
-                    player3ChipCount[numChips].scale = .075;
+                    player3ChipCount[numChips].scale = chipScaling;
                     player3ChipCount[numChips].setDepth(100 + numChips);
                 }
                 numChips = numChips + 1;
@@ -3563,7 +3582,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 100 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords, playerChipYCoords - (k * 5), 'chip_100');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 100;
 
@@ -3575,7 +3594,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 25 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords, playerChipYCoords - (k * 5), 'chip_25');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 25;
 
@@ -3587,7 +3606,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 10 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords, playerChipYCoords - (k * 5), 'chip_10');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 10;
 
@@ -3599,7 +3618,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 5 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords, playerChipYCoords - (k * 5), 'chip_5');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 5;
 
@@ -3611,7 +3630,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 1 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords, playerChipYCoords - (k * 5), 'chip_1');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 1;
 
@@ -3636,7 +3655,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 100 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords, playerChipYCoords - (k * 5), 'chip_100');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 100;
 
@@ -3648,7 +3667,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 25 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords, playerChipYCoords - (k * 5), 'chip_25');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 25;
 
@@ -3660,7 +3679,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 10 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords, playerChipYCoords - (k * 5), 'chip_10');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 10;
 
@@ -3672,7 +3691,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 5 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords, playerChipYCoords - (k * 5), 'chip_5');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 5;
 
@@ -3684,7 +3703,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 1 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords, playerChipYCoords - (k * 5), 'chip_1');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 1;
 
@@ -3709,7 +3728,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 100 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords, playerChipYCoords - (k * 5), 'chip_100');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 100;
 
@@ -3721,7 +3740,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 25 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords, playerChipYCoords - (k * 5), 'chip_25');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 25;
 
@@ -3733,7 +3752,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 10 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords, playerChipYCoords - (k * 5), 'chip_10');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 10;
 
@@ -3745,7 +3764,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 5 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords, playerChipYCoords - (k * 5), 'chip_5');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 5;
 
@@ -3757,7 +3776,7 @@ class GameScene extends Phaser.Scene {
                     while (placeholderBet - 1 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords, playerChipYCoords - (k * 5), 'chip_1');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 1;
 
@@ -3784,6 +3803,7 @@ class GameScene extends Phaser.Scene {
                 // ADDING THIS NEW LINE RIGHT HERE BELOW THIS COMMENT
                 this.scene.baseGameBasicStrategy(currentPlayer, "Hit");
                 playerCards[currentPlayer][playerCards[currentPlayer].length] = (this.scene.getValue(cardInts, cardIndex, this));
+                spriteIndex[currentPlayer][playerCards[currentPlayer].length] = shuffledDeck[cardInts[cardIndex]];
                 this.scene.hitCard(cardInts[cardIndex], shuffledDeck, playerCards[currentPlayer].length-1, currentPlayer, this);
                 cardIndex++;
 
@@ -3835,6 +3855,11 @@ class GameScene extends Phaser.Scene {
                                 this.scene.enableInsuranceButton();
                             else
                                 this.scene.disableInsuranceButton();
+
+                            if (playerCards[1][0] === playerCards[1][1])
+                                this.scene.enableSplitButton();
+                            else
+                                this.scene.disableSplitButton();
                         }
                         else
                         {
@@ -3869,6 +3894,11 @@ class GameScene extends Phaser.Scene {
                                 this.scene.enableInsuranceButton();
                             else
                                 this.scene.disableInsuranceButton();
+
+                            if (playerCards[2][0] === playerCards[2][1])
+                                this.scene.enableSplitButton();
+                            else
+                                this.scene.disableSplitButton();
                         }
                         else
                         {
@@ -3922,6 +3952,7 @@ class GameScene extends Phaser.Scene {
                 // ADDING THIS NEW LINE RIGHT HERE BELOW THIS COMMENT
                 this.scene.baseGameBasicStrategy(currentPlayer, "Double");
                 playerCards[currentPlayer][playerCards[currentPlayer].length] = (this.scene.getValue(cardInts, cardIndex, this));
+                spriteIndex[currentPlayer][playerCards[currentPlayer].length] = shuffledDeck[cardInts[cardIndex]];
                 this.scene.hitCard(cardInts[cardIndex], shuffledDeck, playerCards[currentPlayer].length-1, currentPlayer, this);
                 cardIndex++;
 
@@ -3969,8 +4000,8 @@ class GameScene extends Phaser.Scene {
     
                         while (placeholderBet - 100 >= 0)
                         {
-                            placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords + 75, playerChipYCoords - 25 - (k * 5), 'chip_100');
-                            placeholderChipArray[k].scale = .075;
+                            placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords + 55, playerChipYCoords + 25 - (k * 5), 'chip_100');
+                            placeholderChipArray[k].scale = chipScaling;
                             placeholderChipArray[k].setDepth(100 + k);
                             placeholderBet = placeholderBet - 100;
     
@@ -3981,8 +4012,8 @@ class GameScene extends Phaser.Scene {
     
                         while (placeholderBet - 25 >= 0)
                         {
-                            placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords + 75, playerChipYCoords - 25 - (k * 5), 'chip_25');
-                            placeholderChipArray[k].scale = .075;
+                            placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords + 55, playerChipYCoords + 25 - (k * 5), 'chip_25');
+                            placeholderChipArray[k].scale = chipScaling;
                             placeholderChipArray[k].setDepth(100 + k);
                             placeholderBet = placeholderBet - 25;
     
@@ -3993,8 +4024,8 @@ class GameScene extends Phaser.Scene {
     
                         while (placeholderBet - 10 >= 0)
                         {
-                            placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords + 75, playerChipYCoords - 25 - (k * 5), 'chip_10');
-                            placeholderChipArray[k].scale = .075;
+                            placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords + 55, playerChipYCoords + 25 - (k * 5), 'chip_10');
+                            placeholderChipArray[k].scale = chipScaling;
                             placeholderChipArray[k].setDepth(100 + k);
                             placeholderBet = placeholderBet - 10;
     
@@ -4005,8 +4036,8 @@ class GameScene extends Phaser.Scene {
     
                         while (placeholderBet - 5 >= 0)
                         {
-                            placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords + 75, playerChipYCoords - 25 - (k * 5), 'chip_5');
-                            placeholderChipArray[k].scale = .075;
+                            placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords + 55, playerChipYCoords + 25 - (k * 5), 'chip_5');
+                            placeholderChipArray[k].scale = chipScaling;
                             placeholderChipArray[k].setDepth(100 + k);
                             placeholderBet = placeholderBet - 5;
     
@@ -4017,8 +4048,8 @@ class GameScene extends Phaser.Scene {
     
                         while (placeholderBet - 1 >= 0)
                         {
-                            placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords + 75, playerChipYCoords - 25 - (k * 5), 'chip_1');
-                            placeholderChipArray[k].scale = .075;
+                            placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords + 55, playerChipYCoords + 25 - (k * 5), 'chip_1');
+                            placeholderChipArray[k].scale = chipScaling;
                             placeholderChipArray[k].setDepth(100 + k);
                             placeholderBet = placeholderBet - 1;
     
@@ -4047,6 +4078,11 @@ class GameScene extends Phaser.Scene {
                             this.scene.enableInsuranceButton();
                         else
                             this.scene.disableInsuranceButton();
+
+                        if (playerCards[1][0] === playerCards[1][1])
+                            this.scene.enableSplitButton();
+                        else
+                            this.scene.disableSplitButton();
                     }
                     else
                     {
@@ -4081,8 +4117,8 @@ class GameScene extends Phaser.Scene {
     
                         while (placeholderBet - 100 >= 0)
                         {
-                            placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords + 75, playerChipYCoords - 25 - (k * 5), 'chip_100');
-                            placeholderChipArray[k].scale = .075;
+                            placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords + 55, playerChipYCoords + 25 - (k * 5), 'chip_100');
+                            placeholderChipArray[k].scale = chipScaling;
                             placeholderChipArray[k].setDepth(100 + k);
                             placeholderBet = placeholderBet - 100;
     
@@ -4093,8 +4129,8 @@ class GameScene extends Phaser.Scene {
     
                         while (placeholderBet - 25 >= 0)
                         {
-                            placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords + 75, playerChipYCoords - 25 - (k * 5), 'chip_25');
-                            placeholderChipArray[k].scale = .075;
+                            placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords + 55, playerChipYCoords + 25 - (k * 5), 'chip_25');
+                            placeholderChipArray[k].scale = chipScaling;
                             placeholderChipArray[k].setDepth(100 + k);
                             placeholderBet = placeholderBet - 25;
     
@@ -4105,8 +4141,8 @@ class GameScene extends Phaser.Scene {
     
                         while (placeholderBet - 10 >= 0)
                         {
-                            placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords + 75, playerChipYCoords - 25 - (k * 5), 'chip_10');
-                            placeholderChipArray[k].scale = .075;
+                            placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords + 55, playerChipYCoords + 25 - (k * 5), 'chip_10');
+                            placeholderChipArray[k].scale = chipScaling;
                             placeholderChipArray[k].setDepth(100 + k);
                             placeholderBet = placeholderBet - 10;
     
@@ -4117,8 +4153,8 @@ class GameScene extends Phaser.Scene {
     
                         while (placeholderBet - 5 >= 0)
                         {
-                            placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords + 75, playerChipYCoords - 25 - (k * 5), 'chip_5');
-                            placeholderChipArray[k].scale = .075;
+                            placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords + 55, playerChipYCoords + 25 - (k * 5), 'chip_5');
+                            placeholderChipArray[k].scale = chipScaling;
                             placeholderChipArray[k].setDepth(100 + k);
                             placeholderBet = placeholderBet - 5;
     
@@ -4129,8 +4165,8 @@ class GameScene extends Phaser.Scene {
     
                         while (placeholderBet - 1 >= 0)
                         {
-                            placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords + 75, playerChipYCoords - 25 - (k * 5), 'chip_1');
-                            placeholderChipArray[k].scale = .075;
+                            placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords + 55, playerChipYCoords + 25 - (k * 5), 'chip_1');
+                            placeholderChipArray[k].scale = chipScaling;
                             placeholderChipArray[k].setDepth(100 + k);
                             placeholderBet = placeholderBet - 1;
     
@@ -4159,6 +4195,11 @@ class GameScene extends Phaser.Scene {
                             this.scene.enableInsuranceButton();
                         else
                             this.scene.disableInsuranceButton();
+
+                        if (playerCards[2][0] === playerCards[2][1])
+                            this.scene.enableSplitButton();
+                        else
+                            this.scene.disableSplitButton();
                     }
                     else
                     {
@@ -4197,8 +4238,8 @@ class GameScene extends Phaser.Scene {
     
                         while (placeholderBet - 100 >= 0)
                         {
-                            placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords + 75, playerChipYCoords - 25 - (k * 5), 'chip_100');
-                            placeholderChipArray[k].scale = .075;
+                            placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords + 55, playerChipYCoords + 25 - (k * 5), 'chip_100');
+                            placeholderChipArray[k].scale = chipScaling;
                             placeholderChipArray[k].setDepth(100 + k);
                             placeholderBet = placeholderBet - 100;
     
@@ -4209,8 +4250,8 @@ class GameScene extends Phaser.Scene {
     
                         while (placeholderBet - 25 >= 0)
                         {
-                            placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords + 75, playerChipYCoords - 25 - (k * 5), 'chip_25');
-                            placeholderChipArray[k].scale = .075;
+                            placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords + 55, playerChipYCoords + 25 - (k * 5), 'chip_25');
+                            placeholderChipArray[k].scale = chipScaling;
                             placeholderChipArray[k].setDepth(100 + k);
                             placeholderBet = placeholderBet - 25;
     
@@ -4221,8 +4262,8 @@ class GameScene extends Phaser.Scene {
     
                         while (placeholderBet - 10 >= 0)
                         {
-                            placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords + 75, playerChipYCoords - 25 - (k * 5), 'chip_10');
-                            placeholderChipArray[k].scale = .075;
+                            placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords + 55, playerChipYCoords + 25 - (k * 5), 'chip_10');
+                            placeholderChipArray[k].scale = chipScaling;
                             placeholderChipArray[k].setDepth(100 + k);
                             placeholderBet = placeholderBet - 10;
     
@@ -4233,8 +4274,8 @@ class GameScene extends Phaser.Scene {
     
                         while (placeholderBet - 5 >= 0)
                         {
-                            placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords + 75, playerChipYCoords - 25 - (k * 5), 'chip_5');
-                            placeholderChipArray[k].scale = .075;
+                            placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords + 55, playerChipYCoords + 25 - (k * 5), 'chip_5');
+                            placeholderChipArray[k].scale = chipScaling;
                             placeholderChipArray[k].setDepth(100 + k);
                             placeholderBet = placeholderBet - 5;
     
@@ -4245,8 +4286,8 @@ class GameScene extends Phaser.Scene {
     
                         while (placeholderBet - 1 >= 0)
                         {
-                            placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords + 75, playerChipYCoords - 25 - (k * 5), 'chip_1');
-                            placeholderChipArray[k].scale = .075;
+                            placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords + 55, playerChipYCoords + 25 - (k * 5), 'chip_1');
+                            placeholderChipArray[k].scale = chipScaling;
                             placeholderChipArray[k].setDepth(100 + k);
                             placeholderBet = placeholderBet - 1;
     
@@ -4305,6 +4346,11 @@ class GameScene extends Phaser.Scene {
                         this.scene.enableInsuranceButton();
                     else
                         this.scene.disableInsuranceButton();
+
+                    if (playerCards[1][0] === playerCards[1][1])
+                        this.scene.enableSplitButton();
+                    else
+                        this.scene.disableSplitButton();
                 }
                 else
                 {
@@ -4339,6 +4385,11 @@ class GameScene extends Phaser.Scene {
                         this.scene.enableInsuranceButton();
                     else
                         this.scene.disableInsuranceButton();
+
+                    if (playerCards[2][0] === playerCards[2][1])
+                        this.scene.enableSplitButton();
+                    else
+                        this.scene.disableSplitButton();
                 }
                 else
                 {
@@ -4402,6 +4453,11 @@ class GameScene extends Phaser.Scene {
                         this.scene.enableInsuranceButton();
                     else
                         this.scene.disableInsuranceButton();
+
+                    if (playerCards[1][0] === playerCards[1][1])
+                        this.scene.enableSplitButton();
+                    else
+                        this.scene.disableSplitButton();
                 }
                 else
                 {
@@ -4443,6 +4499,11 @@ class GameScene extends Phaser.Scene {
                         this.scene.enableInsuranceButton();
                     else
                         this.scene.disableInsuranceButton();
+
+                    if (playerCards[2][0] === playerCards[2][1])
+                        this.scene.enableSplitButton();
+                    else
+                        this.scene.disableSplitButton();
                 }
                 else
                 {
@@ -4515,8 +4576,8 @@ class GameScene extends Phaser.Scene {
 
                     while (placeholderBet - 100 >= 0)
                     {
-                        placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords - 75, playerChipYCoords - 25 - (k * 5), 'chip_100');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords, playerChipYCoords + 50 - (k * 5), 'chip_100');
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 100;
 
@@ -4527,8 +4588,8 @@ class GameScene extends Phaser.Scene {
 
                     while (placeholderBet - 25 >= 0)
                     {
-                        placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords - 75, playerChipYCoords - 25 - (k * 5), 'chip_25');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords, playerChipYCoords + 50 - (k * 5), 'chip_25');
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 25;
 
@@ -4539,8 +4600,8 @@ class GameScene extends Phaser.Scene {
 
                     while (placeholderBet - 10 >= 0)
                     {
-                        placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords - 75, playerChipYCoords - 25 - (k * 5), 'chip_10');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords, playerChipYCoords + 50 - (k * 5), 'chip_10');
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 10;
 
@@ -4551,8 +4612,8 @@ class GameScene extends Phaser.Scene {
 
                     while (placeholderBet - 5 >= 0)
                     {
-                        placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords - 75, playerChipYCoords - 25 - (k * 5), 'chip_5');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords, playerChipYCoords + 50 - (k * 5), 'chip_5');
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 5;
 
@@ -4563,8 +4624,8 @@ class GameScene extends Phaser.Scene {
 
                     while (placeholderBet - 1 >= 0)
                     {
-                        placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords - 75, playerChipYCoords - 25 - (k * 5), 'chip_1');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords, playerChipYCoords + 50 - (k * 5), 'chip_1');
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 1;
 
@@ -4575,8 +4636,8 @@ class GameScene extends Phaser.Scene {
 
                     while (placeholderBet - .5 >= 0)
                     {
-                        placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords - 75, playerChipYCoords - 25 - (k * 5), 'half_chip');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords, playerChipYCoords + 50 - (k * 5), 'half_chip');
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - .5;
 
@@ -4608,8 +4669,8 @@ class GameScene extends Phaser.Scene {
 
                     while (placeholderBet - 100 >= 0)
                     {
-                        placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords - 75, playerChipYCoords - 25 - (k * 5), 'chip_100');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords, playerChipYCoords + 50 - (k * 5), 'chip_100');
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 100;
 
@@ -4620,8 +4681,8 @@ class GameScene extends Phaser.Scene {
 
                     while (placeholderBet - 25 >= 0)
                     {
-                        placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords - 75, playerChipYCoords - 25 - (k * 5), 'chip_25');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords, playerChipYCoords + 50 - (k * 5), 'chip_25');
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 25;
 
@@ -4632,8 +4693,8 @@ class GameScene extends Phaser.Scene {
 
                     while (placeholderBet - 10 >= 0)
                     {
-                        placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords - 75, playerChipYCoords - 25 - (k * 5), 'chip_10');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords, playerChipYCoords + 50 - (k * 5), 'chip_10');
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 10;
 
@@ -4644,8 +4705,8 @@ class GameScene extends Phaser.Scene {
 
                     while (placeholderBet - 5 >= 0)
                     {
-                        placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords - 75, playerChipYCoords - 25 - (k * 5), 'chip_5');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords, playerChipYCoords + 50 - (k * 5), 'chip_5');
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 5;
 
@@ -4656,8 +4717,8 @@ class GameScene extends Phaser.Scene {
 
                     while (placeholderBet - 1 >= 0)
                     {
-                        placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords - 75, playerChipYCoords - 25 - (k * 5), 'chip_1');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords, playerChipYCoords + 50 - (k * 5), 'chip_1');
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 1;
 
@@ -4668,8 +4729,8 @@ class GameScene extends Phaser.Scene {
 
                     while (placeholderBet - .5 >= 0)
                     {
-                        placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords - 75, playerChipYCoords - 25 - (k * 5), 'half_chip');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords, playerChipYCoords + 50 - (k * 5), 'half_chip');
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - .5;
 
@@ -4700,8 +4761,8 @@ class GameScene extends Phaser.Scene {
 
                     while (placeholderBet - 100 >= 0)
                     {
-                        placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords - 75, playerChipYCoords - 25 - (k * 5), 'chip_100');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords, playerChipYCoords + 50 - (k * 5), 'chip_100');
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 100;
 
@@ -4712,8 +4773,8 @@ class GameScene extends Phaser.Scene {
 
                     while (placeholderBet - 25 >= 0)
                     {
-                        placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords - 75, playerChipYCoords - 25 - (k * 5), 'chip_25');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords, playerChipYCoords + 50 - (k * 5), 'chip_25');
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 25;
 
@@ -4724,8 +4785,8 @@ class GameScene extends Phaser.Scene {
 
                     while (placeholderBet - 10 >= 0)
                     {
-                        placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords - 75, playerChipYCoords - 25 - (k * 5), 'chip_10');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords, playerChipYCoords + 50 - (k * 5), 'chip_10');
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 10;
 
@@ -4736,8 +4797,8 @@ class GameScene extends Phaser.Scene {
 
                     while (placeholderBet - 5 >= 0)
                     {
-                        placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords - 75, playerChipYCoords - 25 - (k * 5), 'chip_5');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords, playerChipYCoords + 50 - (k * 5), 'chip_5');
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 5;
 
@@ -4748,8 +4809,8 @@ class GameScene extends Phaser.Scene {
 
                     while (placeholderBet - 1 >= 0)
                     {
-                        placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords - 75, playerChipYCoords - 25 - (k * 5), 'chip_1');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords, playerChipYCoords + 50 - (k * 5), 'chip_1');
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - 1;
 
@@ -4760,8 +4821,8 @@ class GameScene extends Phaser.Scene {
 
                     while (placeholderBet - .5 >= 0)
                     {
-                        placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords - 75, playerChipYCoords - 25 - (k * 5), 'half_chip');
-                        placeholderChipArray[k].scale = .075;
+                        placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords, playerChipYCoords + 50 - (k * 5), 'half_chip');
+                        placeholderChipArray[k].scale = chipScaling;
                         placeholderChipArray[k].setDepth(100 + k);
                         placeholderBet = placeholderBet - .5;
 
@@ -4771,6 +4832,123 @@ class GameScene extends Phaser.Scene {
                     }
                 }
                 placeholderChipArray = [];
+            }
+
+        });
+
+        // player chooses splits
+        playerSplit.on('pointerdown', function(){
+
+            playerSplit.setTexture('clickedButton');
+
+            if (currentPlayer == 0)
+            {
+                spriteIndex[0][0].setPosition(cardX[0][0] + 50, cardY[0][0]);
+                spriteIndex[0][1].setPosition(cardX[0][0] - 50, cardY[0][0]);
+
+                spriteIndex[1][0].setPosition(cardX[0][1] + 50, cardY[0][1]);
+                spriteIndex[1][1].setPosition(cardX[0][1] - 50, cardY[0][1]);
+
+                // just testing
+                for (let i = 0; i < player1ChipCount.length; i++)
+                {
+                    player1ChipCount[i].destroy(true);
+                }
+
+                for (let i = 0; i < player2ChipCount.length; i++)
+                {
+                    player2ChipCount[i].destroy(true);
+                }
+
+                //  normals
+                placeholderChipArray[0] = this.scene.add.image(player1ChipXCoords + 25, playerChipYCoords, 'chip_100');
+                placeholderChipArray[0].scale = chipScaling;
+
+                placeholderChipArray[1] = this.scene.add.image(player1ChipXCoords - 25, playerChipYCoords, 'chip_100');
+                placeholderChipArray[1].scale = chipScaling;
+
+                // doubles
+                placeholderChipArray[3] = this.scene.add.image(player1ChipXCoords + 75, playerChipYCoords + 25, 'chip_100');
+                placeholderChipArray[3].scale = chipScaling;
+
+                placeholderChipArray[4] = this.scene.add.image(player1ChipXCoords - 75, playerChipYCoords + 25, 'chip_100');
+                placeholderChipArray[4].scale = chipScaling;
+
+                // normals
+                placeholderChipArray[5] = this.scene.add.image(player2ChipXCoords + 25, playerChipYCoords, 'chip_100');
+                placeholderChipArray[5].scale = chipScaling;
+
+                placeholderChipArray[6] = this.scene.add.image(player2ChipXCoords - 25, playerChipYCoords, 'chip_100');
+                placeholderChipArray[6].scale = chipScaling;
+
+                // doubles
+                placeholderChipArray[7] = this.scene.add.image(player2ChipXCoords + 75, playerChipYCoords + 25, 'chip_100');
+                placeholderChipArray[7].scale = chipScaling;
+
+                placeholderChipArray[8] = this.scene.add.image(player2ChipXCoords - 75, playerChipYCoords + 25, 'chip_100');
+                placeholderChipArray[8].scale = chipScaling;
+
+                // double the bet (2 stacks) (move chips)
+                // make new thing on scoreboard
+                // make new arrays to hold new hand
+
+                if (numPlayers != 1)
+                {
+                    if (playerCards[1][0] === playerCards[1][1])
+                        this.scene.enableSplitButton();
+                    else
+                        this.scene.disableSplitButton();
+                }
+            }
+            else if (currentPlayer == 1)
+            {
+                spriteIndex[0][0].setPosition(cardX[0][0] + 50, cardY[0][0]);
+                spriteIndex[0][1].setPosition(cardX[0][0] - 50, cardY[0][0]);
+
+                spriteIndex[1][0].setPosition(cardX[0][1] + 50, cardY[0][1]);
+                spriteIndex[1][1].setPosition(cardX[0][1] - 50, cardY[0][1]);
+
+                for (let i = 0; i < player1ChipCount.length; i++)
+                {
+                    player1ChipCount[i].destroy(true);
+                }
+
+                for (let i = 0; i < player2ChipCount.length; i++)
+                {
+                    player2ChipCount[i].destroy(true);
+                }
+
+                //  normals
+                placeholderChipArray[0] = this.scene.add.image(player1ChipXCoords + 25, playerChipYCoords, 'chip_100');
+                placeholderChipArray[0].scale = chipScaling;
+
+                placeholderChipArray[1] = this.scene.add.image(player1ChipXCoords - 25, playerChipYCoords, 'chip_100');
+                placeholderChipArray[1].scale = chipScaling;
+
+                // doubles
+                placeholderChipArray[3] = this.scene.add.image(player1ChipXCoords + 75, playerChipYCoords + 25, 'chip_100');
+                placeholderChipArray[3].scale = chipScaling;
+
+                placeholderChipArray[4] = this.scene.add.image(player1ChipXCoords - 75, playerChipYCoords + 25, 'chip_100');
+                placeholderChipArray[4].scale = chipScaling;
+
+                // normals
+                placeholderChipArray[5] = this.scene.add.image(player2ChipXCoords + 25, playerChipYCoords, 'chip_100');
+                placeholderChipArray[5].scale = chipScaling;
+
+                placeholderChipArray[6] = this.scene.add.image(player2ChipXCoords - 25, playerChipYCoords, 'chip_100');
+                placeholderChipArray[6].scale = chipScaling;
+
+                // doubles
+                placeholderChipArray[7] = this.scene.add.image(player2ChipXCoords + 75, playerChipYCoords + 25, 'chip_100');
+                placeholderChipArray[7].scale = chipScaling;
+
+                placeholderChipArray[8] = this.scene.add.image(player2ChipXCoords - 75, playerChipYCoords + 25, 'chip_100');
+                placeholderChipArray[8].scale = chipScaling;
+
+                // double the bet (2 stacks) (move chips)
+                // make new thing on scoreboard
+                // make new arrays to hold new hand
             }
 
         });
