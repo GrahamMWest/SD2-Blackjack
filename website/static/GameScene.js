@@ -2384,27 +2384,27 @@ class GameScene extends Phaser.Scene {
         runningCountScoreBoard = this.add.text(1175, 75, "Running Count: 0", {fontSize: '20px', fill: '#fff'});
         trueCountScoreBoard = this.add.text(1175, 100, "True Count: 0", {fontSize: '20px', fill: '#fff'});
         // dealerCardDisplay = this.add.text(1175, 125, "Dealer Cards: \n", {fontSize: '20px', fill: '#fff'});
-        dealerCardDisplay = this.add.text(25, 125, "Dealer Cards: \n", {fontSize: '20px', fill: '#fff'});
+        dealerCardDisplay = this.add.text(25, 50, "Dealer Cards: \n", {fontSize: '20px', fill: '#fff'});
 
         if (numPlayers >= 1)
         {
             // player1CardDisplay = this.add.text(1175, 225, "Player1 Cards: \n", {fontSize: '20px', fill: '#fff'});
-            player1CardDisplay = this.add.text(25, 200, "Seat1 Cards: \n", {fontSize: '20px', fill: '#fff'});
-            player1Hand1Display = this.add.text(25, 200, "", {fontSize: '20px', fill: '#fff'});
-            player1Hand2Display = this.add.text(25, 250, "", {fontSize: '20px', fill: '#fff'});
-            player1Hand3Display = this.add.text(25, 300, "", {fontSize: '20px', fill: '#fff'});
-            player1Hand4Display = this.add.text(25, 350, "", {fontSize: '20px', fill: '#fff'});
+            player1CardDisplay = this.add.text(25, 100, "Seat1 Cards: \n", {fontSize: '20px', fill: '#fff'});
+            player1Hand1Display = this.add.text(25, 100, "", {fontSize: '20px', fill: '#fff'});
+            player1Hand2Display = this.add.text(25, 150, "", {fontSize: '20px', fill: '#fff'});
+            player1Hand3Display = this.add.text(25, 200, "", {fontSize: '20px', fill: '#fff'});
+            player1Hand4Display = this.add.text(25, 250, "", {fontSize: '20px', fill: '#fff'});
 
         }
         
         if(numPlayers >= 2)
         {
             // player1CardDisplay = this.add.text(1175, 225, "Player1 Cards: \n", {fontSize: '20px', fill: '#fff'});
-            player2CardDisplay = this.add.text(25, 400, "Seat2 Cards: \n", {fontSize: '20px', fill: '#fff'});
-            player2Hand1Display = this.add.text(25, 400, "", {fontSize: '20px', fill: '#fff'});
-            player2Hand2Display = this.add.text(25, 450, "", {fontSize: '20px', fill: '#fff'});
-            player2Hand3Display = this.add.text(25, 500, "", {fontSize: '20px', fill: '#fff'});
-            player2Hand4Display = this.add.text(25, 550, "", {fontSize: '20px', fill: '#fff'});
+            player2CardDisplay = this.add.text(25, 300, "Seat2 Cards: \n", {fontSize: '20px', fill: '#fff'});
+            player2Hand1Display = this.add.text(25, 300, "", {fontSize: '20px', fill: '#fff'});
+            player2Hand2Display = this.add.text(25, 350, "", {fontSize: '20px', fill: '#fff'});
+            player2Hand3Display = this.add.text(25, 400, "", {fontSize: '20px', fill: '#fff'});
+            player2Hand4Display = this.add.text(25, 450, "", {fontSize: '20px', fill: '#fff'});
         }
 
         if (numPlayers >= 3)
@@ -2412,11 +2412,11 @@ class GameScene extends Phaser.Scene {
             // player1CardDisplay = this.add.text(1175, 225, "Player1 Cards: \n", {fontSize: '20px', fill: '#fff'});
             // player2CardDisplay = this.add.text(1175, 325, "Player2 Cards: \n", {fontSize: '20px', fill: '#fff'});
             // player3CardDisplay = this.add.text(1175, 425, "Player3 Cards: \n", {fontSize: '20px', fill: '#fff'});
-            player3CardDisplay = this.add.text(25, 600, "Seat3 Cards: \n", {fontSize: '20px', fill: '#fff'});
-            player3Hand1Display = this.add.text(25, 600, "", {fontSize: '20px', fill: '#fff'});
-            player3Hand2Display = this.add.text(25, 650, "", {fontSize: '20px', fill: '#fff'});
-            player3Hand3Display = this.add.text(25, 700, "", {fontSize: '20px', fill: '#fff'});
-            player3Hand4Display = this.add.text(25, 750, "", {fontSize: '20px', fill: '#fff'});
+            player3CardDisplay = this.add.text(25, 500, "Seat3 Cards: \n", {fontSize: '20px', fill: '#fff'});
+            player3Hand1Display = this.add.text(25, 500, "", {fontSize: '20px', fill: '#fff'});
+            player3Hand2Display = this.add.text(25, 550, "", {fontSize: '20px', fill: '#fff'});
+            player3Hand3Display = this.add.text(25, 600, "", {fontSize: '20px', fill: '#fff'});
+            player3Hand4Display = this.add.text(25, 650, "", {fontSize: '20px', fill: '#fff'});
         }
 
         // places controlPanel
