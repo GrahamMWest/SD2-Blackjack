@@ -66,6 +66,7 @@ let maxSplits = 1;
 // global variables that were created in create function
 let bg;
 let controlPanel;
+let settingsMenuBar;
 let shuffledDeck;
 let cardInts;
 let dealerCard;
@@ -179,16 +180,16 @@ let handIndicatorSpacing = -15;
 
 
 //TODO:
-// make warning to user that they cant play if they dont have minbet * numplayers amount of currency
+// make warning to user that they cant play if they dont have minbet * numplayers amount of currency (popup)
 
 // fix point system (insurance/surrender/can Split or Not/True Count)
 // CHECK WHETHER I NEED TO LOOK FOR WHETHER USER CAN DOUBLE OR NOT (MAYBE A VARIABLE CALLED 'firstAction' OR SOMETHING)
 // make suggestion displays on the right side (same y-level as corresponding player displays), also
 // show "Correct" or "Incorrect" for the users actions, as well as how much each hand profited/lost that round
 
-// make setting sliders
+// make setting menu
 
-// add variation to shoe cutoff
+// add variation to shoe cutoff (professor suggestion)
 
 
 
@@ -3716,6 +3717,11 @@ class GameScene extends Phaser.Scene {
 
         // places controlPanel
         controlPanel = this.add.rectangle(700, 875, 1400, 275, 0x008b8b);
+
+        // places settings menu bar on bottom of control panel
+        settingsMenuBar = this.add.rectangle(700, 983, 1400, 35, 0xC0C0C0);
+        // little black bar to look cool
+        this.add.rectangle(700, 965, 1400, 2, 0x000000);
 
         // gets a shuffled deck
         //shuffledDeck = this.initializeDeck(numDecks);
