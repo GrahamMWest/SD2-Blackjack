@@ -1,9 +1,16 @@
 "use strict";
 
 // cards x & y positions 1-6 for players 1-3 + dealer 
+// flattened
+// const cardX = [[965, 705, 425, 705], [952, 692, 412, 718], [939, 679, 399, 731], [926, 666, 386, 744], [913, 653, 373, 757], [900, 640, 360, 770]];
+// const cardY = [[425, 425, 425, 65], [420, 420, 420, 70], [415, 415, 415, 75], [410, 410, 410, 80], [405, 405, 405, 85], [400, 400, 400, 90]];
+// const cardA = [0, 0, 0, 0];
+
 const cardX = [[965, 705, 425, 705], [952, 692, 412, 718], [939, 679, 399, 731], [926, 666, 386, 744], [913, 653, 373, 757], [900, 640, 360, 770]];
-const cardY = [[425, 425, 425, 65], [420, 420, 420, 70], [415, 415, 415, 75], [410, 410, 410, 80], [405, 405, 405, 85], [400, 400, 400, 90]];
+const cardY = [[425, 425, 425, 65], [405, 405, 405, 85], [385, 385, 385, 105], [365, 365, 365, 125], [345, 345, 345, 145], [325, 325, 325, 165]];
 const cardA = [0, 0, 0, 0];
+
+
 
 const deckCoords = [1075, 75];
 // deckCoords[0], deckCoords[1]
@@ -145,6 +152,9 @@ let handIndicator;
 let player1ChipArrays = [[], [], [], []];
 let player2ChipArrays = [[], [], [], []];
 let player3ChipArrays = [[], [], [], []];
+let player1DoubleChipArrays = [[], [], [], []];
+let player2DoubleChipArrays = [[], [], [], []];
+let player3DoubleChipArrays = [[], [], [], []];
 
 let player1Hand1Display;
 let player1Hand2Display;
@@ -164,15 +174,21 @@ let player3Hand4Display;
 
 
 //TODO:
-// add splits
+// fix point system (insurance/surrender/can Split or Not/True Count)
+// clean up handIndicator position and card positions so things look prettier
+// space out player displays less (to account for ONLY 1 split)
+// MAKE ALL PLAYERS START WITH 5 WORTH OF CHIPS AT START OF ROUND (IS NOW OK SINCE YOU CAN ADJUST CHIPS)
+// CHECK WHETHER I NEED TO LOOK FOR WHETHER USER CAN DOUBLE OR NOT (MAYBE A VARIABLE CALLED 'firstAction' OR SOMETHING)
 
-// space out player displays more (to account for possible splits)
 // make suggestion displays on the right side (same y-level as corresponding player displays), also
 // show "Correct" or "Incorrect" for the users actions, as well as how much each hand profited/lost that round
-// add surrender and insurance actions to basic strategy point chart
+
+// make setting sliders
 
 // make warning to user that they cant play if they dont have minbet * numplayers amount of currency
-// write profit/loss from each hand for each round in bottom right
+
+
+
 
 // (WHAT GRAHAM SHOULD BE DOING)
 // get email auth and password reset working (including the drop down)
@@ -182,19 +198,15 @@ let player3Hand4Display;
 // update user currencies in iswinorloss function (database wise)
 // give all authenticated users 500 currency a day
 
-
 // iron out kinks in the account creation and login process
 //    * when logging in, should say "login failed" rather than specifying username or password being bad
 //    * check for valid date when creating account
 // make a gambling disclaimer (show example pic)
 // fix up navbar (make bigger and bold the current users page)
 
-
 // BUGS/TESTING:
-
-
-// make setting sliders
-// updateinfo function not done yet (splits, ect)
+// make sure iswinorloss plays after dealerdraw animation finishes (might not be possible)
+// test payouts (make sure theyre correct, especially with splits)
 
 // NOTES:
 // early surrender is currently implemented, will add a toggle to only allow late surrender (after dealer checks for BJ)
@@ -227,9 +239,9 @@ function updateInfo(i, j) {
     currencyScoreBoard.setText("Currency: $" + playerCurrency);
     pointScoreBoard.setText("Points: " + playerPoints);
 
-    if (numSplits[j] == 0)
+    if (j < 3)
     {
-        if (j < 3)
+        if (numSplits[currentPlayer] == 0)
         {
             if (playerCards[j][i] === "A" || playerCards[j][i] === "K" || playerCards[j][i] === "Q" || 
             playerCards[j][i] === "J" || playerCards[j][i] === "10")
@@ -322,51 +334,238 @@ function updateInfo(i, j) {
             // such as having 5 cards, also need to take splits into consideration
 
         }
-        else
+        else if (numSplits[currentPlayer] == 1)
         {
-            if (dealerCards[i] === "A" || dealerCards[i] === "K" || dealerCards[i] === "Q" || 
-                dealerCards[i] === "J" || dealerCards[i] === "10")
+            // splits
+            if (currentPlayer == 0)
             {
-                runningCount = runningCount - 1;
-                trueCount = Math.floor(runningCount / Math.ceil((numDecks * 52 - cardIndex) / 52));
-                runningCountScoreBoard.setText('Running Count: ' + runningCount);
-                trueCountScoreBoard.setText('True Count: ' + trueCount);
-            }
-            else if (dealerCards[i] === "7" || dealerCards[i] === "8" || dealerCards[i] === "9"  )
-            {
-                runningCount = runningCount;
-                trueCount = Math.floor(runningCount / Math.ceil((numDecks * 52 - cardIndex) / 52));
-                runningCountScoreBoard.setText('Running Count: ' + runningCount);
-                trueCountScoreBoard.setText('True Count: ' + trueCount);
-            }
-            else if (dealerCards[i] === "2" || dealerCards[i] === "3" || dealerCards[i] === "4" || 
-            dealerCards[i] === "5" || dealerCards[i] === "6")
-            {
-                runningCount = runningCount + 1;
-                trueCount = Math.floor(runningCount / Math.ceil((numDecks * 52 - cardIndex) / 52));
-                runningCountScoreBoard.setText('Running Count: ' + runningCount);
-                trueCountScoreBoard.setText('True Count: ' + trueCount);
-            }
+                // [hand](0/1) [card]
+                if (player1Hands[j][i] === "A" || player1Hands[j][i] === "K" || player1Hands[j][i] === "Q" || 
+                player1Hands[j][i] === "J" || player1Hands[j][i] === "10")
+                {
+                    runningCount = runningCount - 1;
+                    trueCount = Math.floor(runningCount / Math.ceil((numDecks * 52 - cardIndex) / 52));
+                    runningCountScoreBoard.setText('Running Count: ' + runningCount);
+                    trueCountScoreBoard.setText('True Count: ' + trueCount);
+                }
+                else if (player1Hands[j][i] === "7" || player1Hands[j][i] === "8" || player1Hands[j][i] === "9"  )
+                {
+                    runningCount = runningCount;
+                    trueCount = Math.floor(runningCount / Math.ceil((numDecks * 52 - cardIndex) / 52));
+                    runningCountScoreBoard.setText('Running Count: ' + runningCount);
+                    trueCountScoreBoard.setText('True Count: ' + trueCount);
+                }
+                else if (player1Hands[j][i] === "2" || player1Hands[j][i] === "3" || player1Hands[j][i] === "4" || 
+                player1Hands[j][i] === "5" || player1Hands[j][i] === "6")
+                {
+                    runningCount = runningCount + 1;
+                    trueCount = Math.floor(runningCount / Math.ceil((numDecks * 52 - cardIndex) / 52));
+                    runningCountScoreBoard.setText('Running Count: ' + runningCount);
+                    trueCountScoreBoard.setText('True Count: ' + trueCount);
+                }
 
-            if (i == 0)
-                dealerCardDisplay.setText("Dealer Cards:\n[" + dealerCards[i] + "]");
-            else if (i == 1)
-                dealerCardDisplay.setText("Dealer Cards:\n[?, " + dealerCards[i] + "]");
-            else if (i == 2)
-                dealerCardDisplay.setText("Dealer Cards:\n[" + dealerCards[i-2] + ", " + dealerCards[i-1] + ", " + dealerCards[i] + "]");
-            else if (i == 3)
-                dealerCardDisplay.setText("Dealer Cards:\n[" + dealerCards[i-3] + ", " + dealerCards[i-2] + ", " + dealerCards[i-1] + ", " + dealerCards[i] + "]");
-            else if (i == 4)
-                dealerCardDisplay.setText("Dealer Cards:\n[" + dealerCards[i-4] + ", " + dealerCards[i-3] + ", " + dealerCards[i-2] + ", " + dealerCards[i-1] + ", " + dealerCards[i] + "]");
-            else if (i == 5)
-                dealerCardDisplay.setText("Dealer Cards:\n[" + dealerCards[i-5] + ", " + dealerCards[i-4] + ", " + dealerCards[i-3] + ", " + dealerCards[i-2] + ", " + dealerCards[i-1] + ", " + dealerCards[i] + "]");
-            else if (i == 6)
-                dealerCardDisplay.setText("Dealer Cards:\n[" + dealerCards[i-6] + ", " + dealerCards[i-5] + ", " + dealerCards[i-4] + ", " + dealerCards[i-3] + ", " + dealerCards[i-2] + ", " + dealerCards[i-1] + ", " + dealerCards[i] + "]");
+                if (j == 0)
+                {
+                    if (i == 0)
+                        player1Hand1Display.setText("Seat1Hand1 Cards:\n[" + player1Hands[0][i] + "]");
+                    else if (i == 1)
+                        player1Hand1Display.setText("Seat1Hand1 Cards:\n[" + player1Hands[0][i-1] + "," + player1Hands[0][i] + "]");
+                    else if (i == 2)
+                        player1Hand1Display.setText("Seat1Hand1 Cards:\n[" + player1Hands[0][i-2] + "," + player1Hands[0][i-1] + "," + player1Hands[0][i] + "]");
+                    else if (i == 3)
+                        player1Hand1Display.setText("Seat1Hand1 Cards:\n[" + player1Hands[0][i-3] + "," + player1Hands[0][i-2] + "," + player1Hands[0][i-1] + "," + player1Hands[0][i] + "]");
+                    else if (i == 4)
+                        player1Hand1Display.setText("Seat1Hand1 Cards:\n[" + player1Hands[0][i-4] + "," + player1Hands[0][i-3] + "," + player1Hands[0][i-2] + "," + player1Hands[0][i-1] + "," + player1Hands[0][i] + "]");
+                    else if (i == 5)
+                        player1Hand1Display.setText("Seat1Hand1 Cards:\n[" + player1Hands[0][i-5] + "," + player1Hands[0][i-4] + "," + player1Hands[0][i-3] + "," + player1Hands[0][i-2] + "," + player1Hands[0][i-1] + "," + player1Hands[0][i] + "]");
+                    else if (i == 6)
+                        player1Hand1Display.setText("Seat1Hand1 Cards:\n[" + player1Hands[0][i-6] + "," + player1Hands[0][i-5] + "," + player1Hands[0][i-4] + "," + player1Hands[0][i-3] + "," + player1Hands[0][i-2] + "," + player1Hands[0][i-1] + "," + player1Hands[0][i] + "]");
+                }
+                else if (j == 1)
+                {
+                    if (i == 0)
+                        player1Hand2Display.setText("Seat1Hand2 Cards:\n[" + player1Hands[1][i] + "]");
+                    else if (i == 1)
+                        player1Hand2Display.setText("Seat1Hand2 Cards:\n[" + player1Hands[1][i-1] + "," + player1Hands[1][i] + "]");
+                    else if (i == 2)
+                        player1Hand2Display.setText("Seat1Hand2 Cards:\n[" + player1Hands[1][i-2] + "," + player1Hands[1][i-1] + "," + player1Hands[1][i] + "]");
+                    else if (i == 3)
+                        player1Hand2Display.setText("Seat1Hand2 Cards:\n[" + player1Hands[1][i-3] + "," + player1Hands[1][i-2] + "," + player1Hands[1][i-1] + "," + player1Hands[1][i] + "]");
+                    else if (i == 4)
+                        player1Hand2Display.setText("Seat1Hand2 Cards:\n[" + player1Hands[1][i-4] + "," + player1Hands[1][i-3] + "," + player1Hands[1][i-2] + "," + player1Hands[1][i-1] + "," + player1Hands[1][i] + "]");
+                    else if (i == 5)
+                        player1Hand2Display.setText("Seat1Hand2 Cards:\n[" + player1Hands[1][i-5] + "," + player1Hands[1][i-4] + "," + player1Hands[1][i-3] + "," + player1Hands[1][i-2] + "," + player1Hands[1][i-1] + "," + player1Hands[1][i] + "]");
+                    else if (i == 6)
+                        player1Hand2Display.setText("Seat1Hand2 Cards:\n[" + player1Hands[1][i-6] + "," + player1Hands[1][i-5] + "," + player1Hands[1][i-4] + "," + player1Hands[1][i-3] + "," + player1Hands[1][i-2] + "," + player1Hands[1][i-1] + "," + player1Hands[1][i] + "]");
+                }
+            }
+            else if (currentPlayer == 1)
+            {
+                if (player2Hands[j][i] === "A" || player2Hands[j][i] === "K" || player2Hands[j][i] === "Q" || 
+                player2Hands[j][i] === "J" || player2Hands[j][i] === "10")
+                {
+                    runningCount = runningCount - 1;
+                    trueCount = Math.floor(runningCount / Math.ceil((numDecks * 52 - cardIndex) / 52));
+                    runningCountScoreBoard.setText('Running Count: ' + runningCount);
+                    trueCountScoreBoard.setText('True Count: ' + trueCount);
+                }
+                else if (player2Hands[j][i] === "7" || player2Hands[j][i] === "8" || player2Hands[j][i] === "9"  )
+                {
+                    runningCount = runningCount;
+                    trueCount = Math.floor(runningCount / Math.ceil((numDecks * 52 - cardIndex) / 52));
+                    runningCountScoreBoard.setText('Running Count: ' + runningCount);
+                    trueCountScoreBoard.setText('True Count: ' + trueCount);
+                }
+                else if (player2Hands[j][i] === "2" || player2Hands[j][i] === "3" || player2Hands[j][i] === "4" || 
+                player2Hands[j][i] === "5" || player2Hands[j][i] === "6")
+                {
+                    runningCount = runningCount + 1;
+                    trueCount = Math.floor(runningCount / Math.ceil((numDecks * 52 - cardIndex) / 52));
+                    runningCountScoreBoard.setText('Running Count: ' + runningCount);
+                    trueCountScoreBoard.setText('True Count: ' + trueCount);
+                }
+
+                if (j == 0)
+                {
+                    if (i == 0)
+                        player2Hand1Display.setText("Seat2Hand1 Cards:\n[" + player2Hands[0][i] + "]");
+                    else if (i == 1)
+                        player2Hand1Display.setText("Seat2Hand1 Cards:\n[" + player2Hands[0][i-1] + "," + player2Hands[0][i] + "]");
+                    else if (i == 2)
+                        player2Hand1Display.setText("Seat2Hand1 Cards:\n[" + player2Hands[0][i-2] + "," + player2Hands[0][i-1] + "," + player2Hands[0][i] + "]");
+                    else if (i == 3)
+                        player2Hand1Display.setText("Seat2Hand1 Cards:\n[" + player2Hands[0][i-3] + "," + player2Hands[0][i-2] + "," + player2Hands[0][i-1] + "," + player2Hands[0][i] + "]");
+                    else if (i == 4)
+                        player2Hand1Display.setText("Seat2Hand1 Cards:\n[" + player2Hands[0][i-4] + "," + player2Hands[0][i-3] + "," + player2Hands[0][i-2] + "," + player2Hands[0][i-1] + "," + player2Hands[0][i] + "]");
+                    else if (i == 5)
+                        player2Hand1Display.setText("Seat2Hand1 Cards:\n[" + player2Hands[0][i-5] + "," + player2Hands[0][i-4] + "," + player2Hands[0][i-3] + "," + player2Hands[0][i-2] + "," + player2Hands[0][i-1] + "," + player2Hands[0][i] + "]");
+                    else if (i == 6)
+                        player2Hand1Display.setText("Seat2Hand1 Cards:\n[" + player2Hands[0][i-6] + "," + player2Hands[0][i-5] + "," + player2Hands[0][i-4] + "," + player2Hands[0][i-3] + "," + player2Hands[0][i-2] + "," + player2Hands[0][i-1] + "," + player2Hands[0][i] + "]");
+                }
+                else if (j == 1)
+                {
+                    if (i == 0)
+                        player2Hand2Display.setText("Seat2Hand2 Cards:\n[" + player2Hands[1][i] + "]");
+                    else if (i == 1)
+                        player2Hand2Display.setText("Seat2Hand2 Cards:\n[" + player2Hands[1][i-1] + "," + player2Hands[1][i] + "]");
+                    else if (i == 2)
+                        player2Hand2Display.setText("Seat2Hand2 Cards:\n[" + player2Hands[1][i-2] + "," + player2Hands[1][i-1] + "," + player2Hands[1][i] + "]");
+                    else if (i == 3)
+                        player2Hand2Display.setText("Seat2Hand2 Cards:\n[" + player2Hands[1][i-3] + "," + player2Hands[1][i-2] + "," + player2Hands[1][i-1] + "," + player2Hands[1][i] + "]");
+                    else if (i == 4)
+                        player2Hand2Display.setText("Seat2Hand2 Cards:\n[" + player2Hands[1][i-4] + "," + player2Hands[1][i-3] + "," + player2Hands[1][i-2] + "," + player2Hands[1][i-1] + "," + player2Hands[1][i] + "]");
+                    else if (i == 5)
+                        player2Hand2Display.setText("Seat2Hand2 Cards:\n[" + player2Hands[1][i-5] + "," + player2Hands[1][i-4] + "," + player2Hands[1][i-3] + "," + player2Hands[1][i-2] + "," + player2Hands[1][i-1] + "," + player2Hands[1][i] + "]");
+                    else if (i == 6)
+                        player2Hand2Display.setText("Seat2Hand2 Cards:\n[" + player2Hands[1][i-6] + "," + player2Hands[1][i-5] + "," + player2Hands[1][i-4] + "," + player2Hands[1][i-3] + "," + player2Hands[1][i-2] + "," + player2Hands[1][i-1] + "," + player2Hands[1][i] + "]");
+                }
+
+            }
+            else if (currentPlayer == 2)
+            {
+                if (player3Hands[j][i] === "A" || player3Hands[j][i] === "K" || player3Hands[j][i] === "Q" || 
+                player3Hands[j][i] === "J" || player3Hands[j][i] === "10")
+                {
+                    runningCount = runningCount - 1;
+                    trueCount = Math.floor(runningCount / Math.ceil((numDecks * 52 - cardIndex) / 52));
+                    runningCountScoreBoard.setText('Running Count: ' + runningCount);
+                    trueCountScoreBoard.setText('True Count: ' + trueCount);
+                }
+                else if (player3Hands[j][i] === "7" || player3Hands[j][i] === "8" || player3Hands[j][i] === "9"  )
+                {
+                    runningCount = runningCount;
+                    trueCount = Math.floor(runningCount / Math.ceil((numDecks * 52 - cardIndex) / 52));
+                    runningCountScoreBoard.setText('Running Count: ' + runningCount);
+                    trueCountScoreBoard.setText('True Count: ' + trueCount);
+                }
+                else if (player3Hands[j][i] === "2" || player3Hands[j][i] === "3" || player3Hands[j][i] === "4" || 
+                player3Hands[j][i] === "5" || player3Hands[j][i] === "6")
+                {
+                    runningCount = runningCount + 1;
+                    trueCount = Math.floor(runningCount / Math.ceil((numDecks * 52 - cardIndex) / 52));
+                    runningCountScoreBoard.setText('Running Count: ' + runningCount);
+                    trueCountScoreBoard.setText('True Count: ' + trueCount);
+                }
+
+                if (j == 0)
+                {
+                    if (i == 0)
+                        player3Hand1Display.setText("Seat3Hand1 Cards:\n[" + player3Hands[0][i] + "]");
+                    else if (i == 1)
+                        player3Hand1Display.setText("Seat3Hand1 Cards:\n[" + player3Hands[0][i-1] + "," + player3Hands[0][i] + "]");
+                    else if (i == 2)
+                        player3Hand1Display.setText("Seat3Hand1 Cards:\n[" + player3Hands[0][i-2] + "," + player3Hands[0][i-1] + "," + player3Hands[0][i] + "]");
+                    else if (i == 3)
+                        player3Hand1Display.setText("Seat3Hand1 Cards:\n[" + player3Hands[0][i-3] + "," + player3Hands[0][i-2] + "," + player3Hands[0][i-1] + "," + player3Hands[0][i] + "]");
+                    else if (i == 4)
+                        player3Hand1Display.setText("Seat3Hand1 Cards:\n[" + player3Hands[0][i-4] + "," + player3Hands[0][i-3] + "," + player3Hands[0][i-2] + "," + player3Hands[0][i-1] + "," + player3Hands[0][i] + "]");
+                    else if (i == 5)
+                        player3Hand1Display.setText("Seat3Hand1 Cards:\n[" + player3Hands[0][i-5] + "," + player3Hands[0][i-4] + "," + player3Hands[0][i-3] + "," + player3Hands[0][i-2] + "," + player3Hands[0][i-1] + "," + player3Hands[0][i] + "]");
+                    else if (i == 6)
+                        player3Hand1Display.setText("Seat3Hand1 Cards:\n[" + player3Hands[0][i-6] + "," + player3Hands[0][i-5] + "," + player3Hands[0][i-4] + "," + player3Hands[0][i-3] + "," + player3Hands[0][i-2] + "," + player3Hands[0][i-1] + "," + player3Hands[0][i] + "]");
+                }
+                else if (j == 1)
+                {
+                    if (i == 0)
+                        player3Hand2Display.setText("Seat3Hand2 Cards:\n[" + player3Hands[1][i] + "]");
+                    else if (i == 1)
+                        player3Hand2Display.setText("Seat3Hand2 Cards:\n[" + player3Hands[1][i-1] + "," + player3Hands[1][i] + "]");
+                    else if (i == 2)
+                        player3Hand2Display.setText("Seat3Hand2 Cards:\n[" + player3Hands[1][i-2] + "," + player3Hands[1][i-1] + "," + player3Hands[1][i] + "]");
+                    else if (i == 3)
+                        player3Hand2Display.setText("Seat3Hand2 Cards:\n[" + player3Hands[1][i-3] + "," + player3Hands[1][i-2] + "," + player3Hands[1][i-1] + "," + player3Hands[1][i] + "]");
+                    else if (i == 4)
+                        player3Hand2Display.setText("Seat3Hand2 Cards:\n[" + player3Hands[1][i-4] + "," + player3Hands[1][i-3] + "," + player3Hands[1][i-2] + "," + player3Hands[1][i-1] + "," + player3Hands[1][i] + "]");
+                    else if (i == 5)
+                        player3Hand2Display.setText("Seat3Hand2 Cards:\n[" + player3Hands[1][i-5] + "," + player3Hands[1][i-4] + "," + player3Hands[1][i-3] + "," + player3Hands[1][i-2] + "," + player3Hands[1][i-1] + "," + player3Hands[1][i] + "]");
+                    else if (i == 6)
+                        player3Hand2Display.setText("Seat3Hand2 Cards:\n[" + player3Hands[1][i-6] + "," + player3Hands[1][i-5] + "," + player3Hands[1][i-4] + "," + player3Hands[1][i-3] + "," + player3Hands[1][i-2] + "," + player3Hands[1][i-1] + "," + player3Hands[1][i] + "]");
+                }
+            }
+            
+
         }
     }
-    else if (numSplits[j] == 1)
+    else
     {
+        if (dealerCards[i] === "A" || dealerCards[i] === "K" || dealerCards[i] === "Q" || 
+            dealerCards[i] === "J" || dealerCards[i] === "10")
+        {
+            runningCount = runningCount - 1;
+            trueCount = Math.floor(runningCount / Math.ceil((numDecks * 52 - cardIndex) / 52));
+            runningCountScoreBoard.setText('Running Count: ' + runningCount);
+            trueCountScoreBoard.setText('True Count: ' + trueCount);
+        }
+        else if (dealerCards[i] === "7" || dealerCards[i] === "8" || dealerCards[i] === "9"  )
+        {
+            runningCount = runningCount;
+            trueCount = Math.floor(runningCount / Math.ceil((numDecks * 52 - cardIndex) / 52));
+            runningCountScoreBoard.setText('Running Count: ' + runningCount);
+            trueCountScoreBoard.setText('True Count: ' + trueCount);
+        }
+        else if (dealerCards[i] === "2" || dealerCards[i] === "3" || dealerCards[i] === "4" || 
+        dealerCards[i] === "5" || dealerCards[i] === "6")
+        {
+            runningCount = runningCount + 1;
+            trueCount = Math.floor(runningCount / Math.ceil((numDecks * 52 - cardIndex) / 52));
+            runningCountScoreBoard.setText('Running Count: ' + runningCount);
+            trueCountScoreBoard.setText('True Count: ' + trueCount);
+        }
 
+        if (i == 0)
+            dealerCardDisplay.setText("Dealer Cards:\n[" + dealerCards[i] + "]");
+        else if (i == 1)
+            dealerCardDisplay.setText("Dealer Cards:\n[?, " + dealerCards[i] + "]");
+        else if (i == 2)
+            dealerCardDisplay.setText("Dealer Cards:\n[" + dealerCards[i-2] + ", " + dealerCards[i-1] + ", " + dealerCards[i] + "]");
+        else if (i == 3)
+            dealerCardDisplay.setText("Dealer Cards:\n[" + dealerCards[i-3] + ", " + dealerCards[i-2] + ", " + dealerCards[i-1] + ", " + dealerCards[i] + "]");
+        else if (i == 4)
+            dealerCardDisplay.setText("Dealer Cards:\n[" + dealerCards[i-4] + ", " + dealerCards[i-3] + ", " + dealerCards[i-2] + ", " + dealerCards[i-1] + ", " + dealerCards[i] + "]");
+        else if (i == 5)
+            dealerCardDisplay.setText("Dealer Cards:\n[" + dealerCards[i-5] + ", " + dealerCards[i-4] + ", " + dealerCards[i-3] + ", " + dealerCards[i-2] + ", " + dealerCards[i-1] + ", " + dealerCards[i] + "]");
+        else if (i == 6)
+            dealerCardDisplay.setText("Dealer Cards:\n[" + dealerCards[i-6] + ", " + dealerCards[i-5] + ", " + dealerCards[i-4] + ", " + dealerCards[i-3] + ", " + dealerCards[i-2] + ", " + dealerCards[i-1] + ", " + dealerCards[i] + "]");
     }
 };
 
@@ -379,21 +578,412 @@ class GameScene extends Phaser.Scene {
     drawDealerCards(dealerCards, cardIndex, cardInts, i) {
        
         const enableNextRoundButton = this.enableNextRoundButton;
+        
+        if (numPlayers == 1 && numSplits[0] == 0)
+        {
+            if (this.isBust(playerCards[0]))
+            {
+                // do nothing
+                enableNextRoundButton();
+            }
+            else
+            {
+                var length = 2;
+                var timeline = this.tweens.createTimeline();
+                var j = 3;
+            
+                while(this.getHandValue(dealerCards) < 17)
+                {
+                    dealerCards[i] = (this.getValue(cardInts, cardIndex));
+                    this.dealCard(cardInts[cardIndex], shuffledDeck, timeline, i, 3, 0, dealerCard);
 
-        if (numPlayers == 1 && this.isBust(playerCards[0]))
-        {
-            // do nothing
-            enableNextRoundButton();
+                    i++;
+                    cardIndex++;
+                }
+
+                timeline.play();
+
+                timeline.addListener("complete", function(){
+                    enableNextRoundButton();
+                })
+            }
         }
-        else if (numPlayers == 2 && this.isBust(playerCards[0]) && this.isBust(playerCards[1]))
+        else if (numPlayers == 1 && numSplits[0] == 1)
         {
-            // do nothing
-            enableNextRoundButton();
+            if (this.splitIsBust(player1Hands[0]) && this.splitIsBust(player1Hands[1]))
+            {
+                // do nothing
+                enableNextRoundButton();
+            }
+            else
+            {
+                var length = 2;
+                var timeline = this.tweens.createTimeline();
+                var j = 3;
+            
+                while(this.getHandValue(dealerCards) < 17)
+                {
+                    dealerCards[i] = (this.getValue(cardInts, cardIndex));
+                    this.dealCard(cardInts[cardIndex], shuffledDeck, timeline, i, 3, 0, dealerCard);
+        
+                    i++;
+                    cardIndex++;
+                }
+        
+                timeline.play();
+        
+                timeline.addListener("complete", function(){
+                    enableNextRoundButton();
+                })
+            }
         }
-        else if (numPlayers == 3 && this.isBust(playerCards[0]) && this.isBust(playerCards[1]) && this.isBust(playerCards[2]))
+        else if (numPlayers == 2 && numSplits[0] == 0 && numSplits[1] == 0)
         {
-            // do nothing
-            enableNextRoundButton();
+            if (this.isBust(playerCards[0]) && this.isBust(playerCards[1]))
+            {
+                // do nothing
+                enableNextRoundButton();
+            }
+            else
+            {
+                var length = 2;
+                var timeline = this.tweens.createTimeline();
+                var j = 3;
+            
+                while(this.getHandValue(dealerCards) < 17)
+                {
+                    dealerCards[i] = (this.getValue(cardInts, cardIndex));
+                    this.dealCard(cardInts[cardIndex], shuffledDeck, timeline, i, 3, 0, dealerCard);
+        
+                    i++;
+                    cardIndex++;
+                }
+        
+                timeline.play();
+        
+                timeline.addListener("complete", function(){
+                    enableNextRoundButton();
+                })
+            }
+        }
+        else if (numPlayers == 2 && numSplits[0] == 1 && numSplits[1] == 0)
+        {
+            if (this.splitIsBust(player1Hands[0]) && this.splitIsBust(player1Hands[1]) && this.isBust(playerCards[1]))
+            {
+                // do nothing
+                enableNextRoundButton();
+            }
+            else
+            {
+                var length = 2;
+                var timeline = this.tweens.createTimeline();
+                var j = 3;
+            
+                while(this.getHandValue(dealerCards) < 17)
+                {
+                    dealerCards[i] = (this.getValue(cardInts, cardIndex));
+                    this.dealCard(cardInts[cardIndex], shuffledDeck, timeline, i, 3, 0, dealerCard);
+        
+                    i++;
+                    cardIndex++;
+                }
+        
+                timeline.play();
+        
+                timeline.addListener("complete", function(){
+                    enableNextRoundButton();
+                })
+            }
+        }
+        else if (numPlayers == 2 && numSplits[0] == 0 && numSplits[1] == 1)
+        {
+            if (this.splitIsBust(player2Hands[0]) && this.splitIsBust(player2Hands[1]) && this.isBust(playerCards[0]))
+            {
+                // do nothing
+                enableNextRoundButton();
+            }
+            else
+            {
+                var length = 2;
+                var timeline = this.tweens.createTimeline();
+                var j = 3;
+            
+                while(this.getHandValue(dealerCards) < 17)
+                {
+                    dealerCards[i] = (this.getValue(cardInts, cardIndex));
+                    this.dealCard(cardInts[cardIndex], shuffledDeck, timeline, i, 3, 0, dealerCard);
+        
+                    i++;
+                    cardIndex++;
+                }
+        
+                timeline.play();
+        
+                timeline.addListener("complete", function(){
+                    enableNextRoundButton();
+                })
+            }
+        }
+        else if (numPlayers == 2 && numSplits[0] == 1 && numSplits[1] == 1)
+        {
+            if (this.splitIsBust(player1Hands[0]) && this.splitIsBust(player1Hands[1]) && this.splitIsBust(player2Hands[0]) && this.splitIsBust(player2Hands[1]))
+            {
+                // do nothing
+                enableNextRoundButton();
+            }
+            else
+            {
+                var length = 2;
+                var timeline = this.tweens.createTimeline();
+                var j = 3;
+            
+                while(this.getHandValue(dealerCards) < 17)
+                {
+                    dealerCards[i] = (this.getValue(cardInts, cardIndex));
+                    this.dealCard(cardInts[cardIndex], shuffledDeck, timeline, i, 3, 0, dealerCard);
+        
+                    i++;
+                    cardIndex++;
+                }
+        
+                timeline.play();
+        
+                timeline.addListener("complete", function(){
+                    enableNextRoundButton();
+                })
+            }
+        }
+        else if (numPlayers == 3 && numSplits[0] == 0 && numSplits[1] == 0 && numSplits[2] == 0)
+        {
+            if (this.isBust(playerCards[0]) && this.isBust(playerCards[1]) && this.isBust(playerCards[2]))
+            {
+                // do nothing
+                enableNextRoundButton();
+            }
+            else
+            {
+                var length = 2;
+                var timeline = this.tweens.createTimeline();
+                var j = 3;
+            
+                while(this.getHandValue(dealerCards) < 17)
+                {
+                    dealerCards[i] = (this.getValue(cardInts, cardIndex));
+                    this.dealCard(cardInts[cardIndex], shuffledDeck, timeline, i, 3, 0, dealerCard);
+        
+                    i++;
+                    cardIndex++;
+                }
+        
+                timeline.play();
+        
+                timeline.addListener("complete", function(){
+                    enableNextRoundButton();
+                })
+            }
+        }
+        else if (numPlayers == 3 && numSplits[0] == 1 && numSplits[1] == 0 && numSplits[2] == 0)
+        {
+            if (this.splitIsBust(player1Hands[0]) && this.splitIsBust(player1Hands[1]) && this.isBust(playerCards[1]) && this.isBust(playerCards[2]))
+            {
+                // do nothing
+                enableNextRoundButton();
+            }
+            else
+            {
+                var length = 2;
+                var timeline = this.tweens.createTimeline();
+                var j = 3;
+            
+                while(this.getHandValue(dealerCards) < 17)
+                {
+                    dealerCards[i] = (this.getValue(cardInts, cardIndex));
+                    this.dealCard(cardInts[cardIndex], shuffledDeck, timeline, i, 3, 0, dealerCard);
+        
+                    i++;
+                    cardIndex++;
+                }
+        
+                timeline.play();
+        
+                timeline.addListener("complete", function(){
+                    enableNextRoundButton();
+                })
+            }
+        }
+        else if (numPlayers == 3 && numSplits[0] == 0 && numSplits[1] == 1 && numSplits[2] == 0)
+        {
+            if (this.isBust(playerCards[0]) && this.splitIsBust(player2Hands[0]) && this.splitIsBust(player2Hands[1]) && this.isBust(playerCards[2]))
+            {
+                // do nothing
+                enableNextRoundButton();
+            }
+            else
+            {
+                var length = 2;
+                var timeline = this.tweens.createTimeline();
+                var j = 3;
+            
+                while(this.getHandValue(dealerCards) < 17)
+                {
+                    dealerCards[i] = (this.getValue(cardInts, cardIndex));
+                    this.dealCard(cardInts[cardIndex], shuffledDeck, timeline, i, 3, 0, dealerCard);
+        
+                    i++;
+                    cardIndex++;
+                }
+        
+                timeline.play();
+        
+                timeline.addListener("complete", function(){
+                    enableNextRoundButton();
+                })
+            }
+        }
+        else if (numPlayers == 3 && numSplits[0] == 0 && numSplits[1] == 0 && numSplits[2] == 1)
+        {
+            if (this.isBust(playerCards[0]) && this.isBust(playerCards[1]) && this.splitIsBust(player3Hands[0]) && this.splitIsBust(player3Hands[1]))
+            {
+                // do nothing
+                enableNextRoundButton();
+            }
+            else
+            {
+                var length = 2;
+                var timeline = this.tweens.createTimeline();
+                var j = 3;
+            
+                while(this.getHandValue(dealerCards) < 17)
+                {
+                    dealerCards[i] = (this.getValue(cardInts, cardIndex));
+                    this.dealCard(cardInts[cardIndex], shuffledDeck, timeline, i, 3, 0, dealerCard);
+        
+                    i++;
+                    cardIndex++;
+                }
+        
+                timeline.play();
+        
+                timeline.addListener("complete", function(){
+                    enableNextRoundButton();
+                })
+            }
+        }
+        else if (numPlayers == 3 && numSplits[0] == 1 && numSplits[1] == 1 && numSplits[2] == 0)
+        {
+            if (this.splitIsBust(player1Hands[0]) && this.splitIsBust(player1Hands[1]) && this.splitIsBust(player2Hands[0]) && this.splitIsBust(player2Hands[1]) && this.isBust(playerCards[2]))
+            {
+                // do nothing
+                enableNextRoundButton();
+            }
+            else
+            {
+                var length = 2;
+                var timeline = this.tweens.createTimeline();
+                var j = 3;
+            
+                while(this.getHandValue(dealerCards) < 17)
+                {
+                    dealerCards[i] = (this.getValue(cardInts, cardIndex));
+                    this.dealCard(cardInts[cardIndex], shuffledDeck, timeline, i, 3, 0, dealerCard);
+        
+                    i++;
+                    cardIndex++;
+                }
+        
+                timeline.play();
+        
+                timeline.addListener("complete", function(){
+                    enableNextRoundButton();
+                })
+            }
+        }
+        else if (numPlayers == 3 && numSplits[0] == 1 && numSplits[1] == 0 && numSplits[2] == 1)
+        {
+            if (this.splitIsBust(player1Hands[0]) && this.splitIsBust(player1Hands[1]) && this.isBust(playerCards[1]) && this.splitIsBust(player3Hands[0]) && this.splitIsBust(player3Hands[1]))
+            {
+                // do nothing
+                enableNextRoundButton();
+            }
+            else
+            {
+                var length = 2;
+                var timeline = this.tweens.createTimeline();
+                var j = 3;
+            
+                while(this.getHandValue(dealerCards) < 17)
+                {
+                    dealerCards[i] = (this.getValue(cardInts, cardIndex));
+                    this.dealCard(cardInts[cardIndex], shuffledDeck, timeline, i, 3, 0, dealerCard);
+        
+                    i++;
+                    cardIndex++;
+                }
+        
+                timeline.play();
+        
+                timeline.addListener("complete", function(){
+                    enableNextRoundButton();
+                })
+            }
+        }
+        else if (numPlayers == 3 && numSplits[0] == 0 && numSplits[1] == 1 && numSplits[2] == 1)
+        {
+            if (this.isBust(playerCards[0]) && this.splitIsBust(player2Hands[0]) && this.splitIsBust(player2Hands[1]) && this.splitIsBust(player3Hands[0]) && this.splitIsBust(player3Hands[1]))
+            {
+                // do nothing
+                enableNextRoundButton();
+            }
+            else
+            {
+                var length = 2;
+                var timeline = this.tweens.createTimeline();
+                var j = 3;
+            
+                while(this.getHandValue(dealerCards) < 17)
+                {
+                    dealerCards[i] = (this.getValue(cardInts, cardIndex));
+                    this.dealCard(cardInts[cardIndex], shuffledDeck, timeline, i, 3, 0, dealerCard);
+        
+                    i++;
+                    cardIndex++;
+                }
+        
+                timeline.play();
+        
+                timeline.addListener("complete", function(){
+                    enableNextRoundButton();
+                })
+            }
+        }
+        else if (numPlayers == 3 && numSplits[0] == 1 && numSplits[1] == 1 && numSplits[2] == 1)
+        {
+            if (this.splitIsBust(player1Hands[0]) && this.splitIsBust(player1Hands[1]) && this.splitIsBust(player2Hands[0]) && this.splitIsBust(player2Hands[1]) && this.splitIsBust(player3Hands[0]) && this.splitIsBust(player3Hands[1]))
+            {
+                // do nothing
+                enableNextRoundButton();
+            }
+            else
+            {
+                var length = 2;
+                var timeline = this.tweens.createTimeline();
+                var j = 3;
+            
+                while(this.getHandValue(dealerCards) < 17)
+                {
+                    dealerCards[i] = (this.getValue(cardInts, cardIndex));
+                    this.dealCard(cardInts[cardIndex], shuffledDeck, timeline, i, 3, 0, dealerCard);
+        
+                    i++;
+                    cardIndex++;
+                }
+        
+                timeline.play();
+        
+                timeline.addListener("complete", function(){
+                    enableNextRoundButton();
+                })
+            }
         }
         else
         {
@@ -457,7 +1047,106 @@ class GameScene extends Phaser.Scene {
         })
     };
 
-    splitCard() {
+    hitSplitCard(cardIndex, shuffledDeck, i, j, currentHand) {
+
+        const splitIsBust = this.splitIsBust;
+
+        // currentHand = 1, to the right
+        // currentHand = 2, to the left
+        if (currentHand == 1)
+        {
+            this.tweens.add({
+                targets: shuffledDeck[cardIndex],
+                x: cardX[i][j] + 50, // change X coord
+                y: cardY[i][j],
+                angle: cardA[j],
+                ease: 'Linear',
+                duration: 200,
+                // repeat: 0,
+                yoyo: false,
+                delay: 500,
+                onComplete: function() {
+        
+                    shuffledDeck[cardIndex].setDepth(i+1);
+        
+                    if (currentPlayer == 0)
+                    {
+                        updateInfo(player1Hands[currentHand-1].length-1, currentHand-1);
+                        if (splitIsBust(player1Hands[0]))
+                            player1Hand1Display.setTint(0x8E1600);
+
+                        if (splitIsBust(player1Hands[1]))
+                            player1Hand2Display.setTint(0x8E1600);
+                    }
+                    else if (currentPlayer == 1)
+                    {
+                        updateInfo(player2Hands[currentHand-1].length-1, currentHand-1);
+                        if (splitIsBust(player2Hands[0]))
+                            player2Hand1Display.setTint(0x8E1600);
+
+                        if (splitIsBust(player2Hands[1]))
+                            player2Hand2Display.setTint(0x8E1600);
+                    }
+                    else if (currentPlayer == 2)
+                    {
+                        updateInfo(player3Hands[currentHand-1].length-1, currentHand-1);
+                        if (splitIsBust(player3Hands[0]))
+                            player3Hand1Display.setTint(0x8E1600);
+
+                        if (splitIsBust(player3Hands[1]))
+                            player3Hand2Display.setTint(0x8E1600);
+                    }
+    
+                }
+            })
+        }
+        else if (currentHand == 2)
+        {
+            this.tweens.add({
+                targets: shuffledDeck[cardIndex],
+                x: cardX[i][j] - 50, // change X coord
+                y: cardY[i][j],
+                angle: cardA[j],
+                ease: 'Linear',
+                duration: 200,
+                // repeat: 0,
+                yoyo: false,
+                delay: 500,
+                onComplete: function() {
+        
+                    shuffledDeck[cardIndex].setDepth(i+1);
+        
+                    if (currentPlayer == 0)
+                    {
+                        updateInfo(player1Hands[currentHand-1].length-1, currentHand-1);
+                        if (splitIsBust(player1Hands[0]))
+                            player1Hand1Display.setTint(0x8E1600);
+
+                        if (splitIsBust(player1Hands[1]))
+                            player1Hand2Display.setTint(0x8E1600);
+                    }
+                    else if (currentPlayer == 1)
+                    {
+                        updateInfo(player2Hands[currentHand-1].length-1, currentHand-1);
+                        if (splitIsBust(player2Hands[0]))
+                            player2Hand1Display.setTint(0x8E1600);
+
+                        if (splitIsBust(player2Hands[1]))
+                            player2Hand2Display.setTint(0x8E1600);
+                    }
+                    else if (currentPlayer == 2)
+                    {
+                        // -1 to length
+                        updateInfo(player3Hands[currentHand-1].length-1, currentHand-1);
+                        if (splitIsBust(player3Hands[0]))
+                            player3Hand1Display.setTint(0x8E1600);
+                        
+                        if (splitIsBust(player3Hands[1]))
+                            player3Hand2Display.setTint(0x8E1600);
+                    }
+                }
+            })
+        }
 
     };
     
@@ -580,6 +1269,7 @@ class GameScene extends Phaser.Scene {
     };
 
     getHandValue(playerCards) {
+
         var length = playerCards.length;
         var sum = 0;
         var aceCount = 0;
@@ -611,51 +1301,139 @@ class GameScene extends Phaser.Scene {
         }
 
         return sum;
+        
     };
     
     isBlackjack(playerCards) {
-        var length = playerCards.length;
-        var sum = 0;
 
-        if (length != 2)
-            return false;
-        
-        for (let i = 0; i < length; i++)
+        if (numSplits[currentHand] == 0)
         {
-            if (playerCards[i] === "A")
+            var length = playerCards.length;
+            var sum = 0;
+
+            if (length != 2)
+                return false;
+            
+            for (let i = 0; i < length; i++)
             {
-                sum = sum + 11;
+                if (playerCards[i] === "A")
+                {
+                    sum = sum + 11;
+                }
+                else if (playerCards[i] === "10" || playerCards[i] === "J" || playerCards[i] === "Q" || playerCards[i] === "K")
+                {
+                    sum = sum + 10;
+                }
             }
-            else if (playerCards[i] === "10" || playerCards[i] === "J" || playerCards[i] === "Q" || playerCards[i] === "K")
-            {
-                sum = sum + 10;
-            }
+
+            if (sum == 21)
+                return true;
+
+            return false;
         }
-
-        if (sum == 21)
-            return true;
-
-        return false;
     };
 
     isBust(playerCards) {
-        var length = playerCards.length;
+
+        if (numSplits[currentPlayer] == 0)
+        {
+            var length = playerCards.length;
+            var sum = 0;
+            var aceCount = 0;
+
+            for (let i = 0; i < length; i++)
+            {
+                if (playerCards[i] === "A")
+                {
+                    aceCount++;
+                }
+                else if (playerCards[i] === "10" || playerCards[i] === "J" || playerCards[i] === "Q" || playerCards[i] === "K")
+                {
+                    sum = sum + 10;
+                }
+                else
+                {
+                    sum = sum + parseInt(playerCards[i], 10);
+                }
+            }
+
+            if (sum + 11 + (aceCount - 1) > 21)
+            {
+                sum = sum + aceCount;
+                aceCount = 0;
+            }
+
+            while (aceCount > 0)
+            {
+                if (sum + 11 > 21)
+                    sum = sum + 1;
+                else
+                    sum = sum + 11;
+
+                aceCount--;
+            }
+
+            if (sum > 21)
+                return true;
+
+            return false;
+        }
+    };
+
+    splitGetHandValue(splitHand)
+    {
         var sum = 0;
         var aceCount = 0;
+        var length = splitHand.length;
 
         for (let i = 0; i < length; i++)
         {
-            if (playerCards[i] === "A")
+            if (splitHand[i] === "A")
             {
                 aceCount++;
             }
-            else if (playerCards[i] === "10" || playerCards[i] === "J" || playerCards[i] === "Q" || playerCards[i] === "K")
+            else if (splitHand[i] === "10" || splitHand[i] === "J" || splitHand[i] === "Q" || splitHand[i] === "K")
             {
                 sum = sum + 10;
             }
             else
             {
-                sum = sum + parseInt(playerCards[i], 10);
+                sum = sum + parseInt(splitHand[i], 10);
+            }
+        }
+
+        while (aceCount > 0)
+        {
+            if (sum + 11 > 21)
+                sum = sum + 1;
+            else
+                sum = sum + 11;
+
+            aceCount--;
+        }
+
+        return sum;
+    };
+
+    splitIsBust(splitHand) {
+
+        var sum = 0;
+        var aceCount = 0;
+        var length = splitHand.length;
+
+        for (let i = 0; i < length; i++)
+        {
+            if (splitHand[i] === "A")
+            {
+                aceCount++;
+            }
+            else if (splitHand[i] === "10" || splitHand[i] === "J" || splitHand[i] === "Q" || splitHand[i] === "K")
+            {
+                sum = sum + 10;
+            }
+            else
+            {
+                sum = sum + parseInt(splitHand[i], 10);
             }
         }
 
@@ -681,157 +1459,390 @@ class GameScene extends Phaser.Scene {
         return false;
     };
 
+    // (update this for splits, since splits CANT be BJ)
     isWinOrLoss() {
 
         let dealerHandValue = this.getHandValue(dealerCards);
 
-        for (let i = 0; i < numPlayers; i++)
+        // check player1
+        if (numPlayers >= 1)
         {
-            let handValue = this.getHandValue(playerCards[i]);
-
-            if (didPlayersSurrender[i])
+            if (numSplits[0] == 0)
             {
-                // hand loses (surrender) (money already handled earlier)
-                if (i == 0)
+                if (didPlayersSurrender[0])
                 {
+                    // hand loses (surrender) (money already handled earlier)
                     player1CardDisplay.setTint(0xFFA500);
                 }
-                else if (i == 1)
+                else if (this.isBust(playerCards[0]))
                 {
-                    player2CardDisplay.setTint(0xFFA500);
-                }
-                else if (i == 2)
-                {
-                    player3CardDisplay.setTint(0xFFA500);
-                }
-            }
-            else if (this.isBust(playerCards[i]))
-            {
-                // hand loses
-                if (i == 0)
-                {
+                    // hand loses
                     player1CardDisplay.setTint(0x8E1600);
                 }
-                else if (i == 1)
+                else if (this.isBlackjack(dealerCards) && !this.isBlackjack(playerCards[0]))
                 {
-                    player2CardDisplay.setTint(0x8E1600);
-                }
-                else if (i == 2)
-                {
-                    player3CardDisplay.setTint(0x8E1600);
-                }
-            }
-            else if (this.isBlackjack(dealerCards) && !this.isBlackjack(playerCards[i]))
-            {
-                // hand loses
-                if (i == 0)
-                {
+                    // hand loses
                     player1CardDisplay.setTint(0x8E1600);
                 }
-                else if (i == 1)
+                else if (this.isBlackjack(playerCards[0]) && this.isBlackjack(dealerCards))
                 {
-                    player2CardDisplay.setTint(0x8E1600);
-                }
-                else if (i == 2)
-                {
-                    player3CardDisplay.setTint(0x8E1600);
-                }
-            }
-            else if (this.isBlackjack(playerCards[i]) && this.isBlackjack(dealerCards))
-            {
-                //push
-                if (i == 0)
-                {
+                    //push
                     player1CardDisplay.setTint(0xFFFFFF);
                     playerCurrency = playerCurrency + player1Bet;
                 }
-                else if (i == 1)
+                else if (this.isBlackjack(playerCards[0]))
                 {
-                    player2CardDisplay.setTint(0xFFFFFF);
-                    playerCurrency = playerCurrency + player2Bet;
-                }
-                else if (i == 2)
-                {
-                    player3CardDisplay.setTint(0xFFFFFF);
-                    playerCurrency = playerCurrency + player3Bet;
-                }
-            }
-            else if (this.isBlackjack(playerCards[i]))
-            {
-                // blackjack
-                if (i == 0)
-                {
+                    // blackjack
                     player1CardDisplay.setTint(0xFFD700);
                     playerCurrency = playerCurrency + (1.5 * player1Bet) + player1Bet;
                 }
-                else if (i == 1)
+                else if ((this.getHandValue(playerCards[0]) > dealerHandValue && this.getHandValue(playerCards[0]) < 22) || (this.getHandValue(playerCards[0]) < 22 && dealerHandValue > 21))
                 {
-                    player2CardDisplay.setTint(0xFFD700);
-                    playerCurrency = playerCurrency + (1.5 * player2Bet) + player2Bet;
-                }
-                else if (i == 2)
-                {
-                    player3CardDisplay.setTint(0xFFD700);
-                    playerCurrency = playerCurrency + (1.5 * player3Bet) + player3Bet;
-                }
-            }
-            else if ((handValue > dealerHandValue && handValue < 22) || (handValue < 22 && dealerHandValue > 21))
-            {
-                // hand wins
-                if (i == 0)
-                {
+                    // hand wins
                     player1CardDisplay.setTint(0x00FF00);
                     playerCurrency = playerCurrency + (2 * player1Bet);
                 }
-                else if (i == 1)
+                else if (this.getHandValue(playerCards[0]) == dealerHandValue)
                 {
-                    player2CardDisplay.setTint(0x00FF00);
-                    playerCurrency = playerCurrency + (2 * player2Bet);
-                }
-                else if (i == 2)
-                {
-                    player3CardDisplay.setTint(0x00FF00);
-                    playerCurrency = playerCurrency + (2 * player3Bet);
-                }
-            }
-            else if (handValue == dealerHandValue)
-            {
-                // push
-                if (i == 0)
-                {
+                    // push
                     player1CardDisplay.setTint(0xFFFFFF);
                     playerCurrency = playerCurrency + player1Bet;
                 }
-                else if (i == 1)
+                else
                 {
+                    // hand loses
+                    player1CardDisplay.setTint(0x8E1600);
+                }
+
+
+            }
+            else if (numSplits[0] == 1)
+            {
+                // first hand
+                if (this.splitIsBust(player1Hands[0]))
+                {
+                    // hand loses
+                    player1Hand1Display.setTint(0x8E1600);
+                }
+                else if (this.isBlackjack(dealerCards) && this.splitGetHandValue(player1Hands[0]) != 21)
+                {
+                    // hand loses
+                    player1Hand1Display.setTint(0x8E1600);
+                }
+                else if (this.splitGetHandValue(player1Hands[0]) == 21 && this.isBlackjack(dealerCards))
+                {
+                    //push
+                    player1Hand1Display.setTint(0xFFFFFF);
+                    playerCurrency = playerCurrency + player1HandBets[0];
+                }
+                else if ((this.splitGetHandValue(player1Hands[0]) > dealerHandValue && this.splitGetHandValue(player1Hands[0]) < 22) || (this.splitGetHandValue(player1Hands[0]) < 22 && dealerHandValue > 21))
+                {
+                    // hand wins
+                    player1Hand1Display.setTint(0x00FF00);
+                    playerCurrency = playerCurrency + (2 * player1HandBets[0]);
+                }
+                else if (this.splitGetHandValue(player1Hands[0]) == dealerHandValue)
+                {
+                    // push
+                    player1Hand1Display.setTint(0xFFFFFF);
+                    playerCurrency = playerCurrency + player1HandBets[0];
+                }
+                else
+                {
+                    // hand loses
+                    player1Hand1Display.setTint(0x8E1600);
+                }
+                
+                // second hand
+                if (this.splitIsBust(player1Hands[1]))
+                {
+                    // hand loses
+                    player1Hand2Display.setTint(0x8E1600);
+                }
+                else if (this.isBlackjack(dealerCards) && this.splitGetHandValue(player1Hands[1]) != 21)
+                {
+                    // hand loses
+                    player1Hand2Display.setTint(0x8E1600);
+                }
+                else if (this.splitGetHandValue(player1Hands[1]) == 21 && this.isBlackjack(dealerCards))
+                {
+                    //push
+                    player1Hand2Display.setTint(0xFFFFFF);
+                    playerCurrency = playerCurrency + player1HandBets[1];
+                }
+                else if ((this.splitGetHandValue(player1Hands[1]) > dealerHandValue && this.splitGetHandValue(player1Hands[1]) < 22) || (this.splitGetHandValue(player1Hands[1]) < 22 && dealerHandValue > 21))
+                {
+                    // hand wins
+                    player1Hand2Display.setTint(0x00FF00);
+                    playerCurrency = playerCurrency + (2 * player1HandBets[1]);
+                }
+                else if (this.splitGetHandValue(player1Hands[0]) == dealerHandValue)
+                {
+                    // push
+                    player1Hand2Display.setTint(0xFFFFFF);
+                    playerCurrency = playerCurrency + player1HandBets[1];
+                }
+                else
+                {
+                    // hand loses
+                    player1Hand2Display.setTint(0x8E1600);
+                }
+                
+            }
+        }
+
+        // check player2
+        if (numPlayers >= 2)
+        {
+            if (numSplits[1] == 0)
+            {
+                if (didPlayersSurrender[1])
+                {
+                    // hand loses (surrender) (money already handled earlier)
+                    player2CardDisplay.setTint(0xFFA500);
+                }
+                else if (this.isBust(playerCards[1]))
+                {
+                    // hand loses
+                    player2CardDisplay.setTint(0x8E1600);
+                }
+                else if (this.isBlackjack(dealerCards) && !this.isBlackjack(playerCards[1]))
+                {
+                    // hand loses
+                    player2CardDisplay.setTint(0x8E1600);
+                }
+                else if (this.isBlackjack(playerCards[1]) && this.isBlackjack(dealerCards))
+                {
+                    //push
                     player2CardDisplay.setTint(0xFFFFFF);
                     playerCurrency = playerCurrency + player2Bet;
                 }
-                else if (i == 2)
+                else if (this.isBlackjack(playerCards[1]))
                 {
+                    // blackjack
+                    player2CardDisplay.setTint(0xFFD700);
+                    playerCurrency = playerCurrency + (1.5 * player2Bet) + player2Bet;
+                }
+                else if ((this.getHandValue(playerCards[1]) > dealerHandValue && this.getHandValue(playerCards[1]) < 22) || (this.getHandValue(playerCards[1]) < 22 && dealerHandValue > 21))
+                {
+                    // hand wins
+                    player2CardDisplay.setTint(0x00FF00);
+                    playerCurrency = playerCurrency + (2 * player2Bet);
+                }
+                else if (this.getHandValue(playerCards[1]) == dealerHandValue)
+                {
+                    // push
+                    player2CardDisplay.setTint(0xFFFFFF);
+                    playerCurrency = playerCurrency + player2Bet;
+                }
+                else
+                {
+                    // hand loses
+                    player2CardDisplay.setTint(0x8E1600);
+                }
+
+            }
+            else if (numSplits[1] == 1)
+            {
+                // first hand
+                if (this.splitIsBust(player2Hands[0]))
+                {
+                    // hand loses
+                    player2Hand1Display.setTint(0x8E1600);
+                }
+                else if (this.isBlackjack(dealerCards) && this.splitGetHandValue(player2Hands[0]) != 21)
+                {
+                    // hand loses
+                    player2Hand1Display.setTint(0x8E1600);
+                }
+                else if (this.splitGetHandValue(player2Hands[0]) == 21 && this.isBlackjack(dealerCards))
+                {
+                    //push
+                    player2Hand1Display.setTint(0xFFFFFF);
+                    playerCurrency = playerCurrency + player2HandBets[0];
+                }
+                else if ((this.splitGetHandValue(player2Hands[0]) > dealerHandValue && this.splitGetHandValue(player2Hands[0]) < 22) || (this.splitGetHandValue(player2Hands[0]) < 22 && dealerHandValue > 21))
+                {
+                    // hand wins
+                    player2Hand1Display.setTint(0x00FF00);
+                    playerCurrency = playerCurrency + (2 * player2HandBets[0]);
+                }
+                else if (this.splitGetHandValue(player2Hands[0]) == dealerHandValue)
+                {
+                    // push
+                    player2Hand1Display.setTint(0xFFFFFF);
+                    playerCurrency = playerCurrency + player2HandBets[0];
+                }
+                else
+                {
+                    // hand loses
+                    player2Hand1Display.setTint(0x8E1600);
+                }
+            
+                // second hand
+                if (this.splitIsBust(player2Hands[1]))
+                {
+                    // hand loses
+                    player2Hand2Display.setTint(0x8E1600);
+                }
+                else if (this.isBlackjack(dealerCards) && this.splitGetHandValue(player2Hands[1]) != 21)
+                {
+                    // hand loses
+                    player2Hand2Display.setTint(0x8E1600);
+                }
+                else if (this.splitGetHandValue(player2Hands[1]) == 21 && this.isBlackjack(dealerCards))
+                {
+                    //push
+                    player2Hand2Display.setTint(0xFFFFFF);
+                    playerCurrency = playerCurrency + player2HandBets[1];
+                }
+                else if ((this.splitGetHandValue(player2Hands[1]) > dealerHandValue && this.splitGetHandValue(player2Hands[1]) < 22) || (this.splitGetHandValue(player2Hands[1]) < 22 && dealerHandValue > 21))
+                {
+                    // hand wins
+                    player2Hand2Display.setTint(0x00FF00);
+                    playerCurrency = playerCurrency + (2 * player2HandBets[1]);
+                }
+                else if (this.splitGetHandValue(player2Hands[0]) == dealerHandValue)
+                {
+                    // push
+                    player2Hand2Display.setTint(0xFFFFFF);
+                    playerCurrency = playerCurrency + player2HandBets[1];
+                }
+                else
+                {
+                    // hand loses
+                    player2Hand2Display.setTint(0x8E1600);
+                }
+                
+            }
+        }
+
+        // check player3
+        if (numPlayers >= 3)
+        {
+            if (numSplits[2] == 0)
+            {
+                if (didPlayersSurrender[2])
+                {
+                    // hand loses (surrender) (money already handled earlier)
+                    player3CardDisplay.setTint(0xFFA500);
+                }
+                else if (this.isBust(playerCards[2]))
+                {
+                    // hand loses
+                    player3CardDisplay.setTint(0x8E1600);
+                }
+                else if (this.isBlackjack(dealerCards) && !this.isBlackjack(playerCards[2]))
+                {
+                    // hand loses
+                    player3CardDisplay.setTint(0x8E1600);
+                }
+                else if (this.isBlackjack(playerCards[2]) && this.isBlackjack(dealerCards))
+                {
+                    //push
                     player3CardDisplay.setTint(0xFFFFFF);
                     playerCurrency = playerCurrency + player3Bet;
                 }
-            }
-            else
-            {
-                // hand loses
-                if (i == 0)
+                else if (this.isBlackjack(playerCards[2]))
                 {
-                    player1CardDisplay.setTint(0x8E1600);
+                    // blackjack
+                    player3CardDisplay.setTint(0xFFD700);
+                    playerCurrency = playerCurrency + (1.5 * player3Bet) + player3Bet;
                 }
-                else if (i == 1)
+                else if ((this.getHandValue(playerCards[2]) > dealerHandValue && this.getHandValue(playerCards[2]) < 22) || (this.getHandValue(playerCards[2]) < 22 && dealerHandValue > 21))
                 {
-                    player2CardDisplay.setTint(0x8E1600);
+                    // hand wins
+                    player3CardDisplay.setTint(0x00FF00);
+                    playerCurrency = playerCurrency + (2 * player3Bet);
                 }
-                else if (i == 2)
+                else if (this.getHandValue(playerCards[2]) == dealerHandValue)
                 {
+                    // push
+                    player3CardDisplay.setTint(0xFFFFFF);
+                    playerCurrency = playerCurrency + player3Bet;
+                }
+                else
+                {
+                    // hand loses
                     player3CardDisplay.setTint(0x8E1600);
+                }
+
+            }
+            else if (numSplits[2] == 1)
+            {
+                // first hand
+                if (this.splitIsBust(player3Hands[0]))
+                {
+                    // hand loses
+                    player3Hand1Display.setTint(0x8E1600);
+                }
+                else if (this.isBlackjack(dealerCards) && this.splitGetHandValue(player3Hands[0]) != 21)
+                {
+                    // hand loses
+                    player3Hand1Display.setTint(0x8E1600);
+                }
+                else if (this.splitGetHandValue(player3Hands[0]) == 21 && this.isBlackjack(dealerCards))
+                {
+                    //push
+                    player3Hand1Display.setTint(0xFFFFFF);
+                    playerCurrency = playerCurrency + player3HandBets[0];
+                }
+                else if ((this.splitGetHandValue(player3Hands[0]) > dealerHandValue && this.splitGetHandValue(player3Hands[0]) < 22) || (this.splitGetHandValue(player3Hands[0]) < 22 && dealerHandValue > 21))
+                {
+                    // hand wins
+                    player3Hand1Display.setTint(0x00FF00);
+                    playerCurrency = playerCurrency + (2 * player3HandBets[0]);
+                }
+                else if (this.splitGetHandValue(player3Hands[0]) == dealerHandValue)
+                {
+                    // push
+                    player3Hand1Display.setTint(0xFFFFFF);
+                    playerCurrency = playerCurrency + player3HandBets[0];
+                }
+                else
+                {
+                    // hand loses
+                    player3Hand1Display.setTint(0x8E1600);
+                }
+                
+                // second hand
+                if (this.splitIsBust(player3Hands[1]))
+                {
+                    // hand loses
+                    player3Hand2Display.setTint(0x8E1600);
+                }
+                else if (this.isBlackjack(dealerCards) && this.splitGetHandValue(player3Hands[1]) != 21)
+                {
+                    // hand loses
+                    player3Hand2Display.setTint(0x8E1600);
+                }
+                else if (this.splitGetHandValue(player3Hands[1]) == 21 && this.isBlackjack(dealerCards))
+                {
+                    //push
+                    player3Hand2Display.setTint(0xFFFFFF);
+                    playerCurrency = playerCurrency + player3HandBets[1];
+                }
+                else if ((this.splitGetHandValue(player3Hands[1]) > dealerHandValue && this.splitGetHandValue(player3Hands[1]) < 22) || (this.splitGetHandValue(player3Hands[1]) < 22 && dealerHandValue > 21))
+                {
+                    // hand wins
+                    player3Hand2Display.setTint(0x00FF00);
+                    playerCurrency = playerCurrency + (2 * player3HandBets[1]);
+                }
+                else if (this.splitGetHandValue(player3Hands[0]) == dealerHandValue)
+                {
+                    // push
+                    player3Hand2Display.setTint(0xFFFFFF);
+                    playerCurrency = playerCurrency + player3HandBets[1];
+                }
+                else
+                {
+                    // hand loses
+                    player3Hand2Display.setTint(0x8E1600);
                 }
             }
         }
 
-        // check insurance bets
+        // check insurance bets (split or not doesnt matter)
         if (this.isBlackjack(dealerCards) && isPlayerInsured[0] == 1)
         {
             playerCurrency = playerCurrency + (3 * player1InsuranceBet);
@@ -844,7 +1855,6 @@ class GameScene extends Phaser.Scene {
         {
             playerCurrency = playerCurrency + (3 * player3InsuranceBet);
         }
-
 
         currencyScoreBoard.setText("Currency: $" + playerCurrency);
     };
@@ -2190,7 +3200,15 @@ class GameScene extends Phaser.Scene {
 
             for (let j = 0; j < player3ChipArrays[i].length; j++)
                 player3ChipArrays[i][j].destroy(true);
-            
+
+            for (let j = 0; j < player1DoubleChipArrays[i].length; j++)
+                player1DoubleChipArrays[i][j].destroy(true);
+
+            for (let j = 0; j < player2DoubleChipArrays[i].length; j++)
+                player2DoubleChipArrays[i][j].destroy(true);
+
+            for (let j = 0; j < player3DoubleChipArrays[i].length; j++)
+                player3DoubleChipArrays[i][j].destroy(true);
         }
 
         player1Bet = 0;
@@ -2225,6 +3243,14 @@ class GameScene extends Phaser.Scene {
         player3HandBets = [];
         currentHand = 0;
         handIndicator.setVisible(false);
+
+        player1ChipArrays = [[], [], [], []];
+        player2ChipArrays = [[], [], [], []];
+        player3ChipArrays = [[], [], [], []];
+        player1DoubleChipArrays = [[], [], [], []];
+        player2DoubleChipArrays = [[], [], [], []];
+        player3DoubleChipArrays = [[], [], [], []];
+        currentPlayer = 0;
     };
 
     newRound() {
@@ -3932,6 +4958,25 @@ class GameScene extends Phaser.Scene {
                             player3CardDisplay.setTint(0xFFFFFF);
                         }
                     }
+
+                    if (currentPlayer == 0)
+                    {
+                        updateInfo(playerCards[currentPlayer].length-1, currentPlayer);
+                        if (this.scene.isBust(playerCards[currentPlayer]))
+                            player1CardDisplay.setTint(0x8E1600);
+                    }
+                    else if (currentPlayer == 1)
+                    {
+                        updateInfo(playerCards[currentPlayer].length-1, currentPlayer);
+                        if (this.scene.isBust(playerCards[currentPlayer]))
+                            player2CardDisplay.setTint(0x8E1600);
+                    }
+                    else if (currentPlayer == 2)
+                    {
+                        updateInfo(playerCards[currentPlayer].length-1, currentPlayer);
+                        if (this.scene.isBust(playerCards[currentPlayer]))
+                            player3CardDisplay.setTint(0x8E1600);
+                    }
                     
                     if (this.scene.isBust(playerCards[currentPlayer]))
                     {
@@ -3942,6 +4987,7 @@ class GameScene extends Phaser.Scene {
                                 player1TurnIndicator.fillColor = 0xFFFFFF;
                                 player2TurnIndicator.fillColor = 0x8E1600;
                                 currentPlayer = currentPlayer + 1;
+                                currentHand = 0;
                                 this.scene.enableSurrenderButton();
 
                                 if (playerCurrency >= player2Bet)
@@ -3967,6 +5013,7 @@ class GameScene extends Phaser.Scene {
                             else
                             {
                                 // plus more stuff since if its the last player
+                                currentHand = 0;
                                 dealerCard.visible = false;
                                 shuffledDeck[cardInts[dealerIndex]].setDepth(1);
                                 this.scene.revealDealerInfo(dealerCards);
@@ -3986,6 +5033,7 @@ class GameScene extends Phaser.Scene {
                                 player2TurnIndicator.fillColor = 0xFFFFFF;
                                 player3TurnIndicator.fillColor = 0x8E1600;
                                 currentPlayer = currentPlayer + 1;
+                                currentHand = 0;
                                 this.scene.enableSurrenderButton();
 
                                 if (playerCurrency >= player3Bet)
@@ -4013,6 +5061,7 @@ class GameScene extends Phaser.Scene {
                                 player2TurnIndicator.fillColor = 0xFFFFFF;
                                 player1TurnIndicator.fillColor = 0x8E1600;
                                 currentPlayer = 0;
+                                currentHand = 0;
 
                                 // plus more stuff since if its the last player
                                 dealerCard.visible = false;
@@ -4032,6 +5081,7 @@ class GameScene extends Phaser.Scene {
                             player3TurnIndicator.fillColor = 0xFFFFFF;
                             player1TurnIndicator.fillColor = 0x8E1600;
                             currentPlayer = 0;
+                            currentHand = 0;
 
                             // plus more stuff since if its the last player
                             dealerCard.visible = false;
@@ -4044,6 +5094,280 @@ class GameScene extends Phaser.Scene {
                             this.scene.disableActionButtons();
                             this.scene.disableInsuranceButton();
                             this.scene.disableSplitButton();
+                        }
+                    }
+
+                }
+            }
+            else if (numSplits[currentPlayer] == 1)
+            {
+
+                // playercards[currentPlayer][currentlength] = player1Hands[currentHand][currentLength]
+                if ((currentPlayer == 0 && numPlayers >= 1 && !this.scene.splitIsBust(player1Hands[currentHand - 1])) || (currentPlayer == 1 && numPlayers >= 2 && !this.scene.splitIsBust(player2Hands[currentHand - 1])) || (currentPlayer == 2 && numPlayers >= 3 && !this.scene.splitIsBust(player3Hands[currentHand - 1])))
+                {
+                    playerHit.setTexture('clickedButton');
+                    // ADDING THIS NEW LINE RIGHT HERE BELOW THIS COMMENT
+                    this.scene.baseGameBasicStrategy(currentPlayer, "Hit");
+
+                    //player3Hands[1][1] = (this.scene.getValue(cardInts, cardIndex, this));
+                    //player3Sprites[1][1] = shuffledDeck[cardInts[cardIndex]];
+                    //this.scene.hitSplitCard(cardInts[cardIndex], shuffledDeck, player3Hands[1].length-1, currentPlayer, 2, this);
+
+                    if (currentPlayer == 0)
+                    {
+                        player1Hands[currentHand - 1][player1Hands[currentHand - 1].length] = (this.scene.getValue(cardInts, cardIndex, this));
+                        player1Sprites[currentHand - 1][player1Hands[currentHand - 1].length] = shuffledDeck[cardInts[cardIndex]];
+                        this.scene.hitSplitCard(cardInts[cardIndex], shuffledDeck, player1Hands[currentHand - 1].length-1, currentPlayer, currentHand, this);
+                    }
+                    else if (currentPlayer == 1)
+                    {
+                        player2Hands[currentHand - 1][player2Hands[currentHand - 1].length] = (this.scene.getValue(cardInts, cardIndex, this));
+                        player2Sprites[currentHand - 1][player2Hands[currentHand - 1].length] = shuffledDeck[cardInts[cardIndex]];
+                        this.scene.hitSplitCard(cardInts[cardIndex], shuffledDeck, player2Hands[currentHand - 1].length-1, currentPlayer, currentHand, this);
+                    }
+                    else if (currentPlayer == 2)
+                    {
+                        player3Hands[currentHand - 1][player3Hands[currentHand - 1].length] = (this.scene.getValue(cardInts, cardIndex, this));
+                        player3Sprites[currentHand - 1][player3Hands[currentHand - 1].length] = shuffledDeck[cardInts[cardIndex]];
+                        this.scene.hitSplitCard(cardInts[cardIndex], shuffledDeck, player3Hands[currentHand - 1].length-1, currentPlayer, currentHand, this);
+                    }
+
+
+                    cardIndex++;
+
+                    this.scene.disableSurrenderButton();
+                    this.scene.disableDoubleButton();
+                    this.scene.disableInsuranceButton();
+                    // playerCards[currentPlayer][playerCards[currentPlayer].length + 1]
+                    // to dynamically hit cards
+
+                    if (currentPlayer == 0)
+                    {
+                        // check both hands
+                        if (currentHand == 1 && this.scene.splitIsBust(player1Hands[currentHand - 1]) == 0)
+                        {
+                            player1Hand1Display.setTint(0xFFFFFF);
+                        }
+                        else if (currentHand == 2 && this.scene.splitIsBust(player1Hands[currentHand - 1]) == 0)
+                        {
+                            player1Hand2Display.setTint(0xFFFFFF);
+                        }
+
+                    }
+                    else if (currentPlayer == 1)
+                    {
+                        // check both hands
+                        if (currentHand == 1 && this.scene.splitIsBust(player2Hands[currentHand - 1]) == 0)
+                        {
+                            player2Hand1Display.setTint(0xFFFFFF);
+                        }
+                        else if (currentHand == 2 && this.scene.splitIsBust(player2Hands[currentHand - 1]) == 0)
+                        {
+                            player2Hand2Display.setTint(0xFFFFFF);
+                        }
+                    }
+                    else if (currentPlayer == 2)
+                    {
+                        // check both hands
+                        if (currentHand == 1 && this.scene.splitIsBust(player3Hands[currentHand - 1]) == 0)
+                        {
+                            player3Hand1Display.setTint(0xFFFFFF);
+                        }
+                        else if (currentHand == 2 && this.scene.splitIsBust(player3Hands[currentHand - 1]) == 0)
+                        {
+                            player3Hand2Display.setTint(0xFFFFFF);
+                        }
+                    }
+                    
+                    if ((currentPlayer == 0 && this.scene.splitIsBust(player1Hands[currentHand - 1])) || (currentPlayer == 1 && this.scene.splitIsBust(player2Hands[currentHand - 1])) || (currentPlayer == 2 && this.scene.splitIsBust(player3Hands[currentHand - 1])))
+                    {
+                        if (currentPlayer == 0)
+                        {
+                            updateInfo(player1Hands[currentHand-1].length-1, currentHand-1);
+                            if (this.scene.splitIsBust(player1Hands[0]))
+                                player1Hand1Display.setTint(0x8E1600);
+
+                            if (this.scene.splitIsBust(player1Hands[1]))
+                                player1Hand2Display.setTint(0x8E1600);
+                        }
+                        else if (currentPlayer == 1)
+                        {
+                            updateInfo(player2Hands[currentHand-1].length-1, currentHand-1);
+                            if (this.scene.splitIsBust(player2Hands[0]))
+                                player2Hand1Display.setTint(0x8E1600);
+
+                            if (this.scene.splitIsBust(player2Hands[1]))
+                                player2Hand2Display.setTint(0x8E1600);
+                        }
+                        else if (currentPlayer == 2)
+                        {
+                            updateInfo(player3Hands[currentHand-1].length-1, currentHand-1);
+                            if (this.scene.splitIsBust(player3Hands[0]))
+                                player3Hand1Display.setTint(0x8E1600);
+
+                            if (this.scene.splitIsBust(player3Hands[1]))
+                                player3Hand2Display.setTint(0x8E1600);
+                        }
+
+                        if (currentPlayer == 0 && numSplits[currentPlayer] == 1)
+                        {
+                            // first hand out of 2
+                            if (currentHand != numSplits[currentPlayer] + 1)
+                            {
+                                handIndicator.setPosition(cardX[0][0] - 50, cardY[0][0] + 15);
+                                currentHand = currentHand + 1;
+
+                                if (playerCurrency >= player1Bet)
+                                    this.scene.enableDoubleButton();
+                                else
+                                    this.scene.disableDoubleButton();
+                            }
+                            else
+                            {
+                                // last hand of the split
+                                handIndicator.setVisible(false);
+
+                                if (numPlayers != 1)
+                                {
+                                    player1TurnIndicator.fillColor = 0xFFFFFF;
+                                    player2TurnIndicator.fillColor = 0x8E1600;
+                                    currentPlayer = currentPlayer + 1;
+                                    this.scene.enableSurrenderButton();
+
+                                    if (playerCurrency >= player2Bet)
+                                        this.scene.enableDoubleButton();
+                                    else
+                                        this.scene.disableDoubleButton();
+
+                                    if (playerCurrency >= player2Bet * .5 && dealerCards[1] === "A" && numSplits[currentPlayer] == 0)
+                                        this.scene.enableInsuranceButton();
+                                    else
+                                        this.scene.disableInsuranceButton();
+
+                                    if (playerCards[1][0] === playerCards[1][1] && numSplits[currentPlayer] < maxSplits)
+                                        this.scene.enableSplitButton();
+                                    else
+                                        this.scene.disableSplitButton();
+
+                                    if (numSplits[currentPlayer] == 0)
+                                        this.scene.enableSurrenderButton();
+                                    else
+                                        this.scene.disableSurrenderButton();
+                                }
+                                else
+                                {
+                                    // plus more stuff since if its the last player
+                                    currentHand = 0;
+                                    dealerCard.visible = false;
+                                    shuffledDeck[cardInts[dealerIndex]].setDepth(1);
+                                    this.scene.revealDealerInfo(dealerCards);
+                                    // dealer needs to draw to 16, and stand on 17
+                                    this.scene.drawDealerCards(dealerCards, cardIndex, cardInts, dealerCards.length);
+                                    cardIndex = cardIndex + dealerCards.length - 2;
+                                    this.scene.isWinOrLoss();
+                                    this.scene.disableActionButtons();
+                                    this.scene.disableInsuranceButton();
+                                    this.scene.disableSplitButton();
+                                }
+                            }
+                        }
+                        else if (currentPlayer == 1 && numSplits[currentPlayer] == 1)
+                        {
+                            // first hand out of 2
+                            if (currentHand != numSplits[currentPlayer] + 1)
+                            {
+                                handIndicator.setPosition(cardX[0][1] - 50, cardY[0][1] + 15);
+                                currentHand = currentHand + 1;
+
+                                if (playerCurrency >= player2Bet)
+                                    this.scene.enableDoubleButton();
+                                else
+                                    this.scene.disableDoubleButton();
+                            }
+                            else
+                            {
+                                // last hand of the split
+                                handIndicator.setVisible(false);
+
+                                if (numPlayers != 2)
+                                {
+                                    player2TurnIndicator.fillColor = 0xFFFFFF;
+                                    player3TurnIndicator.fillColor = 0x8E1600;
+                                    currentPlayer = currentPlayer + 1;
+                                    this.scene.enableSurrenderButton();
+
+                                    if (playerCurrency >= player3Bet)
+                                        this.scene.enableDoubleButton();
+                                    else
+                                        this.scene.disableDoubleButton();
+
+                                    if (playerCurrency >= player3Bet * .5 && dealerCards[1] === "A" && numSplits[currentPlayer] == 0)
+                                        this.scene.enableInsuranceButton();
+                                    else
+                                        this.scene.disableInsuranceButton();
+
+                                    if (playerCards[2][0] === playerCards[2][1] && numSplits[currentPlayer] < maxSplits)
+                                        this.scene.enableSplitButton();
+                                    else
+                                        this.scene.disableSplitButton();
+
+                                    if (numSplits[currentPlayer] == 0)
+                                        this.scene.enableSurrenderButton();
+                                    else
+                                        this.scene.disableSurrenderButton();
+                                }
+                                else
+                                {
+                                    // plus more stuff since if its the last player
+                                    currentHand = 0;
+                                    dealerCard.visible = false;
+                                    shuffledDeck[cardInts[dealerIndex]].setDepth(1);
+                                    this.scene.revealDealerInfo(dealerCards);
+                                    // dealer needs to draw to 16, and stand on 17
+                                    this.scene.drawDealerCards(dealerCards, cardIndex, cardInts, dealerCards.length);
+                                    cardIndex = cardIndex + dealerCards.length - 2;
+                                    this.scene.isWinOrLoss();
+                                    this.scene.disableActionButtons();
+                                    this.scene.disableInsuranceButton();
+                                    this.scene.disableSplitButton();
+                                }
+                            }
+                        }
+                        else if (currentPlayer == 2 && numSplits[currentPlayer] == 1)
+                        {
+                            // first hand out of 2
+                            if (currentHand != numSplits[currentPlayer] + 1)
+                            {
+                                handIndicator.setPosition(cardX[0][2] - 50, cardY[0][2] + 15);
+                                currentHand = currentHand + 1;
+
+                                if (playerCurrency >= player3Bet)
+                                    this.scene.enableDoubleButton();
+                                else
+                                    this.scene.disableDoubleButton();
+                            }
+                            else
+                            {
+                                // last hand of the split
+                                handIndicator.setVisible(false);
+
+                                player3TurnIndicator.fillColor = 0xFFFFFF;
+                                player1TurnIndicator.fillColor = 0x8E1600;
+                                currentPlayer = 0;
+
+                                // plus more stuff since if its the last player
+                                currentHand = 0;
+                                dealerCard.visible = false;
+                                shuffledDeck[cardInts[dealerIndex]].setDepth(1);
+                                this.scene.revealDealerInfo(dealerCards);
+                                // dealer needs to draw to 16, and stand on 17
+                                this.scene.drawDealerCards(dealerCards, cardIndex, cardInts, dealerCards.length);
+                                cardIndex = cardIndex + dealerCards.length - 2;
+                                this.scene.isWinOrLoss();
+                                this.scene.disableActionButtons();
+                                this.scene.disableInsuranceButton();
+                                this.scene.disableSplitButton();
+                            }
                         }
                     }
 
@@ -4091,8 +5415,27 @@ class GameScene extends Phaser.Scene {
                         }
                     }
 
+
+                    if (currentPlayer == 0)
+                    {
+                        updateInfo(playerCards[currentPlayer].length-1, currentPlayer);
+                        if (this.scene.isBust(playerCards[currentPlayer]))
+                            player1CardDisplay.setTint(0x8E1600);
+                    }
+                    else if (currentPlayer == 1)
+                    {
+                        updateInfo(playerCards[currentPlayer].length-1, currentPlayer);
+                        if (this.scene.isBust(playerCards[currentPlayer]))
+                            player2CardDisplay.setTint(0x8E1600);
+                    }
+                    else if (currentPlayer == 2)
+                    {
+                        updateInfo(playerCards[currentPlayer].length-1, currentPlayer);
+                        if (this.scene.isBust(playerCards[currentPlayer]))
+                            player3CardDisplay.setTint(0x8E1600);
+                    }
+
                     // since this is a double, player can only hit once and their turn is over
-                    // still need to implement the duplicating chips
                     if (currentPlayer == 0)
                     {
                         placeholderBet = player1Bet;
@@ -4439,6 +5782,724 @@ class GameScene extends Phaser.Scene {
 
                 }
             }
+            if (numSplits[currentPlayer] == 1)
+            {
+                if ((currentPlayer == 0 && numPlayers >= 1 && !this.scene.splitIsBust(player1Hands[currentHand - 1])) || (currentPlayer == 1 && numPlayers >= 2 && !this.scene.splitIsBust(player2Hands[currentHand - 1])) || (currentPlayer == 2 && numPlayers >= 3 && !this.scene.splitIsBust(player3Hands[currentHand - 1])))
+                {
+                    playerDouble.setTexture('clickedButton');
+                    // ADDING THIS NEW LINE RIGHT HERE BELOW THIS COMMENT
+                    this.scene.baseGameBasicStrategy(currentPlayer, "Double");;
+                    
+                    if (currentPlayer == 0)
+                    {
+                        player1Hands[currentHand - 1][player1Hands[currentHand - 1].length] = (this.scene.getValue(cardInts, cardIndex, this));
+                        player1Sprites[currentHand - 1][player1Hands[currentHand - 1].length] = shuffledDeck[cardInts[cardIndex]];
+                        this.scene.hitSplitCard(cardInts[cardIndex], shuffledDeck, player1Hands[currentHand - 1].length-1, currentPlayer, currentHand, this);
+                    }
+                    else if (currentPlayer == 1)
+                    {
+                        player2Hands[currentHand - 1][player2Hands[currentHand - 1].length] = (this.scene.getValue(cardInts, cardIndex, this));
+                        player2Sprites[currentHand - 1][player2Hands[currentHand - 1].length] = shuffledDeck[cardInts[cardIndex]];
+                        this.scene.hitSplitCard(cardInts[cardIndex], shuffledDeck, player2Hands[currentHand - 1].length-1, currentPlayer, currentHand, this);
+                    }
+                    else if (currentPlayer == 2)
+                    {
+                        player3Hands[currentHand - 1][player3Hands[currentHand - 1].length] = (this.scene.getValue(cardInts, cardIndex, this));
+                        player3Sprites[currentHand - 1][player3Hands[currentHand - 1].length] = shuffledDeck[cardInts[cardIndex]];
+                        this.scene.hitSplitCard(cardInts[cardIndex], shuffledDeck, player3Hands[currentHand - 1].length-1, currentPlayer, currentHand, this);
+                    }
+
+                    cardIndex++;
+
+                    this.scene.disableSurrenderButton();
+                    this.scene.disableDoubleButton();
+                    this.scene.disableInsuranceButton();
+                    // playerCards[currentPlayer][playerCards[currentPlayer].length + 1]
+                    // to dynamically hit cards
+
+                    if (currentPlayer == 0)
+                    {
+                        updateInfo(player1Hands[currentHand-1].length-1, currentHand-1);
+                        if (this.scene.splitIsBust(player1Hands[0]))
+                            player1Hand1Display.setTint(0x8E1600);
+
+                        if (this.scene.splitIsBust(player1Hands[1]))
+                            player1Hand2Display.setTint(0x8E1600);
+                    }
+                    else if (currentPlayer == 1)
+                    {
+                        updateInfo(player2Hands[currentHand-1].length-1, currentHand-1);
+                        if (this.scene.splitIsBust(player2Hands[0]))
+                            player2Hand1Display.setTint(0x8E1600);
+
+                        if (this.scene.splitIsBust(player2Hands[1]))
+                            player2Hand2Display.setTint(0x8E1600);
+                    }
+                    else if (currentPlayer == 2)
+                    {
+                        updateInfo(player3Hands[currentHand-1].length-1, currentHand-1);
+                        if (this.scene.splitIsBust(player3Hands[0]))
+                            player3Hand1Display.setTint(0x8E1600);
+
+                        if (this.scene.splitIsBust(player3Hands[1]))
+                            player3Hand2Display.setTint(0x8E1600);
+                    }
+
+                    if (currentPlayer == 0)
+                    {
+                        // check both hands
+                        if (currentHand == 1 && this.scene.splitIsBust(player1Hands[currentHand - 1]) == 0)
+                        {
+                            player1Hand1Display.setTint(0xFFFFFF);
+                        }
+                        else if (currentHand == 2 && this.scene.splitIsBust(player1Hands[currentHand - 1]) == 0)
+                        {
+                            player1Hand2Display.setTint(0xFFFFFF);
+                        }
+
+                    }
+                    else if (currentPlayer == 1)
+                    {
+                        // check both hands
+                        if (currentHand == 1 && this.scene.splitIsBust(player2Hands[currentHand - 1]) == 0)
+                        {
+                            player2Hand1Display.setTint(0xFFFFFF);
+                        }
+                        else if (currentHand == 2 && this.scene.splitIsBust(player2Hands[currentHand - 1]) == 0)
+                        {
+                            player2Hand2Display.setTint(0xFFFFFF);
+                        }
+                    }
+                    else if (currentPlayer == 2)
+                    {
+                        // check both hands
+                        if (currentHand == 1 && this.scene.splitIsBust(player3Hands[currentHand - 1]) == 0)
+                        {
+                            player3Hand1Display.setTint(0xFFFFFF);
+                        }
+                        else if (currentHand == 2 && this.scene.splitIsBust(player3Hands[currentHand - 1]) == 0)
+                        {
+                            player3Hand2Display.setTint(0xFFFFFF);
+                        }
+                    }
+
+                    if (currentPlayer == 0 && numSplits[currentPlayer] == 1)
+                    {
+                        if (currentHand != numSplits[currentPlayer] + 1)
+                        {
+                            // first hand
+                            placeholderBet = player1Bet;
+                            playerCurrency = playerCurrency - player1Bet;
+                            var k = 0;
+                
+                            while (placeholderBet > 0)
+                            {
+                                for (let i = 0; i < player1DoubleChipArrays[currentHand-1].length; i++)
+                                {
+                                    player1DoubleChipArrays[currentHand-1][i].destroy(true);
+                                }
+            
+                                numChips = player1DoubleChipArrays[currentHand-1].length;
+            
+                                while (placeholderBet - 100 >= 0)
+                                {
+                                    placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords + 75, playerChipYCoords + 25 - (k * 5), 'chip_100');
+                                    placeholderChipArray[k].scale = chipScaling;
+                                    placeholderChipArray[k].setDepth(100 + k);
+                                    placeholderBet = placeholderBet - 100;
+            
+                                    player1DoubleChipArrays[currentHand-1] = placeholderChipArray;
+                                    numChips = player1DoubleChipArrays[currentHand-1].length;
+                                    k++;
+                                }
+            
+                                while (placeholderBet - 25 >= 0)
+                                {
+                                    placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords + 75, playerChipYCoords + 25 - (k * 5), 'chip_25');
+                                    placeholderChipArray[k].scale = chipScaling;
+                                    placeholderChipArray[k].setDepth(100 + k);
+                                    placeholderBet = placeholderBet - 25;
+            
+                                    player1DoubleChipArrays[currentHand-1] = placeholderChipArray;
+                                    numChips = player1DoubleChipArrays[currentHand-1].length;
+                                    k++;
+                                }
+            
+                                while (placeholderBet - 10 >= 0)
+                                {
+                                    placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords + 75, playerChipYCoords + 25 - (k * 5), 'chip_10');
+                                    placeholderChipArray[k].scale = chipScaling;
+                                    placeholderChipArray[k].setDepth(100 + k);
+                                    placeholderBet = placeholderBet - 10;
+            
+                                    player1DoubleChipArrays[currentHand-1] = placeholderChipArray;
+                                    numChips = player1DoubleChipArrays[currentHand-1].length;
+                                    k++;
+                                }
+            
+                                while (placeholderBet - 5 >= 0)
+                                {
+                                    placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords + 75, playerChipYCoords + 25 - (k * 5), 'chip_5');
+                                    placeholderChipArray[k].scale = chipScaling;
+                                    placeholderChipArray[k].setDepth(100 + k);
+                                    placeholderBet = placeholderBet - 5;
+            
+                                    player1DoubleChipArrays[currentHand-1] = placeholderChipArray;
+                                    numChips = player1DoubleChipArrays[currentHand-1].length;
+                                    k++;
+                                }
+            
+                                while (placeholderBet - 1 >= 0)
+                                {
+                                    placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords + 75, playerChipYCoords + 25 - (k * 5), 'chip_1');
+                                    placeholderChipArray[k].scale = chipScaling;
+                                    placeholderChipArray[k].setDepth(100 + k);
+                                    placeholderBet = placeholderBet - 1;
+            
+                                    player1DoubleChipArrays[currentHand-1] = placeholderChipArray;
+                                    numChips = player1DoubleChipArrays[currentHand-1].length;
+                                    k++;
+                                }
+                            }
+                            placeholderChipArray = [];
+
+                            player1HandBets[currentHand - 1] = player1Bet * 2;
+
+                            if (playerCurrency >= player1Bet)
+                                this.scene.enableDoubleButton();
+                            else
+                                this.scene.disableDoubleButton();
+
+                            handIndicator.setPosition(cardX[0][0] - 50, cardY[0][0] + 15);
+                            currentHand = currentHand + 1;
+                        }
+                        else
+                        {
+                            // second hand
+                            placeholderBet = player1Bet;
+                            playerCurrency = playerCurrency - player1Bet;
+                            var k = 0;
+                
+                            while (placeholderBet > 0)
+                            {
+                                for (let i = 0; i < player1DoubleChipArrays[currentHand-1].length; i++)
+                                {
+                                    player1DoubleChipArrays[currentHand-1][i].destroy(true);
+                                }
+            
+                                numChips = player1DoubleChipArrays[currentHand-1].length;
+            
+                                while (placeholderBet - 100 >= 0)
+                                {
+                                    placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords - 75, playerChipYCoords + 25 - (k * 5), 'chip_100');
+                                    placeholderChipArray[k].scale = chipScaling;
+                                    placeholderChipArray[k].setDepth(100 + k);
+                                    placeholderBet = placeholderBet - 100;
+            
+                                    player1DoubleChipArrays[currentHand-1] = placeholderChipArray;
+                                    numChips = player1DoubleChipArrays[currentHand-1].length;
+                                    k++;
+                                }
+            
+                                while (placeholderBet - 25 >= 0)
+                                {
+                                    placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords - 75, playerChipYCoords + 25 - (k * 5), 'chip_25');
+                                    placeholderChipArray[k].scale = chipScaling;
+                                    placeholderChipArray[k].setDepth(100 + k);
+                                    placeholderBet = placeholderBet - 25;
+            
+                                    player1DoubleChipArrays[currentHand-1] = placeholderChipArray;
+                                    numChips = player1DoubleChipArrays[currentHand-1].length;
+                                    k++;
+                                }
+            
+                                while (placeholderBet - 10 >= 0)
+                                {
+                                    placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords - 75, playerChipYCoords + 25 - (k * 5), 'chip_10');
+                                    placeholderChipArray[k].scale = chipScaling;
+                                    placeholderChipArray[k].setDepth(100 + k);
+                                    placeholderBet = placeholderBet - 10;
+            
+                                    player1DoubleChipArrays[currentHand-1] = placeholderChipArray;
+                                    numChips = player1DoubleChipArrays[currentHand-1].length;
+                                    k++;
+                                }
+            
+                                while (placeholderBet - 5 >= 0)
+                                {
+                                    placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords - 75, playerChipYCoords + 25 - (k * 5), 'chip_5');
+                                    placeholderChipArray[k].scale = chipScaling;
+                                    placeholderChipArray[k].setDepth(100 + k);
+                                    placeholderBet = placeholderBet - 5;
+            
+                                    player1DoubleChipArrays[currentHand-1] = placeholderChipArray;
+                                    numChips = player1DoubleChipArrays[currentHand-1].length;
+                                    k++;
+                                }
+            
+                                while (placeholderBet - 1 >= 0)
+                                {
+                                    placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords - 75, playerChipYCoords + 25 - (k * 5), 'chip_1');
+                                    placeholderChipArray[k].scale = chipScaling;
+                                    placeholderChipArray[k].setDepth(100 + k);
+                                    placeholderBet = placeholderBet - 1;
+            
+                                    player1DoubleChipArrays[currentHand-1] = placeholderChipArray;
+                                    numChips = player1DoubleChipArrays[currentHand-1].length;
+                                    k++;
+                                }
+                            }
+                            placeholderChipArray = [];
+
+                            player1HandBets[currentHand - 1] = player1Bet * 2;
+                            handIndicator.setVisible(false);
+                            currentHand = 0;
+
+                            if (numPlayers != 1)
+                            {
+                                player1TurnIndicator.fillColor = 0xFFFFFF;
+                                player2TurnIndicator.fillColor = 0x8E1600;
+                                currentPlayer = currentPlayer + 1;
+                                this.scene.enableSurrenderButton();
+
+                                if (playerCurrency >= player2Bet)
+                                    this.scene.enableDoubleButton();
+                                else
+                                    this.scene.disableDoubleButton();
+
+                                if (playerCurrency >= player2Bet * .5 && dealerCards[1] === "A" && numSplits[currentPlayer] == 0)
+                                    this.scene.enableInsuranceButton();
+                                else
+                                    this.scene.disableInsuranceButton();
+
+                                if (playerCards[1][0] === playerCards[1][1] && numSplits[currentPlayer] < maxSplits)
+                                    this.scene.enableSplitButton();
+                                else
+                                    this.scene.disableSplitButton();
+
+                                if (numSplits[currentPlayer] == 0)
+                                    this.scene.enableSurrenderButton();
+                                else
+                                    this.scene.disableSurrenderButton();
+                            }
+                            else
+                            {
+                                // plus more stuff since if its the last player
+                                dealerCard.visible = false;
+                                shuffledDeck[cardInts[dealerIndex]].setDepth(1);
+                                this.scene.revealDealerInfo(dealerCards);
+                                // dealer needs to draw to 16, and stand on 17
+                                this.scene.drawDealerCards(dealerCards, cardIndex, cardInts, dealerCards.length);
+                                cardIndex = cardIndex + dealerCards.length - 2;
+                                this.scene.isWinOrLoss();
+                                this.scene.disableActionButtons();
+                                this.scene.disableInsuranceButton();
+                                this.scene.disableSplitButton();
+                            }
+                        }
+                    }
+                    else if (currentPlayer == 1 && numSplits[currentPlayer] == 1)
+                    {
+                        if (currentHand != numSplits[currentPlayer] + 1)
+                        {
+                            // first hand
+                            placeholderBet = player2Bet;
+                            playerCurrency = playerCurrency - player2Bet;
+                            var k = 0;
+                
+                            while (placeholderBet > 0)
+                            {
+                                for (let i = 0; i < player2DoubleChipArrays[currentHand-1].length; i++)
+                                {
+                                    player2DoubleChipArrays[currentHand-1][i].destroy(true);
+                                }
+            
+                                numChips = player2DoubleChipArrays[currentHand-1].length;
+            
+                                while (placeholderBet - 100 >= 0)
+                                {
+                                    placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords + 75, playerChipYCoords + 25 - (k * 5), 'chip_100');
+                                    placeholderChipArray[k].scale = chipScaling;
+                                    placeholderChipArray[k].setDepth(100 + k);
+                                    placeholderBet = placeholderBet - 100;
+            
+                                    player2DoubleChipArrays[currentHand-1] = placeholderChipArray;
+                                    numChips = player2DoubleChipArrays[currentHand-1].length;
+                                    k++;
+                                }
+            
+                                while (placeholderBet - 25 >= 0)
+                                {
+                                    placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords + 75, playerChipYCoords + 25 - (k * 5), 'chip_25');
+                                    placeholderChipArray[k].scale = chipScaling;
+                                    placeholderChipArray[k].setDepth(100 + k);
+                                    placeholderBet = placeholderBet - 25;
+            
+                                    player2DoubleChipArrays[currentHand-1] = placeholderChipArray;
+                                    numChips = player2DoubleChipArrays[currentHand-1].length;
+                                    k++;
+                                }
+            
+                                while (placeholderBet - 10 >= 0)
+                                {
+                                    placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords + 75, playerChipYCoords + 25 - (k * 5), 'chip_10');
+                                    placeholderChipArray[k].scale = chipScaling;
+                                    placeholderChipArray[k].setDepth(100 + k);
+                                    placeholderBet = placeholderBet - 10;
+            
+                                    player2DoubleChipArrays[currentHand-1] = placeholderChipArray;
+                                    numChips = player2DoubleChipArrays[currentHand-1].length;
+                                    k++;
+                                }
+            
+                                while (placeholderBet - 5 >= 0)
+                                {
+                                    placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords + 75, playerChipYCoords + 25 - (k * 5), 'chip_5');
+                                    placeholderChipArray[k].scale = chipScaling;
+                                    placeholderChipArray[k].setDepth(100 + k);
+                                    placeholderBet = placeholderBet - 5;
+            
+                                    player2DoubleChipArrays[currentHand-1] = placeholderChipArray;
+                                    numChips = player2DoubleChipArrays[currentHand-1].length;
+                                    k++;
+                                }
+            
+                                while (placeholderBet - 1 >= 0)
+                                {
+                                    placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords + 75, playerChipYCoords + 25 - (k * 5), 'chip_1');
+                                    placeholderChipArray[k].scale = chipScaling;
+                                    placeholderChipArray[k].setDepth(100 + k);
+                                    placeholderBet = placeholderBet - 1;
+            
+                                    player2DoubleChipArrays[currentHand-1] = placeholderChipArray;
+                                    numChips = player2DoubleChipArrays[currentHand-1].length;
+                                    k++;
+                                }
+                            }
+                            placeholderChipArray = [];
+
+                            player2HandBets[currentHand - 1] = player2Bet * 2;
+
+                            if (playerCurrency >= player2Bet)
+                                this.scene.enableDoubleButton();
+                            else
+                                this.scene.disableDoubleButton();
+
+                            handIndicator.setPosition(cardX[0][1] - 50, cardY[0][1] + 15);
+                            currentHand = currentHand + 1;
+                        }
+                        else
+                        {
+                            // second hand
+                            placeholderBet = player1Bet;
+                            playerCurrency = playerCurrency - player2Bet;
+                            var k = 0;
+                
+                            while (placeholderBet > 0)
+                            {
+                                for (let i = 0; i < player2DoubleChipArrays[currentHand-1].length; i++)
+                                {
+                                    player2DoubleChipArrays[currentHand-1][i].destroy(true);
+                                }
+            
+                                numChips = player2DoubleChipArrays[currentHand-1].length;
+            
+                                while (placeholderBet - 100 >= 0)
+                                {
+                                    placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords - 75, playerChipYCoords + 25 - (k * 5), 'chip_100');
+                                    placeholderChipArray[k].scale = chipScaling;
+                                    placeholderChipArray[k].setDepth(100 + k);
+                                    placeholderBet = placeholderBet - 100;
+            
+                                    player2DoubleChipArrays[currentHand-1] = placeholderChipArray;
+                                    numChips = player2DoubleChipArrays[currentHand-1].length;
+                                    k++;
+                                }
+            
+                                while (placeholderBet - 25 >= 0)
+                                {
+                                    placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords - 75, playerChipYCoords + 25 - (k * 5), 'chip_25');
+                                    placeholderChipArray[k].scale = chipScaling;
+                                    placeholderChipArray[k].setDepth(100 + k);
+                                    placeholderBet = placeholderBet - 25;
+            
+                                    player2DoubleChipArrays[currentHand-1] = placeholderChipArray;
+                                    numChips = player2DoubleChipArrays[currentHand-1].length;
+                                    k++;
+                                }
+            
+                                while (placeholderBet - 10 >= 0)
+                                {
+                                    placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords - 75, playerChipYCoords + 25 - (k * 5), 'chip_10');
+                                    placeholderChipArray[k].scale = chipScaling;
+                                    placeholderChipArray[k].setDepth(100 + k);
+                                    placeholderBet = placeholderBet - 10;
+            
+                                    player2DoubleChipArrays[currentHand-1] = placeholderChipArray;
+                                    numChips = player2DoubleChipArrays[currentHand-1].length;
+                                    k++;
+                                }
+            
+                                while (placeholderBet - 5 >= 0)
+                                {
+                                    placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords - 75, playerChipYCoords + 25 - (k * 5), 'chip_5');
+                                    placeholderChipArray[k].scale = chipScaling;
+                                    placeholderChipArray[k].setDepth(100 + k);
+                                    placeholderBet = placeholderBet - 5;
+            
+                                    player2DoubleChipArrays[currentHand-1] = placeholderChipArray;
+                                    numChips = player2DoubleChipArrays[currentHand-1].length;
+                                    k++;
+                                }
+            
+                                while (placeholderBet - 1 >= 0)
+                                {
+                                    placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords - 75, playerChipYCoords + 25 - (k * 5), 'chip_1');
+                                    placeholderChipArray[k].scale = chipScaling;
+                                    placeholderChipArray[k].setDepth(100 + k);
+                                    placeholderBet = placeholderBet - 1;
+            
+                                    player2DoubleChipArrays[currentHand-1] = placeholderChipArray;
+                                    numChips = player2DoubleChipArrays[currentHand-1].length;
+                                    k++;
+                                }
+                            }
+                            placeholderChipArray = [];
+
+                            player2HandBets[currentHand - 1] = player2Bet * 2;
+                            handIndicator.setVisible(false);
+                            currentHand = 0;
+
+                            if (numPlayers != 2)
+                            {
+                                player2TurnIndicator.fillColor = 0xFFFFFF;
+                                player3TurnIndicator.fillColor = 0x8E1600;
+                                currentPlayer = currentPlayer + 1;
+                                this.scene.enableSurrenderButton();
+
+                                if (playerCurrency >= player3Bet)
+                                    this.scene.enableDoubleButton();
+                                else
+                                    this.scene.disableDoubleButton();
+
+                                if (playerCurrency >= player3Bet * .5 && dealerCards[1] === "A" && numSplits[currentPlayer] == 0)
+                                    this.scene.enableInsuranceButton();
+                                else
+                                    this.scene.disableInsuranceButton();
+
+                                if (playerCards[2][0] === playerCards[2][1] && numSplits[currentPlayer] < maxSplits)
+                                    this.scene.enableSplitButton();
+                                else
+                                    this.scene.disableSplitButton();
+
+                                if (numSplits[currentPlayer] == 0)
+                                    this.scene.enableSurrenderButton();
+                                else
+                                    this.scene.disableSurrenderButton();
+                            }
+                            else
+                            {
+                                // plus more stuff since if its the last player
+                                dealerCard.visible = false;
+                                shuffledDeck[cardInts[dealerIndex]].setDepth(1);
+                                this.scene.revealDealerInfo(dealerCards);
+                                // dealer needs to draw to 16, and stand on 17
+                                this.scene.drawDealerCards(dealerCards, cardIndex, cardInts, dealerCards.length);
+                                cardIndex = cardIndex + dealerCards.length - 2;
+                                this.scene.isWinOrLoss();
+                                this.scene.disableActionButtons();
+                                this.scene.disableInsuranceButton();
+                                this.scene.disableSplitButton();
+                            }
+                        }
+                    }
+                    else if (currentPlayer == 2 && numSplits[currentPlayer] == 1)
+                    {
+                        if (currentHand != numSplits[currentPlayer] + 1)
+                        {
+                            // first hand
+                            placeholderBet = player3Bet;
+                            playerCurrency = playerCurrency - player3Bet;
+                            var k = 0;
+                
+                            while (placeholderBet > 0)
+                            {
+                                for (let i = 0; i < player3DoubleChipArrays[currentHand-1].length; i++)
+                                {
+                                    player3DoubleChipArrays[currentHand-1][i].destroy(true);
+                                }
+            
+                                numChips = player3DoubleChipArrays[currentHand-1].length;
+            
+                                while (placeholderBet - 100 >= 0)
+                                {
+                                    placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords + 75, playerChipYCoords + 25 - (k * 5), 'chip_100');
+                                    placeholderChipArray[k].scale = chipScaling;
+                                    placeholderChipArray[k].setDepth(100 + k);
+                                    placeholderBet = placeholderBet - 100;
+            
+                                    player3DoubleChipArrays[currentHand-1] = placeholderChipArray;
+                                    numChips = player3DoubleChipArrays[currentHand-1].length;
+                                    k++;
+                                }
+            
+                                while (placeholderBet - 25 >= 0)
+                                {
+                                    placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords + 75, playerChipYCoords + 25 - (k * 5), 'chip_25');
+                                    placeholderChipArray[k].scale = chipScaling;
+                                    placeholderChipArray[k].setDepth(100 + k);
+                                    placeholderBet = placeholderBet - 25;
+            
+                                    player3DoubleChipArrays[currentHand-1] = placeholderChipArray;
+                                    numChips = player3DoubleChipArrays[currentHand-1].length;
+                                    k++;
+                                }
+            
+                                while (placeholderBet - 10 >= 0)
+                                {
+                                    placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords + 75, playerChipYCoords + 25 - (k * 5), 'chip_10');
+                                    placeholderChipArray[k].scale = chipScaling;
+                                    placeholderChipArray[k].setDepth(100 + k);
+                                    placeholderBet = placeholderBet - 10;
+            
+                                    player3DoubleChipArrays[currentHand-1] = placeholderChipArray;
+                                    numChips = player3DoubleChipArrays[currentHand-1].length;
+                                    k++;
+                                }
+            
+                                while (placeholderBet - 5 >= 0)
+                                {
+                                    placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords + 75, playerChipYCoords + 25 - (k * 5), 'chip_5');
+                                    placeholderChipArray[k].scale = chipScaling;
+                                    placeholderChipArray[k].setDepth(100 + k);
+                                    placeholderBet = placeholderBet - 5;
+            
+                                    player3DoubleChipArrays[currentHand-1] = placeholderChipArray;
+                                    numChips = player3DoubleChipArrays[currentHand-1].length;
+                                    k++;
+                                }
+            
+                                while (placeholderBet - 1 >= 0)
+                                {
+                                    placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords + 75, playerChipYCoords + 25 - (k * 5), 'chip_1');
+                                    placeholderChipArray[k].scale = chipScaling;
+                                    placeholderChipArray[k].setDepth(100 + k);
+                                    placeholderBet = placeholderBet - 1;
+            
+                                    player3DoubleChipArrays[currentHand-1] = placeholderChipArray;
+                                    numChips = player3DoubleChipArrays[currentHand-1].length;
+                                    k++;
+                                }
+                            }
+                            placeholderChipArray = [];
+
+                            player3HandBets[currentHand - 1] = player3Bet * 2;
+
+                            if (playerCurrency >= player3Bet)
+                                this.scene.enableDoubleButton();
+                            else
+                                this.scene.disableDoubleButton();
+
+                            handIndicator.setPosition(cardX[0][2] - 50, cardY[0][2] + 15);
+                            currentHand = currentHand + 1;
+                        }
+                        else
+                        {
+                            // second hand
+                            placeholderBet = player3Bet;
+                            playerCurrency = playerCurrency - player3Bet;
+                            var k = 0;
+                
+                            while (placeholderBet > 0)
+                            {
+                                for (let i = 0; i < player3DoubleChipArrays[currentHand-1].length; i++)
+                                {
+                                    player3DoubleChipArrays[currentHand-1][i].destroy(true);
+                                }
+            
+                                numChips = player3DoubleChipArrays[currentHand-1].length;
+            
+                                while (placeholderBet - 100 >= 0)
+                                {
+                                    placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords - 75, playerChipYCoords + 25 - (k * 5), 'chip_100');
+                                    placeholderChipArray[k].scale = chipScaling;
+                                    placeholderChipArray[k].setDepth(100 + k);
+                                    placeholderBet = placeholderBet - 100;
+            
+                                    player3DoubleChipArrays[currentHand-1] = placeholderChipArray;
+                                    numChips = player3DoubleChipArrays[currentHand-1].length;
+                                    k++;
+                                }
+            
+                                while (placeholderBet - 25 >= 0)
+                                {
+                                    placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords - 75, playerChipYCoords + 25 - (k * 5), 'chip_25');
+                                    placeholderChipArray[k].scale = chipScaling;
+                                    placeholderChipArray[k].setDepth(100 + k);
+                                    placeholderBet = placeholderBet - 25;
+            
+                                    player3DoubleChipArrays[currentHand-1] = placeholderChipArray;
+                                    numChips = player3DoubleChipArrays[currentHand-1].length;
+                                    k++;
+                                }
+            
+                                while (placeholderBet - 10 >= 0)
+                                {
+                                    placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords - 75, playerChipYCoords + 25 - (k * 5), 'chip_10');
+                                    placeholderChipArray[k].scale = chipScaling;
+                                    placeholderChipArray[k].setDepth(100 + k);
+                                    placeholderBet = placeholderBet - 10;
+            
+                                    player3DoubleChipArrays[currentHand-1] = placeholderChipArray;
+                                    numChips = player3DoubleChipArrays[currentHand-1].length;
+                                    k++;
+                                }
+            
+                                while (placeholderBet - 5 >= 0)
+                                {
+                                    placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords - 75, playerChipYCoords + 25 - (k * 5), 'chip_5');
+                                    placeholderChipArray[k].scale = chipScaling;
+                                    placeholderChipArray[k].setDepth(100 + k);
+                                    placeholderBet = placeholderBet - 5;
+            
+                                    player3DoubleChipArrays[currentHand-1] = placeholderChipArray;
+                                    numChips = player3DoubleChipArrays[currentHand-1].length;
+                                    k++;
+                                }
+            
+                                while (placeholderBet - 1 >= 0)
+                                {
+                                    placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords - 75, playerChipYCoords + 25 - (k * 5), 'chip_1');
+                                    placeholderChipArray[k].scale = chipScaling;
+                                    placeholderChipArray[k].setDepth(100 + k);
+                                    placeholderBet = placeholderBet - 1;
+            
+                                    player3DoubleChipArrays[currentHand-1] = placeholderChipArray;
+                                    numChips = player3DoubleChipArrays[currentHand-1].length;
+                                    k++;
+                                }
+                            }
+                            placeholderChipArray = [];
+
+                            player3HandBets[currentHand - 1] = player3Bet * 2;
+                            handIndicator.setVisible(false);
+                            currentHand = 0;
+                            
+                            // plus more stuff since if its the last player
+                            dealerCard.visible = false;
+                            shuffledDeck[cardInts[dealerIndex]].setDepth(1);
+                            this.scene.revealDealerInfo(dealerCards);
+                            // dealer needs to draw to 16, and stand on 17
+                            this.scene.drawDealerCards(dealerCards, cardIndex, cardInts, dealerCards.length);
+                            cardIndex = cardIndex + dealerCards.length - 2;
+                            this.scene.isWinOrLoss();
+                            this.scene.disableActionButtons();
+                            this.scene.disableInsuranceButton();
+                            this.scene.disableSplitButton();
+                        }
+                    }
+                }
+            }
         });
 
         // player chooses to stand
@@ -4449,11 +6510,9 @@ class GameScene extends Phaser.Scene {
 
             if (numSplits[currentPlayer] == 0)
             {
-
                 this.scene.baseGameBasicStrategy(currentPlayer, "Stand");
                 updateInfo();
 
-        
                 if (currentPlayer == 0)
                 {
                     if (numPlayers != 1)
@@ -4562,6 +6621,174 @@ class GameScene extends Phaser.Scene {
                     this.scene.disableSplitButton();
                 }
             }
+            else if (numSplits[currentPlayer] == 1)
+            {
+                this.scene.baseGameBasicStrategy(currentPlayer, "Stand");
+                updateInfo();
+
+                if (currentPlayer == 0)
+                {
+                    // first hand out of 2
+                    if (currentHand != numSplits[currentPlayer] + 1)
+                    {
+                        handIndicator.setPosition(cardX[0][0] - 50, cardY[0][0] + 15);
+                        currentHand = currentHand + 1;
+
+                        if (playerCurrency >= player1Bet)
+                            this.scene.enableDoubleButton();
+                        else
+                            this.scene.disableDoubleButton();
+                    }
+                    else
+                    {
+                        // last hand of the split
+                        handIndicator.setVisible(false);
+
+                        if (numPlayers != 1)
+                        {
+                            player1TurnIndicator.fillColor = 0xFFFFFF;
+                            player2TurnIndicator.fillColor = 0x8E1600;
+                            currentPlayer = currentPlayer + 1;
+                            this.scene.enableSurrenderButton();
+
+                            if (playerCurrency >= player2Bet)
+                                this.scene.enableDoubleButton();
+                            else
+                                this.scene.disableDoubleButton();
+
+                            if (playerCurrency >= player2Bet * .5 && dealerCards[1] === "A" && numSplits[currentPlayer] == 0)
+                                this.scene.enableInsuranceButton();
+                            else
+                                this.scene.disableInsuranceButton();
+
+                            if (playerCards[1][0] === playerCards[1][1] && numSplits[currentPlayer] < maxSplits)
+                                this.scene.enableSplitButton();
+                            else
+                                this.scene.disableSplitButton();
+
+                            if (numSplits[currentPlayer] == 0)
+                                this.scene.enableSurrenderButton();
+                            else
+                                this.scene.disableSurrenderButton();
+                        }
+                        else
+                        {
+                            // plus more stuff since if its the last player
+                            currentHand = 0;
+                            dealerCard.visible = false;
+                            shuffledDeck[cardInts[dealerIndex]].setDepth(1);
+                            this.scene.revealDealerInfo(dealerCards);
+                            // dealer needs to draw to 16, and stand on 17
+                            this.scene.drawDealerCards(dealerCards, cardIndex, cardInts, dealerCards.length);
+                            cardIndex = cardIndex + dealerCards.length - 2;
+                            this.scene.isWinOrLoss();
+                            this.scene.disableActionButtons();
+                            this.scene.disableInsuranceButton();
+                            this.scene.disableSplitButton();
+                        }
+                    }
+                }
+                else if (currentPlayer == 1)
+                {
+                    // first hand out of 2
+                    if (currentHand != numSplits[currentPlayer] + 1)
+                    {
+                        handIndicator.setPosition(cardX[0][1] - 50, cardY[0][1] + 15);
+                        currentHand = currentHand + 1;
+
+                        if (playerCurrency >= player2Bet)
+                            this.scene.enableDoubleButton();
+                        else
+                            this.scene.disableDoubleButton();
+                    }
+                    else
+                    {
+                        // last hand of the split
+                        handIndicator.setVisible(false);
+
+                        if (numPlayers != 2)
+                        {
+                            player2TurnIndicator.fillColor = 0xFFFFFF;
+                            player3TurnIndicator.fillColor = 0x8E1600;
+                            currentPlayer = currentPlayer + 1;
+                            this.scene.enableSurrenderButton();
+
+                            if (playerCurrency >= player3Bet)
+                                this.scene.enableDoubleButton();
+                            else
+                                this.scene.disableDoubleButton();
+
+                            if (playerCurrency >= player3Bet * .5 && dealerCards[1] === "A" && numSplits[currentPlayer] == 0)
+                                this.scene.enableInsuranceButton();
+                            else
+                                this.scene.disableInsuranceButton();
+
+                            if (playerCards[2][0] === playerCards[2][1] && numSplits[currentPlayer] < maxSplits)
+                                this.scene.enableSplitButton();
+                            else
+                                this.scene.disableSplitButton();
+
+                            if (numSplits[currentPlayer] == 0)
+                                this.scene.enableSurrenderButton();
+                            else
+                                this.scene.disableSurrenderButton();
+                        }
+                        else
+                        {
+                            // plus more stuff since if its the last player
+                            currentHand = 0;
+                            dealerCard.visible = false;
+                            shuffledDeck[cardInts[dealerIndex]].setDepth(1);
+                            this.scene.revealDealerInfo(dealerCards);
+                            // dealer needs to draw to 16, and stand on 17
+                            this.scene.drawDealerCards(dealerCards, cardIndex, cardInts, dealerCards.length);
+                            cardIndex = cardIndex + dealerCards.length - 2;
+                            this.scene.isWinOrLoss();
+                            this.scene.disableActionButtons();
+                            this.scene.disableInsuranceButton();
+                            this.scene.disableSplitButton();
+                        }
+                    }
+                }
+                else if (currentPlayer == 2)
+                {
+                    // first hand out of 2
+                    if (currentHand != numSplits[currentPlayer] + 1)
+                    {
+                        handIndicator.setPosition(cardX[0][2] - 50, cardY[0][2] + 15);
+                        currentHand = currentHand + 1;
+
+                        if (playerCurrency >= player3Bet)
+                            this.scene.enableDoubleButton();
+                        else
+                            this.scene.disableDoubleButton();
+                    }
+                    else
+                    {
+                        // last hand of the split
+                        handIndicator.setVisible(false);
+
+                        player3TurnIndicator.fillColor = 0xFFFFFF;
+                        player1TurnIndicator.fillColor = 0x8E1600;
+                        currentPlayer = 0;
+
+                        // plus more stuff since if its the last player
+                        currentHand = 0;
+                        dealerCard.visible = false;
+                        shuffledDeck[cardInts[dealerIndex]].setDepth(1);
+                        this.scene.revealDealerInfo(dealerCards);
+                        // dealer needs to draw to 16, and stand on 17
+                        this.scene.drawDealerCards(dealerCards, cardIndex, cardInts, dealerCards.length);
+                        cardIndex = cardIndex + dealerCards.length - 2;
+                        this.scene.isWinOrLoss();
+                        this.scene.disableActionButtons();
+                        this.scene.disableInsuranceButton();
+                        this.scene.disableSplitButton();
+                    }
+                }
+
+            }
+
         });
 
         // player chooses to surrender
@@ -4988,6 +7215,8 @@ class GameScene extends Phaser.Scene {
 
             playerSplit.setTexture('clickedButton');
             this.scene.disableSplitButton();
+            this.scene.disableInsuranceButton();
+            this.scene.disableSurrenderButton();
             // will need to change something with the dictionary since were using new arrays with splits
             // this.scene.baseGameBasicStrategy(currentPlayer, "Split");
 
@@ -5001,12 +7230,17 @@ class GameScene extends Phaser.Scene {
             // make new thing on scoreboard
             // make new arrays to hold new hand
 
+            // updateinfo for splits
+            // [card][hand]
             if (currentPlayer == 0)
             {
                 if (numSplits[currentPlayer] == 0)
                 {
+                    numSplits[currentPlayer] = numSplits[currentPlayer] + 1;
                     // [hand][card]
+                    // hand 1
                     player1Hands[0][0] = playerCards[0][0];
+                    // hand 2 
                     player1Hands[1][0] = playerCards[0][1];
 
                     player1Sprites[0][0] = spriteIndex[0][0];
@@ -5016,6 +7250,7 @@ class GameScene extends Phaser.Scene {
                     player1Sprites[1][0].setPosition(cardX[0][0] - 50, cardY[0][0]);
 
                     player1HandBets[0] = player1Bet;
+                    player1HandBets[1] = player1Bet;
 
                     // deal with scoreboard
                     player1CardDisplay.setText("");
@@ -5121,34 +7356,29 @@ class GameScene extends Phaser.Scene {
                         }
                     }
 
+                    // deal cards to new hands
+                    currentHand = 1;
+                    player1Hands[0][1] = (this.scene.getValue(cardInts, cardIndex, this));
+                    player1Sprites[0][1] = shuffledDeck[cardInts[cardIndex]];
+                    this.scene.hitSplitCard(cardInts[cardIndex], shuffledDeck, player1Hands[0].length-1, currentPlayer, 1, this);
+
+                    cardIndex = cardIndex + 1;
+                    updateInfo(1, 0);
+                    currentHand = 2;
+
+                    player1Hands[1][1] = (this.scene.getValue(cardInts, cardIndex, this));
+                    player1Sprites[1][1] = shuffledDeck[cardInts[cardIndex]];
+                    this.scene.hitSplitCard(cardInts[cardIndex], shuffledDeck, player1Hands[1].length-1, currentPlayer, 2, this);
+                    
+                    cardIndex = cardIndex + 1;
+                    updateInfo(1, 1);
+
                     // place hand indicator on first hand
                     handIndicator.setPosition(cardX[0][0] + 50, cardY[0][0] + 15);
                     handIndicator.setVisible(true);
+                    currentHand = 1;
 
-                    numSplits[currentPlayer] = numSplits[currentPlayer] + 1;
-                }
-                else if (numSplits[currentPlayer] == 1)
-                {
-                    numSplits[currentPlayer] = numSplits[currentPlayer] + 1;
-                }
-                else if (numSplits[currentPlayer] == 2)
-                {
-                    numSplits[currentPlayer] = numSplits[currentPlayer] + 1;
-                }
-
-
-
-
-                if (numPlayers != 1)
-                {
-                    if (playerCards[1][0] === playerCards[1][1])
-                        this.scene.enableSplitButton();
-                    else
-                        this.scene.disableSplitButton();
-                }
-                else
-                {
-                    // last seat
+                    // numSplits[currentPlayer] = numSplits[currentPlayer] + 1;
                 }
             }
             else if (currentPlayer == 1)
@@ -5156,6 +7386,7 @@ class GameScene extends Phaser.Scene {
   
                 if (numSplits[currentPlayer] == 0)
                 {
+                    numSplits[currentPlayer] = numSplits[currentPlayer] + 1;
 
                     // [hand][card]
                     player2Hands[0][0] = playerCards[1][0];
@@ -5168,6 +7399,7 @@ class GameScene extends Phaser.Scene {
                     player2Sprites[1][0].setPosition(cardX[0][1] - 50, cardY[0][1]);
 
                     player2HandBets[0] = player2Bet;
+                    player2HandBets[1] = player2Bet;
 
                     // deal with scoreboard
                     player2CardDisplay.setText("");
@@ -5273,35 +7505,29 @@ class GameScene extends Phaser.Scene {
                         }
                     }
 
+                    // deal cards to new hands
+                    currentHand = 1;
+                    player2Hands[0][1] = (this.scene.getValue(cardInts, cardIndex, this));
+                    player2Sprites[0][1] = shuffledDeck[cardInts[cardIndex]];
+                    this.scene.hitSplitCard(cardInts[cardIndex], shuffledDeck, player2Hands[0].length-1, currentPlayer, 1, this);
+
+                    cardIndex = cardIndex + 1;
+                    updateInfo(1, 0);
+                    currentHand = 2;
+
+                    player2Hands[1][1] = (this.scene.getValue(cardInts, cardIndex, this));
+                    player2Sprites[1][1] = shuffledDeck[cardInts[cardIndex]];
+                    this.scene.hitSplitCard(cardInts[cardIndex], shuffledDeck, player2Hands[1].length-1, currentPlayer, 2, this);
+                    
+                    cardIndex = cardIndex + 1;
+                    updateInfo(1, 1);
+
                     // place hand indicator on first hand
                     handIndicator.setPosition(cardX[0][1] + 50, cardY[0][1] + 15);
                     handIndicator.setVisible(true);
+                    currentHand = 1;
 
-                    numSplits[currentPlayer] = numSplits[currentPlayer] + 1;
-
-                }
-                else if (numSplits[currentPlayer] == 1)
-                {
-                    numSplits[currentPlayer] = numSplits[currentPlayer] + 1;
-                }
-                else if (numSplits[currentPlayer] == 2)
-                {
-                    numSplits[currentPlayer] = numSplits[currentPlayer] + 1;
-                }
-
-
-
-                if (numPlayers != 2)
-                {
-                    if (playerCards[2][0] === playerCards[2][1])
-                        this.scene.enableSplitButton();
-                    else
-                        this.scene.disableSplitButton();
-                }
-                else
-                {
-                    // last seat
-
+                    // numSplits[currentPlayer] = numSplits[currentPlayer] + 1;
                 }
             }
             else if (currentPlayer == 2)
@@ -5309,6 +7535,8 @@ class GameScene extends Phaser.Scene {
 
                 if (numSplits[currentPlayer] == 0)
                 {
+                    numSplits[currentPlayer] = numSplits[currentPlayer] + 1;
+
                     // [hand][card]
                     player3Hands[0][0] = playerCards[2][0];
                     player3Hands[1][0] = playerCards[2][1];
@@ -5320,6 +7548,7 @@ class GameScene extends Phaser.Scene {
                     player3Sprites[1][0].setPosition(cardX[0][2] - 50, cardY[0][2]);
 
                     player3HandBets[0] = player3Bet;
+                    player3HandBets[1] = player3Bet;
 
                     // deal with scoreboard
                     player3CardDisplay.setText("");
@@ -5425,20 +7654,29 @@ class GameScene extends Phaser.Scene {
                         }
                     }
 
+                    // deal cards to new hands
+                    currentHand = 1;
+                    player3Hands[0][1] = (this.scene.getValue(cardInts, cardIndex, this));
+                    player3Sprites[0][1] = shuffledDeck[cardInts[cardIndex]];
+                    this.scene.hitSplitCard(cardInts[cardIndex], shuffledDeck, player3Hands[0].length-1, currentPlayer, 1, this);
+
+                    cardIndex = cardIndex + 1;
+                    updateInfo(1, 0);
+                    currentHand = 2;
+
+                    player3Hands[1][1] = (this.scene.getValue(cardInts, cardIndex, this));
+                    player3Sprites[1][1] = shuffledDeck[cardInts[cardIndex]];
+                    this.scene.hitSplitCard(cardInts[cardIndex], shuffledDeck, player3Hands[1].length-1, currentPlayer, 2, this);
+                    
+                    cardIndex = cardIndex + 1;
+                    updateInfo(1, 1);
+
                     // place hand indicator on first hand
                     handIndicator.setPosition(cardX[0][2] + 50, cardY[0][2] + 15);
                     handIndicator.setVisible(true);
+                    currentHand = 1;
 
-                    numSplits[currentPlayer] = numSplits[currentPlayer] + 1;
-                   
-                }
-                else if (numSplits[currentPlayer] == 1)
-                {
-                    numSplits[currentPlayer] = numSplits[currentPlayer] + 1;
-                }
-                else if (numSplits[currentPlayer] == 2)
-                {
-                    numSplits[currentPlayer] = numSplits[currentPlayer] + 1;
+                    // numSplits[currentPlayer] = numSplits[currentPlayer] + 1;
                 }
 
             }
@@ -5487,52 +7725,4 @@ class GameScene extends Phaser.Scene {
     update() {
         
     };
-
-    // split testing junk
-    /*
-                spriteIndex[0][0].setPosition(cardX[0][0] + 50, cardY[0][0]);
-                spriteIndex[0][1].setPosition(cardX[0][0] - 50, cardY[0][0]);
-
-                spriteIndex[1][0].setPosition(cardX[0][1] + 50, cardY[0][1]);
-                spriteIndex[1][1].setPosition(cardX[0][1] - 50, cardY[0][1]);
-
-                for (let i = 0; i < player1ChipCount.length; i++)
-                {
-                    player1ChipCount[i].destroy(true);
-                }
-
-                for (let i = 0; i < player2ChipCount.length; i++)
-                {
-                    player2ChipCount[i].destroy(true);
-                }
-
-                //  normals
-                placeholderChipArray[0] = this.scene.add.image(player1ChipXCoords + 25, playerChipYCoords, 'chip_100');
-                placeholderChipArray[0].scale = chipScaling;
-
-                placeholderChipArray[1] = this.scene.add.image(player1ChipXCoords - 25, playerChipYCoords, 'chip_100');
-                placeholderChipArray[1].scale = chipScaling;
-
-                // doubles
-                placeholderChipArray[3] = this.scene.add.image(player1ChipXCoords + 75, playerChipYCoords + 25, 'chip_100');
-                placeholderChipArray[3].scale = chipScaling;
-
-                placeholderChipArray[4] = this.scene.add.image(player1ChipXCoords - 75, playerChipYCoords + 25, 'chip_100');
-                placeholderChipArray[4].scale = chipScaling;
-
-                // normals
-                placeholderChipArray[5] = this.scene.add.image(player2ChipXCoords + 25, playerChipYCoords, 'chip_100');
-                placeholderChipArray[5].scale = chipScaling;
-
-                placeholderChipArray[6] = this.scene.add.image(player2ChipXCoords - 25, playerChipYCoords, 'chip_100');
-                placeholderChipArray[6].scale = chipScaling;
-
-                // doubles
-                placeholderChipArray[7] = this.scene.add.image(player2ChipXCoords + 75, playerChipYCoords + 25, 'chip_100');
-                placeholderChipArray[7].scale = chipScaling;
-
-                placeholderChipArray[8] = this.scene.add.image(player2ChipXCoords - 75, playerChipYCoords + 25, 'chip_100');
-                placeholderChipArray[8].scale = chipScaling;
-    */
-
 }
