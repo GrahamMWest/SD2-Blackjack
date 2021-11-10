@@ -67,6 +67,7 @@ let maxSplits = 1;
 let bg;
 let controlPanel;
 let settingsMenuBar;
+let logoURL;
 let shuffledDeck;
 let cardInts;
 let dealerCard;
@@ -129,6 +130,9 @@ let playerInsurance;
 let insuranceText;
 let playerSplit;
 let splitText;
+
+// menu button
+let menuButton;
 
 let disclaimer;
 let shuffleAnimation;
@@ -3083,6 +3087,44 @@ class GameScene extends Phaser.Scene {
         })
     };
 
+    disableMenuButton(){
+        menuButton.disableInteractive();
+        menuButton.setTexture('MenuLocked');
+
+        menuButton.on('pointerover', function(){
+            menuButton.setTexture('MenuLocked');
+        })
+
+        menuButton.on('pointeron', function(){
+            menuButton.setTexture('MenuLocked');
+        })
+
+        menuButton.on('pointerout', function(){
+            menuButton.setTexture('MenuLocked');
+        })
+
+        menuButton.on('pointerup', function(){
+            menuButton.setTexture('MenuLocked');
+        })
+    };
+
+    enableMenuButton(){
+        menuButton.setInteractive({ useHandCursor: true });
+        menuButton.setTexture('MenuNormal');
+
+        menuButton.on('pointerover', function(){
+            menuButton.setTexture('MenuHovered');
+        })
+
+        menuButton.on('pointerout', function(){
+            menuButton.setTexture('MenuNormal');
+        })
+
+        menuButton.on('pointerup', function(){
+            menuButton.setTexture('MenuHovered');
+        })
+    };
+
     resetBoard() {
         dealerCardDisplay.setText("Dealer Cards: \n");
         if (numPlayers >= 1)
@@ -3638,6 +3680,16 @@ class GameScene extends Phaser.Scene {
         this.load.image('nextBettorButtonClicked', '/static/assets/nextBettorButtonClicked.png');
         this.load.image('nextBettorButtonHovered', '/static/assets/nextBettorButtonHovered.png');
 
+        // menu button
+        this.load.image('MenuNormal', '/static/assets/MenuNormal.png');
+        this.load.image('MenuLocked', '/static/assets/MenuLocked.png');
+        this.load.image('MenuClicked', '/static/assets/MenuClicked.png');
+        this.load.image('MenuHovered', '/static/assets/MenuHovered.png');
+
+        // branding stuff
+        this.load.image('logoURL', '/static/assets/url_overlay.png');
+        this.load.image('logo', '/static/assets/SDBlackjack_logo.png');
+
         // chips
         this.load.image('half_chip', '/static/assets/half_chip.png');
         this.load.image('chip_1', '/static/assets/1Chip.png');
@@ -3719,9 +3771,12 @@ class GameScene extends Phaser.Scene {
         controlPanel = this.add.rectangle(700, 875, 1400, 275, 0x008b8b);
 
         // places settings menu bar on bottom of control panel
-        settingsMenuBar = this.add.rectangle(700, 983, 1400, 35, 0xC0C0C0);
+        settingsMenuBar = this.add.rectangle(700, 980, 1400, 40, 0xC0C0C0);
         // little black bar to look cool
-        this.add.rectangle(700, 965, 1400, 2, 0x000000);
+        this.add.rectangle(700, 960, 1400, 2, 0x000000);
+        // lidl logo
+        logoURL = this.add.image(700, 982, 'logoURL');
+        logoURL.scale = .5;
 
         // gets a shuffled deck
         //shuffledDeck = this.initializeDeck(numDecks);
@@ -3739,24 +3794,28 @@ class GameScene extends Phaser.Scene {
         deck.setDepth(1000000);
 
         // places betting buttons
-        whiteChip_1_Button = this.add.image(500, 925, 'chip_1');
+        whiteChip_1_Button = this.add.image(500, 915, 'chip_1');
         whiteChip_1_Button.scale = .075;
-        redChip_5_Button = this.add.image(600, 925, 'chip_5');
+        redChip_5_Button = this.add.image(600, 915, 'chip_5');
         redChip_5_Button.scale = .075;
-        blueChip_10_Button = this.add.image(700, 925, 'chip_10');
+        blueChip_10_Button = this.add.image(700, 915, 'chip_10');
         blueChip_10_Button.scale = .075;
-        greenChip_25_Button = this.add.image(800, 925, 'chip_25');
+        greenChip_25_Button = this.add.image(800, 915, 'chip_25');
         greenChip_25_Button.scale = .075;
-        blackChip_100_Button = this.add.image(900, 925, 'chip_100');
+        blackChip_100_Button = this.add.image(900, 915, 'chip_100');
         blackChip_100_Button.scale = .075;
 
         // places next round button
-        nextRoundButton = this.add.image(1000, 925, 'nextRoundButtonLocked');
+        nextRoundButton = this.add.image(1000, 915, 'nextRoundButtonLocked');
         nextRoundButton.scale = 1.25;
 
         // places next bettor button
-        nextBettorButton = this.add.image(400, 925, 'nextBettorButtonNormal');
+        nextBettorButton = this.add.image(400, 915, 'nextBettorButtonNormal');
         nextBettorButton.scale = 1.25;
+
+        // places menu button
+        menuButton = this.add.image(1375, 980, 'MenuNormal');
+        this.enableMenuButton();
 
         this.disableNextRoundButton();
         this.disableNextBettorButton();
@@ -3769,7 +3828,6 @@ class GameScene extends Phaser.Scene {
         handIndicator = this.add.image(975, 775, 'handIndication');
         handIndicator.setVisible(false);
         handIndicator.setDepth(1000000);
-
 
         // placing player action buttons
         playerHit = this.add.sprite(200, 845, 'lockedButton');
@@ -8291,6 +8349,10 @@ class GameScene extends Phaser.Scene {
             // this.scene.enableBettingButtons();
         });
 
+        // player wants to open the menu
+        menuButton.on('pointerdown', function(){
+            menuButton.setTexture('MenuClicked');
+        });
 
     };
 
