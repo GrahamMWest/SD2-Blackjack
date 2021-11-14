@@ -48,20 +48,27 @@ let runningCountScoreBoard;
 let runningCount = 0;
 let trueCountScoreBoard;
 let trueCount = 0;
-
-
-
 let cardIndex = 0;
+
+// unchangeable settings
+let playerCurrency = 500;
+let playerPoints = 0;
+let maxSplits = 1; // cant go higher due to graphics constraints
+let countSpoiler = 0; // 1 = true, 0 = false (cant get working due to hitboxes)
 
 // changeable settings
 let numDecks = 4;
 let numPlayers = 3;
 let deckPen = .1;
-let playerCurrency = 500;
-let playerPoints = 0;
 let minBet = 5;
 let maxBet = 500;
-let maxSplits = 1;
+
+let settingsNumDecks = numDecks;
+let settingsNumPlayers = numPlayers;
+let settingsDeckPen = deckPen;
+let settingsMinBet = minBet;
+let settingsMaxBet = maxBet;
+
 
 // global variables that were created in create function
 let bg;
@@ -73,6 +80,8 @@ let cardInts;
 let dealerCard;
 let dealerIndex
 let deck;
+let trueCountSpoiler;
+let runningCountSpoiler;
 
 // buttons and GUI
 let whiteChip_1_Button;
@@ -131,10 +140,34 @@ let insuranceText;
 let playerSplit;
 let splitText;
 
-// menu button
+// menu buttons
 let menuButton;
+let menuScreen;
+
+let numPlayersHeader;
+let numPlayersPlusButton;
+let numPlayersMinusButton;
+let numPlayersDisplay;
+let numPlayersText;
+
+let numDecksHeader;
+let numDecksPlusButton;
+let numDecksMinusButton;
+let numDecksDisplay;
+let numDecksText;
+
+let deckPenHeader;
+let deckPenPlusButton;
+let deckPenMinusButton;
+let deckPenDisplay;
+let deckPenText;
+
+
+
 
 let disclaimer;
+let currencyWarningShape;
+let currencyWarningText;
 let shuffleAnimation;
 
 let nextRoundButton;
@@ -184,14 +217,12 @@ let handIndicatorSpacing = -15;
 
 
 //TODO:
-// make warning to user that they cant play if they dont have minbet * numplayers amount of currency (popup)
+// make settings menu
 
 // fix point system (insurance/surrender/can Split or Not/True Count)
 // CHECK WHETHER I NEED TO LOOK FOR WHETHER USER CAN DOUBLE OR NOT (MAYBE A VARIABLE CALLED 'firstAction' OR SOMETHING)
 // make suggestion displays on the right side (same y-level as corresponding player displays), also
 // show "Correct" or "Incorrect" for the users actions, as well as how much each hand profited/lost that round
-
-// make setting menu
 
 // add variation to shoe cutoff (professor suggestion)
 
@@ -3125,7 +3156,59 @@ class GameScene extends Phaser.Scene {
         })
     };
 
+    disableSettingsButtons() {
+        numPlayersMinusButton.disableInteractive();
+        numPlayersPlusButton.disableInteractive();
+
+        numPlayersMinusButton.setTexture('minusButtonLocked');
+        numPlayersPlusButton.setTexture('plusButtonLocked');
+
+    };
+
+    enableSettingsButtons() {
+
+        numPlayersMinusButton.setInteractive({ useHandCursor: true });
+        numPlayersMinusButton.setTexture('minusButtonNormal');
+
+        numPlayersMinusButton.on('pointerover', function(){
+            numPlayersMinusButton.setTexture('minusButtonHovered');
+        })
+
+        numPlayersMinusButton.on('pointerout', function(){
+            numPlayersMinusButton.setTexture('minusButtonNormal');
+        })
+
+        numPlayersMinusButton.on('pointerup', function(){
+            numPlayersMinusButton.setTexture('minusButtonHovered');
+        })
+
+
+
+        numPlayersPlusButton.setInteractive({ useHandCursor: true });
+        numPlayersPlusButton.setTexture('plusButtonNormal');
+
+        numPlayersPlusButton.on('pointerover', function(){
+            numPlayersPlusButton.setTexture('plusButtonHovered');
+        })
+
+        numPlayersPlusButton.on('pointerout', function(){
+            numPlayersPlusButton.setTexture('plusButtonNormal');
+        })
+
+        numPlayersPlusButton.on('pointerup', function(){
+            numPlayersPlusButton.setTexture('plusButtonHovered');
+        })
+
+    };
+
     resetBoard() {
+
+        numDecks = settingsNumDecks;
+        numPlayers = settingsNumPlayers;
+        deckPen = settingsDeckPen;
+        minBet = settingsMinBet;
+        maxBet = settingsMaxBet;
+
         dealerCardDisplay.setText("Dealer Cards: \n");
         if (numPlayers >= 1)
         {
@@ -3171,6 +3254,24 @@ class GameScene extends Phaser.Scene {
             // player3Hand3Display.setTint(0xFFFFFF);
             // player3Hand4Display.setText("");
             // player3Hand4Display.setTint(0xFFFFFF);
+        }
+
+        if (numPlayers == 1)
+        {
+            player2CardDisplay.setText("");
+            player2Hand1Display.setText("");
+            player2Hand2Display.setText("");
+
+            player3CardDisplay.setText("");
+            player3Hand1Display.setText("");
+            player3Hand2Display.setText("");
+        }
+
+        if (numPlayers == 2)
+        {
+            player3CardDisplay.setText("");
+            player3Hand1Display.setText("");
+            player3Hand2Display.setText("");
         }
 
         this.disableNextRoundButton();
@@ -3298,8 +3399,6 @@ class GameScene extends Phaser.Scene {
         player3DoubleChipArrays = [[], [], [], []];
         currentPlayer = 0;
 
-
-
         // check if player has enough currency to go another round
         if (playerCurrency < minBet * numPlayers)
         {
@@ -3310,6 +3409,8 @@ class GameScene extends Phaser.Scene {
             this.disableNextBettorButton();
 
             // put warning here
+            currencyWarningShape.visible = true;
+            currencyWarningText.visible = true;
 
             // stops the game
             // this.scene.pause("GameScene");
@@ -3680,11 +3781,28 @@ class GameScene extends Phaser.Scene {
         this.load.image('nextBettorButtonClicked', '/static/assets/nextBettorButtonClicked.png');
         this.load.image('nextBettorButtonHovered', '/static/assets/nextBettorButtonHovered.png');
 
+        this.load.image('spoiler', '/static/assets/spoilers.png');
+        this.load.image('spoiler2', '/static/assets/spoilers.png');
+
         // menu button
         this.load.image('MenuNormal', '/static/assets/MenuNormal.png');
         this.load.image('MenuLocked', '/static/assets/MenuLocked.png');
         this.load.image('MenuClicked', '/static/assets/MenuClicked.png');
         this.load.image('MenuHovered', '/static/assets/MenuHovered.png');
+
+        // menu background
+        this.load.image('MenuScreen', '/static/assets/MenuScreen.jpg');
+
+        // menu buttons
+        this.load.image('minusButtonNormal', '/static/assets/minusButtonNormal.png');
+        this.load.image('minusButtonLocked', '/static/assets/minusButtonLocked.png');
+        this.load.image('minusButtonClicked', '/static/assets/minusButtonClicked.png');
+        this.load.image('minusButtonHovered', '/static/assets/minusButtonHovered.png');
+
+        this.load.image('plusButtonNormal', '/static/assets/plusButtonNormal.png');
+        this.load.image('plusButtonLocked', '/static/assets/plusButtonLocked.png');
+        this.load.image('plusButtonClicked', '/static/assets/plusButtonClicked.png');
+        this.load.image('plusButtonHovered', '/static/assets/plusButtonHovered.png');
 
         // branding stuff
         this.load.image('logoURL', '/static/assets/url_overlay.png');
@@ -3734,37 +3852,34 @@ class GameScene extends Phaser.Scene {
         // dealerCardDisplay = this.add.text(1175, 125, "Dealer Cards: \n", {fontSize: '20px', fill: '#fff'});
         dealerCardDisplay = this.add.text(25, 50, "Dealer Cards: \n", {fontSize: '20px', fill: '#fff'});
 
-        if (numPlayers >= 1)
-        {
-            // player1CardDisplay = this.add.text(1175, 225, "Player1 Cards: \n", {fontSize: '20px', fill: '#fff'});
-            player1CardDisplay = this.add.text(25, 150, "Seat1 Cards: \n", {fontSize: '20px', fill: '#fff'});
-            player1Hand1Display = this.add.text(25, 150, "", {fontSize: '20px', fill: '#fff'});
-            player1Hand2Display = this.add.text(25, 200, "", {fontSize: '20px', fill: '#fff'});
-            // player1Hand3Display = this.add.text(25, 200, "", {fontSize: '20px', fill: '#fff'});
-            // player1Hand4Display = this.add.text(25, 250, "", {fontSize: '20px', fill: '#fff'});
+        player1CardDisplay = this.add.text(25, 150, "Seat1 Cards: \n", {fontSize: '20px', fill: '#fff'});
+        player1Hand1Display = this.add.text(25, 150, "", {fontSize: '20px', fill: '#fff'});
+        player1Hand2Display = this.add.text(25, 200, "", {fontSize: '20px', fill: '#fff'});
+    
+        player2CardDisplay = this.add.text(25, 325, "Seat2 Cards: \n", {fontSize: '20px', fill: '#fff'});
+        player2Hand1Display = this.add.text(25, 325, "", {fontSize: '20px', fill: '#fff'});
+        player2Hand2Display = this.add.text(25, 375, "", {fontSize: '20px', fill: '#fff'});
 
-        }
-        
-        if(numPlayers >= 2)
+        player3CardDisplay = this.add.text(25, 500, "Seat3 Cards: \n", {fontSize: '20px', fill: '#fff'});
+        player3Hand1Display = this.add.text(25, 500, "", {fontSize: '20px', fill: '#fff'});
+        player3Hand2Display = this.add.text(25, 550, "", {fontSize: '20px', fill: '#fff'});
+
+        if (numPlayers == 1)
         {
-            // player1CardDisplay = this.add.text(1175, 225, "Player1 Cards: \n", {fontSize: '20px', fill: '#fff'});
-            player2CardDisplay = this.add.text(25, 325, "Seat2 Cards: \n", {fontSize: '20px', fill: '#fff'});
-            player2Hand1Display = this.add.text(25, 325, "", {fontSize: '20px', fill: '#fff'});
-            player2Hand2Display = this.add.text(25, 375, "", {fontSize: '20px', fill: '#fff'});
-            // player2Hand3Display = this.add.text(25, 400, "", {fontSize: '20px', fill: '#fff'});
-            // player2Hand4Display = this.add.text(25, 450, "", {fontSize: '20px', fill: '#fff'});
+            player2CardDisplay.setText("");
+            player2Hand1Display.setText("");
+            player2Hand2Display.setText("");
+
+            player3CardDisplay.setText("");
+            player3Hand1Display.setText("");
+            player3Hand2Display.setText("");
         }
 
-        if (numPlayers >= 3)
+        if (numPlayers == 2)
         {
-            // player1CardDisplay = this.add.text(1175, 225, "Player1 Cards: \n", {fontSize: '20px', fill: '#fff'});
-            // player2CardDisplay = this.add.text(1175, 325, "Player2 Cards: \n", {fontSize: '20px', fill: '#fff'});
-            // player3CardDisplay = this.add.text(1175, 425, "Player3 Cards: \n", {fontSize: '20px', fill: '#fff'});
-            player3CardDisplay = this.add.text(25, 500, "Seat3 Cards: \n", {fontSize: '20px', fill: '#fff'});
-            player3Hand1Display = this.add.text(25, 500, "", {fontSize: '20px', fill: '#fff'});
-            player3Hand2Display = this.add.text(25, 550, "", {fontSize: '20px', fill: '#fff'});
-            // player3Hand3Display = this.add.text(25, 600, "", {fontSize: '20px', fill: '#fff'});
-            // player3Hand4Display = this.add.text(25, 650, "", {fontSize: '20px', fill: '#fff'});
+            player3CardDisplay.setText("");
+            player3Hand1Display.setText("");
+            player3Hand2Display.setText("");
         }
 
         // places controlPanel
@@ -3815,7 +3930,60 @@ class GameScene extends Phaser.Scene {
 
         // places menu button
         menuButton = this.add.image(1375, 980, 'MenuNormal');
+        menuButton.setDepth(1000000000000000);
         this.enableMenuButton();
+
+        // menuScreen = this.add.rectangle(1400/2, 1000/2, 1400, 1000, 0xC0C0C0);
+        menuScreen = this.add.image(1400/2, 1000/2, 'MenuScreen');
+        menuScreen.scale = .926;
+        menuScreen.setDepth(1000000000000);
+        menuScreen.tint = 0xA9A9A9;
+        menuScreen.visible = false;
+
+        // numplayers buttons + display
+        numPlayersHeader = this.add.text(390, 550, "Num. Players", {fontSize: '24px', fill: '#fff'});
+        numPlayersMinusButton = this.add.sprite(400, 600, 'nextBettorButtonNormal');
+        numPlayersMinusButton.scale = 1;
+        numPlayersPlusButton = this.add.sprite(550, 600, 'nextRoundButtonNormal');
+        numPlayersPlusButton.scale = 1;
+        numPlayersDisplay = this.add.rectangle(475, 600, 100, 40, 0x000000);
+        numPlayersText = this.add.text(465, 590, numPlayers, {fontSize: '28px', fill: '#fff'});
+
+        numPlayersHeader.setDepth(2000000000000000);
+        numPlayersMinusButton.setDepth(2000000000000000);
+        numPlayersPlusButton.setDepth(2000000000000000);
+        numPlayersDisplay.setDepth(2000000000000000);
+        numPlayersText.setDepth(2000000000000000);
+
+        numPlayersHeader.visible = false;
+        numPlayersMinusButton.visible = false;
+        numPlayersPlusButton.visible = false;
+        numPlayersDisplay.visible = false;
+        numPlayersText.visible = false;
+
+        // numdecks buttons + display
+
+        // deckpen buttons + display
+
+        // minbet slider + display
+
+        // maxbet slider + display
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
         this.disableNextRoundButton();
         this.disableNextBettorButton();
@@ -3863,6 +4031,18 @@ class GameScene extends Phaser.Scene {
         // WIP Disclaimer
         disclaimer = this.add.text(25, 25, "Work In Progress", {fontSize: '20px', fill: '#fff'});
 
+        currencyWarningShape = this.add.graphics();
+        currencyWarningShape.fillStyle(0xFFFFFF, 1);
+        // length, width, x-center, y-center, rounded radius
+        currencyWarningShape.fillRoundedRect(350, 325, 700, 300, 32);
+        currencyWarningShape.setDepth(100000000);
+        
+        currencyWarningText = this.add.text(730/2, 395, "It appears that you do not have \nenough currency to start a new round. \nLower the number of players \nor the minimum bet if possible, \nor wait until 8 am EST \nfor a daily currency deposit of $500.", {fontSize: '30px', fill: '#8E1600', align: 'center'});
+        currencyWarningText.setDepth(10000000001);
+
+        currencyWarningShape.visible = false;
+        currencyWarningText.visible = false;
+
         shuffleAnimation = this.add.sprite(700, 300, 'shufflingAnim');
         shuffleAnimation.scale = .2;
         shuffleAnimation.visible = false;
@@ -3909,12 +4089,17 @@ class GameScene extends Phaser.Scene {
             this.disableNextBettorButton();
 
             // put warning here
+            currencyWarningShape.visible = true;
+            currencyWarningText.visible = true;
 
             // stops the game
             // this.pause("GameScene");
         }
         else
         {
+            currencyWarningShape.visible = false;
+            currencyWarningText.visible = false;
+
             // give minbet worth of chips to all current players
             playerCurrency = playerCurrency - (minBet * numPlayers);
             if (numPlayers >= 1)
@@ -4220,7 +4405,8 @@ class GameScene extends Phaser.Scene {
 
         whiteChip_1_Button.on('pointerdown', function(){
 
-            if (!(currentBet + 1 > maxBet) && ((playerCurrency - 1 > 0 && currentPlayer != numPlayers) || (playerCurrency - 1 >= 0 && currentPlayer + 1 === numPlayers)))
+            // if (!(currentBet + 1 > maxBet) && ((playerCurrency - 1 > 0 && currentPlayer != numPlayers) || (playerCurrency - 1 >= 0 && currentPlayer + 1 === numPlayers)))
+            if (!(currentBet + 1 > maxBet) && (playerCurrency - 1 >= 0))
             {
                 currentBet = currentBet + 1;
                 playerCurrency = playerCurrency - 1;
@@ -4479,7 +4665,8 @@ class GameScene extends Phaser.Scene {
 
         redChip_5_Button.on('pointerdown', function(){
 
-            if (!(currentBet + 5 > maxBet) && ((playerCurrency - 5 > 0 && currentPlayer != numPlayers) || (playerCurrency - 5 >= 0 && currentPlayer + 1 === numPlayers)))
+            // if (!(currentBet + 5 > maxBet) && ((playerCurrency - 5 > 0 && currentPlayer != numPlayers) || (playerCurrency - 5 >= 0 && currentPlayer + 1 === numPlayers)))
+            if (!(currentBet + 5 > maxBet) && (playerCurrency - 5 >= 0))
             {
                 currentBet = currentBet + 5;
                 playerCurrency = playerCurrency - 5;
@@ -4736,7 +4923,8 @@ class GameScene extends Phaser.Scene {
 
         blueChip_10_Button.on('pointerdown', function(){
 
-            if (!(currentBet + 10 > maxBet) && ((playerCurrency - 10 > 0 && currentPlayer != numPlayers) || (playerCurrency - 10 >= 0 && currentPlayer + 1 === numPlayers)))
+            // if (!(currentBet + 10 > maxBet) && ((playerCurrency - 10 > 0 && currentPlayer != numPlayers) || (playerCurrency - 10 >= 0 && currentPlayer + 1 === numPlayers)))
+            if (!(currentBet + 10 > maxBet) && (playerCurrency - 10 >= 0))
             {
                 currentBet = currentBet + 10;
                 playerCurrency = playerCurrency - 10;
@@ -4993,7 +5181,8 @@ class GameScene extends Phaser.Scene {
 
         greenChip_25_Button.on('pointerdown', function(){
 
-            if (!(currentBet + 25 > maxBet) && ((playerCurrency - 25 > 0 && currentPlayer != numPlayers) || (playerCurrency - 25 >= 0 && currentPlayer + 1 === numPlayers)))
+            // if (!(currentBet + 25 > maxBet) && ((playerCurrency - 25 > 0 && currentPlayer != numPlayers) || (playerCurrency - 25 >= 0 && currentPlayer + 1 === numPlayers)))
+            if (!(currentBet + 25 > maxBet) && (playerCurrency - 25 >= 0))
             {
                 currentBet = currentBet + 25;
                 playerCurrency = playerCurrency - 25;
@@ -5250,7 +5439,8 @@ class GameScene extends Phaser.Scene {
 
         blackChip_100_Button.on('pointerdown', function(){
 
-            if (!(currentBet + 100 > maxBet) && ((playerCurrency - 100 > 0 && currentPlayer != numPlayers) || (playerCurrency - 100 >= 0 && currentPlayer + 1 === numPlayers)))
+            // if (!(currentBet + 100 > maxBet) && ((playerCurrency - 100 > 0 && currentPlayer != numPlayers) || (playerCurrency - 100 >= 0 && currentPlayer + 1 === numPlayers)))
+            if (!(currentBet + 100 > maxBet) && (playerCurrency - 100 >= 0))
             {
                 currentBet = currentBet + 100;
                 playerCurrency = playerCurrency - 100;
@@ -8313,6 +8503,7 @@ class GameScene extends Phaser.Scene {
 
         });
 
+        // player wants to start a new round
         nextRoundButton.on('pointerdown', function(){
             nextRoundButton.setTexture('nextRoundButtonClicked');
             this.scene.resetBoard();
@@ -8352,9 +8543,71 @@ class GameScene extends Phaser.Scene {
         // player wants to open the menu
         menuButton.on('pointerdown', function(){
             menuButton.setTexture('MenuClicked');
+
+            if (menuScreen.visible == true)
+            {
+                menuScreen.visible = false;
+                this.scene.disableSettingsButtons();
+
+                numPlayersHeader.visible = false;
+                numPlayersMinusButton.visible = false;
+                numPlayersPlusButton.visible = false;
+                numPlayersDisplay.visible = false;
+                numPlayersText.visible = false;
+
+
+            }
+            else if (menuScreen.visible == false)
+            {
+                menuScreen.visible = true;
+                this.scene.enableSettingsButtons();
+
+                numPlayersHeader.visible = true;
+                numPlayersMinusButton.visible = true;
+                numPlayersPlusButton.visible = true;
+                numPlayersDisplay.visible = true;
+                numPlayersText.visible = true;
+            }
+
+            // do this when changing numDecks or deck pen
+            // cardIndex = 0;
+            // // shuffledDeck = this.scene.initializeDeck(numDecks);
+            // // cardInts = this.scene.shuffleInts(numDecks);
+            // this.scene.initializeDeck(numDecks);
+            // this.scene.shuffleInts(numDecks);
+            // runningCount = 0;
+            // trueCount = 0;
+            // runningCountScoreBoard.setText('Running Count: 0');
+            // trueCountScoreBoard.setText('True Count: 0');
+
+
+
+
+
+
+
         });
 
-    };
+        numPlayersMinusButton.on('pointerdown', function(){
+            if (settingsNumPlayers > 1)
+            {
+                numPlayersMinusButton.setTexture('minusButtonClicked')
+                settingsNumPlayers = settingsNumPlayers - 1;
+                numPlayersText.setText(settingsNumPlayers);
+            }
+        });
+
+        numPlayersPlusButton.on('pointerdown', function(){
+            if (settingsNumPlayers < 3)
+            {
+                numPlayersPlusButton.setTexture('plusButtonClicked')
+                settingsNumPlayers = settingsNumPlayers + 1;
+                numPlayersText.setText(settingsNumPlayers);
+            }
+        });
+
+
+    };  
 
     update() {
         
