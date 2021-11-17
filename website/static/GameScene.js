@@ -57,19 +57,20 @@ let maxSplits = 1; // cant go higher due to graphics constraints
 let insuranceOption = 1; // 1 = late, 0 = early (SHOULD ALWAYS REMAIN 1)
 
 // changeable settings
-let numDecks = 4;
+let numDecks = 8;
 let numPlayers = 3;
 let deckPen = .25;
-let minBet = 5;
+let minBet = 30;
 let maxBet = 500;
 let countSpoiler = 0; // 1 = true, 0 = false (cant get working due to hitboxes)
-let peekingOption = 1; // 1 = peeking, 0 = no peeking, 2 = no surrender at all / peeking is advantagous for player (ALWAYS KEEP PEEKING 1) (this is equivalent to early/late surrender, 1 = late surrender, 0 = early surrender)
 
-// not allowing surrender (like at all)
-// blackjack payout (6/5 vs 3/2)
-// hit split Aces (whether you can hit aces after splitting them)
-// no doubling after split
-// whether dealer stands on soft 17 (A + 6 for example) (changes basic strategy, so not doing this)
+let peekingOption = 1; // 1 = peeking, 0 = no peeking, 2 = no surrender at all / peeking is advantagous for player (ALWAYS KEEP PEEKING 1) (this is equivalent to early/late surrender, 1 = late surrender, 0 = early surrender)
+let blackjackPayout = 3/2;
+let hitSplitAces = 1; // 1 = yes, 0 = no
+let doubleAfterSplit = 1; // 1 = yes, 0 = no
+let hitStandSoft17 = 0; // 1 = hit, 0 = stand
+let doubleOption = 0; // 0 = double on any first 2 cards, 1 = 9-11 only, 2 = 9-10
+
 
 let settingsNumDecks = numDecks;
 let settingsNumPlayers = numPlayers;
@@ -77,7 +78,13 @@ let settingsDeckPen = deckPen;
 let settingsMinBet = minBet;
 let settingsMaxBet = maxBet;
 let settingsCountSpoiler = countSpoiler;
+
 let settingsPeekingOption = peekingOption;
+let settingsBlackjackPayout = blackjackPayout;
+let settingsHitSplitAces = hitSplitAces;
+let settingsDoubleAfterSplit = doubleAfterSplit;
+let settingsHitStandSoft17 = hitStandSoft17;
+let settingsDoubleOption = doubleOption;
 
 let confirmedSettingsNumDecks = numDecks;
 let confirmedSettingsNumPlayers = numPlayers;
@@ -85,7 +92,13 @@ let confirmedSettingsDeckPen = deckPen;
 let confirmedSettingsMinBet = minBet;
 let confirmedSettingsMaxBet = maxBet;
 let confirmedSettingsCountSpoiler = countSpoiler;
+
 let confirmedSettingsPeekingOption = peekingOption;
+let confirmedSettingsBlackjackPayout = blackjackPayout;
+let confirmedSettingsHitSplitAces = hitSplitAces;
+let confirmedSettingsDoubleAfterSplit = doubleAfterSplit;
+let confirmedSettingsHitStandSoft17 = hitStandSoft17;
+let confirmedSettingsDoubleOption = doubleOption;
 
 let applySettingsFlag = 0;
 let applyDeckSettingsFlag = 0;
@@ -205,6 +218,43 @@ let countSpoilerMinusButton;
 let countSpoilerDisplay;
 let countSpoilerText;
 
+// peekingOption = surrender stuff
+let peekingOptionHeader;
+let peekingOptionPlusButton;
+let peekingOptionMinusButton;
+let peekingOptionDisplay;
+let peekingOptionText;
+
+let blackjackPayoutHeader;
+let blackjackPayoutPlusButton;
+let blackjackPayoutMinusButton;
+let blackjackPayoutDisplay;
+let blackjackPayoutText;
+
+let hitSplitAcesHeader;
+let hitSplitAcesPlusButton;
+let hitSplitAcesMinusButton;
+let hitSplitAcesDisplay;
+let hitSplitAcesText;
+
+let doubleAfterSplitHeader;
+let doubleAfterSplitPlusButton;
+let doubleAfterSplitMinusButton;
+let doubleAfterSplitDisplay;
+let doubleAfterSplitText;
+
+let hitStandSoft17Header;
+let hitStandSoft17PlusButton;
+let hitStandSoft17MinusButton;
+let hitStandSoft17Display;
+let hitStandSoft17Text;
+
+let doubleOptionHeader;
+let doubleOptionPlusButton;
+let doubleOptionMinusButton;
+let doubleOptionDisplay;
+let doubleOptionText;
+
 
 let disclaimer;
 let currencyWarningShape;
@@ -258,6 +308,7 @@ let handIndicatorSpacing = -15;
 
 
 //TODO:
+// test when minbet is multiple chips (like 30)
 // make settings menu
 // make buttons grayed out when they should be
 // CANT DOUBLE ON SPLIT ACE
@@ -3555,6 +3606,14 @@ class GameScene extends Phaser.Scene {
         maxBet = confirmedSettingsMaxBet;
         countSpoiler = confirmedSettingsCountSpoiler;
 
+        peekingOption = confirmedSettingsPeekingOption;
+        blackjackPayout = confirmedSettingsBlackjackPayout;
+        hitSplitAces = confirmedSettingsHitSplitAces;
+        doubleAfterSplit = confirmedSettingsDoubleAfterSplit;
+        hitStandSoft17 = confirmedSettingsHitStandSoft17;
+        doubleOption = confirmedSettingsDoubleOption;
+        
+
         dealerCardDisplay.setText("Dealer Cards: \n");
         if (numPlayers >= 1)
         {
@@ -4445,7 +4504,7 @@ class GameScene extends Phaser.Scene {
         settingsDisclaimer.visible = false;
 
         // numplayers buttons + display
-        numPlayersHeader = this.add.text(387, 200, "Num. Players", {fontSize: '24px', fill: '#fff'});
+        numPlayersHeader = this.add.text(388, 200, "Num. Players", {fontSize: '24px', fill: '#fff'});
         numPlayersMinusButton = this.add.sprite(400, 250, 'minusButtonNormal');
         numPlayersMinusButton.scale = 1;
         numPlayersPlusButton = this.add.sprite(550, 250, 'plusButtonNormal');
@@ -4621,20 +4680,20 @@ class GameScene extends Phaser.Scene {
         }
 
         // countSpoiler buttons + display
-        countSpoilerHeader = this.add.text(805, 200, "Count Spoilers", {fontSize: '24px', fill: '#fff'});
-        countSpoilerMinusButton = this.add.sprite(832, 250, 'minusButtonNormal');
+        countSpoilerHeader = this.add.text(370, 700, "Count Spoilers", {fontSize: '24px', fill: '#fff'});
+        countSpoilerMinusButton = this.add.sprite(400, 750, 'minusButtonNormal');
         countSpoilerMinusButton.scale = 1;
-        countSpoilerPlusButton = this.add.sprite(982, 250, 'plusButtonNormal');
+        countSpoilerPlusButton = this.add.sprite(550, 750, 'plusButtonNormal');
         countSpoilerPlusButton.scale = 1;
-        countSpoilerDisplay = this.add.rectangle(907, 250, 100, 40, 0x000000);
+        countSpoilerDisplay = this.add.rectangle(475, 750, 100, 40, 0x000000);
 
         if (countSpoiler == 0)
         {
-            countSpoilerText = this.add.text(884, 240, "Off", {fontSize: '28px', fill: '#fff'});
+            countSpoilerText = this.add.text(451, 740, "Off", {fontSize: '28px', fill: '#fff'});
         }
         else if (countSpoiler == 1)
         {
-            countSpoilerText = this.add.text(892, 240, "On", {fontSize: '28px', fill: '#fff'});
+            countSpoilerText = this.add.text(459, 740, "On", {fontSize: '28px', fill: '#fff'});
         }
 
         countSpoilerHeader.setDepth(2000000000000);
@@ -4649,23 +4708,148 @@ class GameScene extends Phaser.Scene {
         countSpoilerDisplay.visible = false;
         countSpoilerText.visible = false;
 
-        // OTHER SETTINGS
-        // Early Surrender (currently implemented, can surrender before dealer checks their hand for blackjack) 
-        // vs Late Surrender (can only surrender after dealer checks their hand for blackjack)
+        // let peekingOption = 1; // 1 = peeking, 0 = no peeking, 2 = no surrender at all / peeking is advantagous for player (ALWAYS KEEP PEEKING 1) (this is equivalent to early/late surrender, 1 = late surrender, 0 = early surrender)
+        // let blackjackPayout = 3/2;
+        // let hitSplitAces = 1; // 1 = yes, 0 = no
+        // let doubleAfterSplit = 1; // 1 = yes, 0 = no
+        // let hitStandSoft17 = 0; // 1 = hit, 0 = stand
+        // let doubleOption = 0; // 0 = double on any first 2 cards, 1 = 9-11 only, 2 = 9-10
+
+  
+        // surrender buttons + display
+        peekingOptionHeader = this.add.text(805, 200, "Surrender Options", {fontSize: '24px', fill: '#fff'});
+        peekingOptionMinusButton = this.add.sprite(850, 250, 'minusButtonNormal');
+        peekingOptionMinusButton.scale = 1;
+        peekingOptionPlusButton = this.add.sprite(1000, 250, 'plusButtonNormal');
+        peekingOptionPlusButton.scale = 1;
+        peekingOptionDisplay = this.add.rectangle(925, 250, 100, 40, 0x000000);
+        peekingOptionText = this.add.text(916, 240, peekingOption, {fontSize: '28px', fill: '#fff'});
+
+        peekingOptionHeader.setDepth(2000000000000);
+        peekingOptionMinusButton.setDepth(2000000000000);
+        peekingOptionPlusButton.setDepth(2000000000000);
+        peekingOptionDisplay.setDepth(2000000000000);
+        peekingOptionText.setDepth(2000000000000);
+
+        peekingOptionHeader.visible = false;
+        peekingOptionMinusButton.visible = false;
+        peekingOptionPlusButton.visible = false;
+        peekingOptionDisplay.visible = false;
+        peekingOptionText.visible = false;
+
+        // double buttons + display
+        doubleOptionHeader = this.add.text(818, 300, "Double Options", {fontSize: '24px', fill: '#fff'});
+        doubleOptionMinusButton = this.add.sprite(850, 350, 'minusButtonNormal');
+        doubleOptionMinusButton.scale = 1;
+        doubleOptionPlusButton = this.add.sprite(1000, 350, 'plusButtonNormal');
+        doubleOptionPlusButton.scale = 1;
+        doubleOptionDisplay = this.add.rectangle(925, 350, 100, 40, 0x000000);
+        doubleOptionText = this.add.text(918, 340, doubleOption, {fontSize: '28px', fill: '#fff'});
+
+        doubleOptionHeader.setDepth(2000000000000);
+        doubleOptionMinusButton.setDepth(2000000000000);
+        doubleOptionPlusButton.setDepth(2000000000000);
+        doubleOptionDisplay.setDepth(2000000000000);
+        doubleOptionText.setDepth(2000000000000);
+
+        doubleOptionHeader.visible = false;
+        doubleOptionMinusButton.visible = false;
+        doubleOptionPlusButton.visible = false;
+        doubleOptionDisplay.visible = false;
+        doubleOptionText.visible = false;
+
+        // hitSplitAces buttons + display
+        hitSplitAcesHeader = this.add.text(823, 400, "Hit Split Aces", {fontSize: '24px', fill: '#fff'});
+        hitSplitAcesMinusButton = this.add.sprite(850, 450, 'minusButtonNormal');
+        hitSplitAcesMinusButton.scale = 1;
+        hitSplitAcesPlusButton = this.add.sprite(1000, 450, 'plusButtonNormal');
+        hitSplitAcesPlusButton.scale = 1;
+        hitSplitAcesDisplay = this.add.rectangle(925, 450, 100, 40, 0x000000);
+        hitSplitAcesText = this.add.text(918, 440, hitSplitAces, {fontSize: '28px', fill: '#fff'});
+
+        hitSplitAcesHeader.setDepth(2000000000000);
+        hitSplitAcesMinusButton.setDepth(2000000000000);
+        hitSplitAcesPlusButton.setDepth(2000000000000);
+        hitSplitAcesDisplay.setDepth(2000000000000);
+        hitSplitAcesText.setDepth(2000000000000);
+
+        hitSplitAcesHeader.visible = false;
+        hitSplitAcesMinusButton.visible = false;
+        hitSplitAcesPlusButton.visible = false;
+        hitSplitAcesDisplay.visible = false;
+        hitSplitAcesText.visible = false;
+
+        // doubleAfterSplit buttons + display
+        doubleAfterSplitHeader = this.add.text(780, 500, "Doubling After Split", {fontSize: '24px', fill: '#fff'});
+        doubleAfterSplitMinusButton = this.add.sprite(850, 550, 'minusButtonNormal');
+        doubleAfterSplitMinusButton.scale = 1;
+        doubleAfterSplitPlusButton = this.add.sprite(1000, 550, 'plusButtonNormal');
+        doubleAfterSplitPlusButton.scale = 1;
+        doubleAfterSplitDisplay = this.add.rectangle(925, 550, 100, 40, 0x000000);
+        doubleAfterSplitText = this.add.text(918, 540, doubleAfterSplit, {fontSize: '28px', fill: '#fff'});
+
+        doubleAfterSplitHeader.setDepth(2000000000000);
+        doubleAfterSplitMinusButton.setDepth(2000000000000);
+        doubleAfterSplitPlusButton.setDepth(2000000000000);
+        doubleAfterSplitDisplay.setDepth(2000000000000);
+        doubleAfterSplitText.setDepth(2000000000000);
+
+        doubleAfterSplitHeader.visible = false;
+        doubleAfterSplitMinusButton.visible = false;
+        doubleAfterSplitPlusButton.visible = false;
+        doubleAfterSplitDisplay.visible = false;
+        doubleAfterSplitText.visible = false;
+
+        // hitStandSoft17 buttons + display
+        hitStandSoft17Header = this.add.text(760, 600, "Hit or Stand on Soft 17", {fontSize: '24px', fill: '#fff'});
+        hitStandSoft17MinusButton = this.add.sprite(850, 650, 'minusButtonNormal');
+        hitStandSoft17MinusButton.scale = 1;
+        hitStandSoft17PlusButton = this.add.sprite(1000, 650, 'plusButtonNormal');
+        hitStandSoft17PlusButton.scale = 1;
+        hitStandSoft17Display = this.add.rectangle(925, 650, 100, 40, 0x000000);
+        hitStandSoft17Text = this.add.text(918, 640, hitStandSoft17, {fontSize: '28px', fill: '#fff'});
+
+        hitStandSoft17Header.setDepth(2000000000000);
+        hitStandSoft17MinusButton.setDepth(2000000000000);
+        hitStandSoft17PlusButton.setDepth(2000000000000);
+        hitStandSoft17Display.setDepth(2000000000000);
+        hitStandSoft17Text.setDepth(2000000000000);
+
+        hitStandSoft17Header.visible = false;
+        hitStandSoft17MinusButton.visible = false;
+        hitStandSoft17PlusButton.visible = false;
+        hitStandSoft17Display.visible = false;
+        hitStandSoft17Text.visible = false;
+
+        // blackjackPayout buttons + display
+        blackjackPayoutHeader = this.add.text(808, 700, "Blackjack Payout", {fontSize: '24px', fill: '#fff'});
+        blackjackPayoutMinusButton = this.add.sprite(850, 750, 'minusButtonNormal');
+        blackjackPayoutMinusButton.scale = 1;
+        blackjackPayoutPlusButton = this.add.sprite(1000, 750, 'plusButtonNormal');
+        blackjackPayoutPlusButton.scale = 1;
+        blackjackPayoutDisplay = this.add.rectangle(925, 750, 100, 40, 0x000000);
+        blackjackPayoutText = this.add.text(902, 740, blackjackPayout, {fontSize: '28px', fill: '#fff'});
+
+        blackjackPayoutHeader.setDepth(2000000000000);
+        blackjackPayoutMinusButton.setDepth(2000000000000);
+        blackjackPayoutPlusButton.setDepth(2000000000000);
+        blackjackPayoutDisplay.setDepth(2000000000000);
+        blackjackPayoutText.setDepth(2000000000000);
+
+        blackjackPayoutHeader.visible = false;
+        blackjackPayoutMinusButton.visible = false;
+        blackjackPayoutPlusButton.visible = false;
+        blackjackPayoutDisplay.visible = false;
+        blackjackPayoutText.visible = false;
 
 
-
-
-
-
-
-        // BUTTON BUG MIGHT BE OCCURING BECAUSE MULTIPLE INTERACTIONS ARE USING THE SAME SPRITE
+        // BUTTON BUG IS MOST DEFINETELY RELATED TO THE Y COORD. THE LOWER THE Y, THE MORE ACCURATE THE BUTTON
 
         // apply settings button
-        applySettingsButton = this.add.sprite(700, 800, 'normalButton');
+        applySettingsButton = this.add.sprite(700, 900, 'normalButton');
         applySettingsButton.setDepth(2000000000000);
         applySettingsButton.scale = 2;
-        applySettingsText = this.add.text(673, 785, "Apply", textStyle);
+        applySettingsText = this.add.text(673, 885, "Apply", textStyle);
         applySettingsText.setDepth(2000000000001);
 
         applySettingsButton.visible = false;
@@ -9571,6 +9755,41 @@ class GameScene extends Phaser.Scene {
                 countSpoilerDisplay.visible = false;
                 countSpoilerText.visible = false;
 
+                peekingOptionHeader.visible = false;
+                peekingOptionMinusButton.visible = false;
+                peekingOptionPlusButton.visible = false;
+                peekingOptionDisplay.visible = false;
+                peekingOptionText.visible = false;
+
+                doubleOptionHeader.visible = false;
+                doubleOptionMinusButton.visible = false;
+                doubleOptionPlusButton.visible = false;
+                doubleOptionDisplay.visible = false;
+                doubleOptionText.visible = false;
+
+                hitSplitAcesHeader.visible = false;
+                hitSplitAcesMinusButton.visible = false;
+                hitSplitAcesPlusButton.visible = false;
+                hitSplitAcesDisplay.visible = false;
+                hitSplitAcesText.visible = false;
+
+                doubleAfterSplitHeader.visible = false;
+                doubleAfterSplitMinusButton.visible = false;
+                doubleAfterSplitPlusButton.visible = false;
+                doubleAfterSplitDisplay.visible = false;
+                doubleAfterSplitText.visible = false;
+
+                hitStandSoft17Header.visible = false;
+                hitStandSoft17MinusButton.visible = false;
+                hitStandSoft17PlusButton.visible = false;
+                hitStandSoft17Display.visible = false;
+                hitStandSoft17Text.visible = false;
+
+                blackjackPayoutHeader.visible = false;
+                blackjackPayoutMinusButton.visible = false;
+                blackjackPayoutPlusButton.visible = false;
+                blackjackPayoutDisplay.visible = false;
+                blackjackPayoutText.visible = false;
             }
             else if (menuScreen.visible == false)
             {
@@ -9623,6 +9842,42 @@ class GameScene extends Phaser.Scene {
                 countSpoilerPlusButton.visible = true;
                 countSpoilerDisplay.visible = true;
                 countSpoilerText.visible = true;
+
+                peekingOptionHeader.visible = true;
+                peekingOptionMinusButton.visible = true;
+                peekingOptionPlusButton.visible = true;
+                peekingOptionDisplay.visible = true;
+                peekingOptionText.visible = true;
+
+                doubleOptionHeader.visible = true;
+                doubleOptionMinusButton.visible = true;
+                doubleOptionPlusButton.visible = true;
+                doubleOptionDisplay.visible = true;
+                doubleOptionText.visible = true;   
+
+                hitSplitAcesHeader.visible = true;
+                hitSplitAcesMinusButton.visible = true;
+                hitSplitAcesPlusButton.visible = true;
+                hitSplitAcesDisplay.visible = true;
+                hitSplitAcesText.visible = true;
+
+                doubleAfterSplitHeader.visible = true;
+                doubleAfterSplitMinusButton.visible = true;
+                doubleAfterSplitPlusButton.visible = true;
+                doubleAfterSplitDisplay.visible = true;
+                doubleAfterSplitText.visible = true;
+
+                hitStandSoft17Header.visible = true;
+                hitStandSoft17MinusButton.visible = true;
+                hitStandSoft17PlusButton.visible = true;
+                hitStandSoft17Display.visible = true;
+                hitStandSoft17Text.visible = true;
+
+                blackjackPayoutHeader.visible = true;
+                blackjackPayoutMinusButton.visible = true;
+                blackjackPayoutPlusButton.visible = true;
+                blackjackPayoutDisplay.visible = true;
+                blackjackPayoutText.visible = true;
             }
 
             // do this when changing numDecks or deck pen
@@ -9848,7 +10103,7 @@ class GameScene extends Phaser.Scene {
             {
                 countSpoilerMinusButton.setTexture('minusButtonClicked');
                 settingsCountSpoiler = 0;
-                countSpoilerText.setPosition(884, 240);
+                countSpoilerText.setPosition(451, 740);
                 countSpoilerText.setText("Off");
             }
         });
@@ -9859,7 +10114,7 @@ class GameScene extends Phaser.Scene {
             {
                 countSpoilerPlusButton.setTexture('plusButtonClicked');
                 settingsCountSpoiler = 1;
-                countSpoilerText.setPosition(892, 240);
+                countSpoilerText.setPosition(459, 740);
                 countSpoilerText.setText("On");
             }
         });
@@ -9888,6 +10143,13 @@ class GameScene extends Phaser.Scene {
             confirmedSettingsMinBet = settingsMinBet;
             confirmedSettingsMaxBet = settingsMaxBet;
             confirmedSettingsCountSpoiler = settingsCountSpoiler;
+
+            confirmedSettingsPeekingOption = settingsPeekingOption;
+            confirmedSettingsBlackjackPayout = settingsBlackjackPayout;
+            confirmedSettingsHitSplitAces = settingsHitSplitAces;
+            confirmedSettingsDoubleAfterSplit = settingsDoubleAfterSplit;
+            confirmedSettingsHitStandSoft17 = settingsHitStandSoft17;
+            confirmedSettingsDoubleOption = settingsDoubleOption;
 
             applySettingsFlag = 1;
 
@@ -9938,6 +10200,42 @@ class GameScene extends Phaser.Scene {
             countSpoilerPlusButton.visible = false;
             countSpoilerDisplay.visible = false;
             countSpoilerText.visible = false;
+
+            peekingOptionHeader.visible = false;
+            peekingOptionMinusButton.visible = false;
+            peekingOptionPlusButton.visible = false;
+            peekingOptionDisplay.visible = false;
+            peekingOptionText.visible = false;
+
+            doubleOptionHeader.visible = false;
+            doubleOptionMinusButton.visible = false;
+            doubleOptionPlusButton.visible = false;
+            doubleOptionDisplay.visible = false;
+            doubleOptionText.visible = false;
+
+            hitSplitAcesHeader.visible = false;
+            hitSplitAcesMinusButton.visible = false;
+            hitSplitAcesPlusButton.visible = false;
+            hitSplitAcesDisplay.visible = false;
+            hitSplitAcesText.visible = false;
+
+            doubleAfterSplitHeader.visible = false;
+            doubleAfterSplitMinusButton.visible = false;
+            doubleAfterSplitPlusButton.visible = false;
+            doubleAfterSplitDisplay.visible = false;
+            doubleAfterSplitText.visible = false;
+
+            hitStandSoft17Header.visible = false;
+            hitStandSoft17MinusButton.visible = false;
+            hitStandSoft17PlusButton.visible = false;
+            hitStandSoft17Display.visible = false;
+            hitStandSoft17Text.visible = false;
+
+            blackjackPayoutHeader.visible = false;
+            blackjackPayoutMinusButton.visible = false;
+            blackjackPayoutPlusButton.visible = false;
+            blackjackPayoutDisplay.visible = false;
+            blackjackPayoutText.visible = false;
         });
 
     };  
