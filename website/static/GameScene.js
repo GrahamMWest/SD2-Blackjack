@@ -6,8 +6,8 @@
 // const cardY = [[425, 425, 425, 65], [420, 420, 420, 70], [415, 415, 415, 75], [410, 410, 410, 80], [405, 405, 405, 85], [400, 400, 400, 90]];
 // const cardA = [0, 0, 0, 0];
 
-const cardX = [[965, 705, 425, 705], [952, 692, 412, 718], [939, 679, 399, 731], [926, 666, 386, 744], [913, 653, 373, 757], [900, 640, 360, 770]];
-const cardY = [[425, 425, 425, 65], [405, 405, 405, 85], [385, 385, 385, 105], [365, 365, 365, 125], [345, 345, 345, 145], [325, 325, 325, 165]];
+const cardX = [[965, 705, 425, 705], [952, 692, 412, 718], [939, 679, 399, 731], [926, 666, 386, 744], [913, 653, 373, 757], [900, 640, 360, 770], [887, 627, 347, 787]];
+const cardY = [[425, 425, 425, 65], [405, 405, 405, 85], [385, 385, 385, 105], [365, 365, 365, 125], [345, 345, 345, 145], [325, 325, 325, 165], [305, 305, 305, 185]];
 const cardA = [0, 0, 0, 0];
 
 
@@ -54,21 +54,43 @@ let cardIndex = 0;
 let playerCurrency = 500;
 let playerPoints = 0;
 let maxSplits = 1; // cant go higher due to graphics constraints
-let countSpoiler = 0; // 1 = true, 0 = false (cant get working due to hitboxes)
+let insuranceOption = 1; // 1 = late, 0 = early (SHOULD ALWAYS REMAIN 1)
+let peekingOption = 1; // 1 = peeking, 0 = no peeking / peeking is advantagous for player (ALWAYS KEEP PEEKING 1) (this is equivalent to early/late surrender, 1 = late surrender, 0 = early surrender)
 
 // changeable settings
 let numDecks = 4;
 let numPlayers = 3;
-let deckPen = .1;
+let deckPen = .25;
 let minBet = 5;
 let maxBet = 500;
+let countSpoiler = 0; // 1 = true, 0 = false (cant get working due to hitboxes)
+
+// not allowing surrender (like at all)
+// blackjack payout (6/5 vs 3/2)
+// hit split Aces (whether you can hit aces after splitting them)
+// no doubling after split
+// whether dealer stands on soft 17 (A + 6 for example) (changes basic strategy, so not doing this)
 
 let settingsNumDecks = numDecks;
 let settingsNumPlayers = numPlayers;
 let settingsDeckPen = deckPen;
 let settingsMinBet = minBet;
 let settingsMaxBet = maxBet;
+let settingsCountSpoiler = countSpoiler;
+let settingsInsuranceOption = insuranceOption;
+let settingsPeekingOption = peekingOption;
 
+let confirmedSettingsNumDecks = numDecks;
+let confirmedSettingsNumPlayers = numPlayers;
+let confirmedSettingsDeckPen = deckPen;
+let confirmedSettingsMinBet = minBet;
+let confirmedSettingsMaxBet = maxBet;
+let confirmedSettingsCountSpoiler = countSpoiler;
+let confirmedSettingsInsuranceOption = insuranceOption;
+let confirmedSettingsPeekingOption = peekingOption;
+
+let applySettingsFlag = 0;
+let applyDeckSettingsFlag = 0;
 
 // global variables that were created in create function
 let bg;
@@ -125,6 +147,7 @@ let player3InsuranceChips = [];
 let placeholderChipArray = [];
 let didPlayersSurrender = [0, 0, 0];
 let isPlayerInsured = [0,0,0];
+let insuranceRound = 0;
 
 // actions and displays
 let playerHit;
@@ -141,8 +164,12 @@ let playerSplit;
 let splitText;
 
 // menu buttons
+let settingsHeader;
+let settingsDisclaimer;
 let menuButton;
 let menuScreen;
+let applySettingsButton;
+let applySettingsText;
 
 let numPlayersHeader;
 let numPlayersPlusButton;
@@ -162,7 +189,23 @@ let deckPenMinusButton;
 let deckPenDisplay;
 let deckPenText;
 
+let minBetHeader;
+let minBetPlusButton;
+let minBetMinusButton;
+let minBetDisplay;
+let minBetText;
 
+let maxBetHeader;
+let maxBetPlusButton;
+let maxBetMinusButton;
+let maxBetDisplay;
+let maxBetText;
+
+let countSpoilerHeader;
+let countSpoilerPlusButton;
+let countSpoilerMinusButton;
+let countSpoilerDisplay;
+let countSpoilerText;
 
 
 let disclaimer;
@@ -218,6 +261,8 @@ let handIndicatorSpacing = -15;
 
 //TODO:
 // make settings menu
+// make buttons grayed out when they should be
+// CANT DOUBLE ON SPLIT ACE
 
 // fix point system (insurance/surrender/can Split or Not/True Count)
 // CHECK WHETHER I NEED TO LOOK FOR WHETHER USER CAN DOUBLE OR NOT (MAYBE A VARIABLE CALLED 'firstAction' OR SOMETHING)
@@ -369,8 +414,6 @@ function updateInfo(i, j) {
                 else if (j == 2)
                     player3CardDisplay.setText("Seat" + (j + 1) + " Cards:\n[" + playerCards[j][i-6] + "," + playerCards[j][i-5] + "," + playerCards[j][i-4] + "," + playerCards[j][i-3] + "," + playerCards[j][i-2] + "," + playerCards[j][i-1] + "," + playerCards[j][i] + "]");
             }
-            // gonna have to continue this if/else for all card combinations, 
-            // such as having 5 cards, also need to take splits into consideration
 
         }
         else if (numSplits[currentPlayer] == 1)
@@ -2782,6 +2825,46 @@ class GameScene extends Phaser.Scene {
         })
     };
 
+    disableStandButton() {
+
+        playerStand.disableInteractive();
+
+        playerStand.setTexture('lockedButton');
+
+        playerStand.on('pointerover', function(){
+            playerStand.setTexture('lockedButton');
+        })
+
+        playerStand.on('pointerout', function(){
+            playerStand.setTexture('lockedButton');
+        })
+
+        // idk if these below are needed
+        playerStand.on('pointerup', function(){
+            playerStand.setTexture('lockedButton');
+        })
+    };
+
+    enableStandButton() {
+
+        playerStand.setInteractive({ useHandCursor: true});
+
+        playerStand.setTexture('normalButton');
+
+        playerStand.on('pointerover', function(){
+            playerStand.setTexture('hoveredButton');
+        })
+
+        playerStand.on('pointerout', function(){
+            playerStand.setTexture('normalButton');
+        })
+
+        // idk if these below are needed
+        playerStand.on('pointerup', function(){
+            playerStand.setTexture('hoveredButton');
+        })
+    };
+
     disableDoubleButton(){
 
         playerDouble.disableInteractive();
@@ -3157,16 +3240,57 @@ class GameScene extends Phaser.Scene {
     };
 
     disableSettingsButtons() {
+        // numPlayers
         numPlayersMinusButton.disableInteractive();
         numPlayersPlusButton.disableInteractive();
 
         numPlayersMinusButton.setTexture('minusButtonLocked');
         numPlayersPlusButton.setTexture('plusButtonLocked');
 
+        // numDecks
+        numDecksMinusButton.disableInteractive();
+        numDecksPlusButton.disableInteractive();
+
+        numDecksMinusButton.setTexture('minusButtonLocked');
+        numDecksPlusButton.setTexture('plusButtonLocked');
+
+        // deckPen
+        deckPenMinusButton.disableInteractive();
+        deckPenPlusButton.disableInteractive();
+
+        deckPenMinusButton.setTexture('minusButtonLocked');
+        deckPenPlusButton.setTexture('plusButtonLocked');
+
+        // minBet
+        minBetMinusButton.disableInteractive();
+        minBetPlusButton.disableInteractive();
+
+        minBetMinusButton.setTexture('minusButtonLocked');
+        minBetPlusButton.setTexture('plusButtonLocked');
+
+        // maxBet
+        maxBetMinusButton.disableInteractive();
+        maxBetPlusButton.disableInteractive();
+
+        maxBetMinusButton.setTexture('minusButtonLocked');
+        maxBetPlusButton.setTexture('plusButtonLocked');
+
+        // countSpoiler
+        countSpoilerMinusButton.disableInteractive();
+        countSpoilerPlusButton.disableInteractive();
+
+        countSpoilerMinusButton.setTexture('minusButtonLocked');
+        countSpoilerPlusButton.setTexture('plusButtonLocked');
+
+        // apply button
+        applySettingsButton.disableInteractive();
+
+        applySettingsButton.setTexture('lockedButton');
     };
 
     enableSettingsButtons() {
 
+        // numPlayers
         numPlayersMinusButton.setInteractive({ useHandCursor: true });
         numPlayersMinusButton.setTexture('minusButtonNormal');
 
@@ -3181,7 +3305,6 @@ class GameScene extends Phaser.Scene {
         numPlayersMinusButton.on('pointerup', function(){
             numPlayersMinusButton.setTexture('minusButtonHovered');
         })
-
 
 
         numPlayersPlusButton.setInteractive({ useHandCursor: true });
@@ -3199,15 +3322,240 @@ class GameScene extends Phaser.Scene {
             numPlayersPlusButton.setTexture('plusButtonHovered');
         })
 
+
+        // numDecks
+        numDecksMinusButton.setInteractive({ useHandCursor: true });
+        numDecksMinusButton.setTexture('minusButtonNormal');
+
+        numDecksMinusButton.on('pointerover', function(){
+            numDecksMinusButton.setTexture('minusButtonHovered');
+        })
+
+        numDecksMinusButton.on('pointerout', function(){
+            numDecksMinusButton.setTexture('minusButtonNormal');
+        })
+
+        numDecksMinusButton.on('pointerup', function(){
+            numDecksMinusButton.setTexture('minusButtonHovered');
+        })
+
+
+        numDecksPlusButton.setInteractive({ useHandCursor: true });
+        numDecksPlusButton.setTexture('plusButtonNormal');
+
+        numDecksPlusButton.on('pointerover', function(){
+            numDecksPlusButton.setTexture('plusButtonHovered');
+        })
+
+        numDecksPlusButton.on('pointerout', function(){
+            numDecksPlusButton.setTexture('plusButtonNormal');
+        })
+
+        numDecksPlusButton.on('pointerup', function(){
+            numDecksPlusButton.setTexture('plusButtonHovered');
+        })
+
+        // deckPen
+        deckPenMinusButton.setInteractive({ useHandCursor: true });
+        deckPenMinusButton.setTexture('minusButtonNormal');
+
+        deckPenMinusButton.on('pointerover', function(){
+            deckPenMinusButton.setTexture('minusButtonHovered');
+        })
+
+        deckPenMinusButton.on('pointerout', function(){
+            deckPenMinusButton.setTexture('minusButtonNormal');
+        })
+
+        deckPenMinusButton.on('pointerup', function(){
+            deckPenMinusButton.setTexture('minusButtonHovered');
+        })
+
+
+        deckPenPlusButton.setInteractive({ useHandCursor: true });
+        deckPenPlusButton.setTexture('plusButtonNormal');
+
+        deckPenPlusButton.on('pointerover', function(){
+            deckPenPlusButton.setTexture('plusButtonHovered');
+        })
+
+        deckPenPlusButton.on('pointerout', function(){
+            deckPenPlusButton.setTexture('plusButtonNormal');
+        })
+
+        deckPenPlusButton.on('pointerup', function(){
+            deckPenPlusButton.setTexture('plusButtonHovered');
+        })
+
+
+
+        // minBet
+        minBetMinusButton.setInteractive({ useHandCursor: true });
+        minBetMinusButton.setTexture('minusButtonNormal');
+
+        minBetMinusButton.on('pointerover', function(){
+            minBetMinusButton.setTexture('minusButtonHovered');
+        })
+
+        minBetMinusButton.on('pointerout', function(){
+            minBetMinusButton.setTexture('minusButtonNormal');
+        })
+
+        minBetMinusButton.on('pointerup', function(){
+            minBetMinusButton.setTexture('minusButtonHovered');
+        })
+
+
+        minBetPlusButton.setInteractive({ useHandCursor: true });
+        minBetPlusButton.setTexture('plusButtonNormal');
+
+        minBetPlusButton.on('pointerover', function(){
+            minBetPlusButton.setTexture('plusButtonHovered');
+        })
+
+        minBetPlusButton.on('pointerout', function(){
+            minBetPlusButton.setTexture('plusButtonNormal');
+        })
+
+        minBetPlusButton.on('pointerup', function(){
+            minBetPlusButton.setTexture('plusButtonHovered');
+        })
+
+
+
+        // maxBet
+        maxBetMinusButton.setInteractive({ useHandCursor: true });
+        maxBetMinusButton.setTexture('minusButtonNormal');
+
+        maxBetMinusButton.on('pointerover', function(){
+            maxBetMinusButton.setTexture('minusButtonHovered');
+        })
+
+        maxBetMinusButton.on('pointerout', function(){
+            maxBetMinusButton.setTexture('minusButtonNormal');
+        })
+
+        maxBetMinusButton.on('pointerup', function(){
+            maxBetMinusButton.setTexture('minusButtonHovered');
+        })
+
+
+        maxBetPlusButton.setInteractive({ useHandCursor: true });
+        maxBetPlusButton.setTexture('plusButtonNormal');
+
+        maxBetPlusButton.on('pointerover', function(){
+            maxBetPlusButton.setTexture('plusButtonHovered');
+        })
+
+        maxBetPlusButton.on('pointerout', function(){
+            maxBetPlusButton.setTexture('plusButtonNormal');
+        })
+
+        maxBetPlusButton.on('pointerup', function(){
+            maxBetPlusButton.setTexture('plusButtonHovered');
+        })
+
+
+
+        // countSpoiler
+        countSpoilerMinusButton.setInteractive({ useHandCursor: true });
+        countSpoilerMinusButton.setTexture('minusButtonNormal');
+
+        countSpoilerMinusButton.on('pointerover', function(){
+            countSpoilerMinusButton.setTexture('minusButtonHovered');
+        })
+
+        countSpoilerMinusButton.on('pointerout', function(){
+            countSpoilerMinusButton.setTexture('minusButtonNormal');
+        })
+
+        countSpoilerMinusButton.on('pointerup', function(){
+            countSpoilerMinusButton.setTexture('minusButtonHovered');
+        })
+
+
+        countSpoilerPlusButton.setInteractive({ useHandCursor: true });
+        countSpoilerPlusButton.setTexture('plusButtonNormal');
+
+        countSpoilerPlusButton.on('pointerover', function(){
+            countSpoilerPlusButton.setTexture('plusButtonHovered');
+        })
+
+        countSpoilerPlusButton.on('pointerout', function(){
+            countSpoilerPlusButton.setTexture('plusButtonNormal');
+        })
+
+        countSpoilerPlusButton.on('pointerup', function(){
+            countSpoilerPlusButton.setTexture('plusButtonHovered');
+        })
+
+
+
+
+        // apply button
+        applySettingsButton.setInteractive({ useHandCursor: true });
+        applySettingsButton.setTexture('normalButton');
+
+        applySettingsButton.on('pointerover', function(){
+            applySettingsButton.setTexture('hoveredButton');
+        })
+
+        applySettingsButton.on('pointerout', function(){
+            applySettingsButton.setTexture('normalButton');
+        })
+
+        applySettingsButton.on('pointerup', function(){
+            applySettingsButton.setTexture('hoveredButton');
+        })
+    };
+
+    moveButtonsAway() {
+
+        whiteChip_1_Button.setY(1500);
+        redChip_5_Button.setY(1500);
+        blueChip_10_Button.setY(1500);
+        greenChip_25_Button.setY(1500);
+        blackChip_100_Button.setY(1500);
+
+        nextRoundButton.setY(1500);
+        nextBettorButton.setY(1500);
+
+        playerHit.setY(1500);
+        playerDouble.setY(1500);
+        playerStand.setY(1500);
+        playerSurrender.setY(1500);
+        playerSplit.setY(1500);
+        playerInsurance.setY(1500);
+
+    };
+
+    moveButtonsBack() {
+
+        whiteChip_1_Button.setY(915);
+        redChip_5_Button.setY(915);
+        blueChip_10_Button.setY(915);
+        greenChip_25_Button.setY(915);
+        blackChip_100_Button.setY(915);
+
+        nextRoundButton.setY(915);
+        nextBettorButton.setY(915);
+
+        playerHit.setY(845);
+        playerDouble.setY(845);
+        playerStand.setY(845);
+        playerSurrender.setY(845);
+        playerSplit.setY(845);
+        playerInsurance.setY(845);
     };
 
     resetBoard() {
 
-        numDecks = settingsNumDecks;
-        numPlayers = settingsNumPlayers;
-        deckPen = settingsDeckPen;
-        minBet = settingsMinBet;
-        maxBet = settingsMaxBet;
+        numDecks = confirmedSettingsNumDecks;
+        numPlayers = confirmedSettingsNumPlayers;
+        deckPen = confirmedSettingsDeckPen;
+        minBet = confirmedSettingsMinBet;
+        maxBet = confirmedSettingsMaxBet;
+        countSpoiler = confirmedSettingsCountSpoiler;
 
         dealerCardDisplay.setText("Dealer Cards: \n");
         if (numPlayers >= 1)
@@ -3272,6 +3620,27 @@ class GameScene extends Phaser.Scene {
             player3CardDisplay.setText("");
             player3Hand1Display.setText("");
             player3Hand2Display.setText("");
+        }
+
+        player1TurnIndicator.fillColor = 0x8E1600;
+        player2TurnIndicator.fillColor = 0xFFFFFF;
+        player3TurnIndicator.fillColor = 0xFFFFFF;
+
+        if (confirmedSettingsCountSpoiler == 1)
+        {
+            runningCountSpoiler.visible = true;
+            trueCountSpoiler.visible = true;
+
+            runningCountSpoiler.on("pointerover", () => { runningCountSpoiler.visible = false; });
+            runningCountSpoiler.on("pointerout", () => { runningCountSpoiler.visible = true; });
+    
+            trueCountSpoiler.on("pointerover", () => { trueCountSpoiler.visible = false; });
+            trueCountSpoiler.on("pointerout", () => { trueCountSpoiler.visible = true; });
+        }
+        else if (confirmedSettingsCountSpoiler == 0)
+        {
+            runningCountSpoiler.visible = false;
+            trueCountSpoiler.visible = false;
         }
 
         this.disableNextRoundButton();
@@ -3375,6 +3744,7 @@ class GameScene extends Phaser.Scene {
         player3InsuranceChips = [];
         didPlayersSurrender = [0, 0, 0];
         isPlayerInsured = [0, 0, 0];
+        insuranceRound = 0;
         numChips = 0;
         currentBet = minBet;
 
@@ -3664,6 +4034,34 @@ class GameScene extends Phaser.Scene {
             updateInfo();
             this.enableBettingButtons();
         }
+
+        if (applyDeckSettingsFlag == 1)
+        {
+            cardIndex = 0;
+            // shuffledDeck = this.scene.initializeDeck(numDecks);
+            // cardInts = this.scene.shuffleInts(numDecks);
+            this.initializeDeck(numDecks);
+            this.shuffleInts(numDecks);
+            runningCount = 0;
+            trueCount = 0;
+            runningCountScoreBoard.setText('Running Count: 0');
+            trueCountScoreBoard.setText('True Count: 0');
+
+            this.anims.create({
+                key: "shuffle",
+                frameRate: 3,
+                frames: this.anims.generateFrameNumbers("shufflingAnim", {start:0, end:2}),
+                repeat: 2,
+                showOnStart: true,
+                hideOnComplete: true
+            });
+    
+            // play a shuffle animation as a test
+            shuffleAnimation.play("shuffle");
+        }
+
+        applySettingsFlag = 0;
+        applyDeckSettingsFlag = 0;
     };
 
     newRound() {
@@ -3737,22 +4135,108 @@ class GameScene extends Phaser.Scene {
                 }
             }
 
+            // let insuranceOption = 0; // 1 = late, 0 = early
+            // CHECK FOR A or 10 VALUE CARD HERE AND DO THINGS FOR EARLY VS LATE SURRENDER
+            // IF DEALER HAS BJ, THEY AUTO WIN UNLESS A PLAYER ALSO HAS BJ, THEN ITS PUSH
+
+            // Early Surrender = dealer checks for blackjack after all players make moves (what I currenly have)
+
+            // Late Surrender = dealer check for BJ after all bets are made 
+            // (when cards are first dealt and before any players make any moves), players can only surrender after that
+
+            // for late insurance, all players have to choose 'insurance' or 'stand' if the dealer shows an A
+            // then the dealer checks for BJ
+            // then players play their actual turn
+
+            // peekingOption, 0 = no peeking, 1 = peeking
+            // peeking is advantagous for player
+
             // check if dealers upcard is an Ace
-            if (dealerCards[1] === "A")
+            if (insuranceOption == 0)
             {
-                if (playerCurrency >= player1Bet * .5)
-                    this.enableInsuranceButton();
-            } 
+                if (dealerCards[1] === "A")
+                {
+                    if (playerCurrency >= player1Bet * .5)
+                        this.enableInsuranceButton();
 
-            if (playerCurrency >= player1Bet)
-                this.enableDoubleButton();
-            else
-                this.disableDoubleButton();
+                        if (playerCurrency >= player1Bet)
+                            this.enableDoubleButton();
+                        else
+                            this.disableDoubleButton();
+        
+                        if (playerCards[0][0] === playerCards[0][1] && playerCurrency >= player1Bet)
+                            this.enableSplitButton();
+                        else
+                            this.disableSplitButton();
+                }
+                else if ((dealerCards[1] === "10" || dealerCards[1] === "J" || dealerCards[1] === "Q" || dealerCards[1] === "K") && peekingOption == 1)
+                {
+                    if (this.isBlackjack(dealerCards))
+                    {
+                        // reveal dealer cards
+                        // go to iswinorloss
+                        dealerCard.visible = false;
+                        shuffledDeck[cardInts[dealerIndex]].setDepth(1);
+                        this.revealDealerInfo(dealerCards);
+                        this.drawDealerCards(dealerCards, cardIndex, cardInts, dealerCards.length);
+                        cardIndex = cardIndex + dealerCards.length - 2;
+                        this.isWinOrLoss();
+                        this.disableActionButtons();
+                        this.disableInsuranceButton();
+                        this.disableSplitButton();
+                    }
+                    else
+                    {
+                        if (playerCurrency >= player1Bet)
+                            this.enableDoubleButton();
+                        else
+                            this.disableDoubleButton();
 
-            if (playerCards[0][0] === playerCards[0][1] && playerCurrency >= player1Bet)
-                this.enableSplitButton();
-            else
-                this.disableSplitButton();
+                        if (playerCards[0][0] === playerCards[0][1] && playerCurrency >= player1Bet)
+                            this.enableSplitButton();
+                        else
+                            this.disableSplitButton();
+                    }
+                }
+            }
+            else if (insuranceOption == 1)
+            {
+                // if dealer upcard = A, go through each player and ask Insurance or Stand
+                if (dealerCards[1] === "A")
+                {
+                    // disable all buttons that arent insurance/stand/next bettor
+                    this.disableBettingButtons();
+                    this.disableSplitButton();
+                    this.disableSurrenderButton();
+                    this.disableActionButtons();
+
+                    if (playerCurrency >= player1Bet * .5)
+                        this.enableInsuranceButton();
+
+                    // enable stand
+                    this.enableStandButton();
+
+                    insuranceRound = 1;
+                }
+                else if ((dealerCards[1] === "10" || dealerCards[1] === "J" || dealerCards[1] === "Q" || dealerCards[1] === "K") && peekingOption == 1)
+                {
+                    if (this.isBlackjack(dealerCards))
+                    {
+                        // reveal dealer cards
+                        // go to iswinorloss
+                        dealerCard.visible = false;
+                        shuffledDeck[cardInts[dealerIndex]].setDepth(1);
+                        this.revealDealerInfo(dealerCards);
+                        this.drawDealerCards(dealerCards, cardIndex, cardInts, dealerCards.length);
+                        cardIndex = cardIndex + dealerCards.length - 2;
+                        this.isWinOrLoss();
+                        this.disableActionButtons();
+                        this.disableInsuranceButton();
+                        this.disableSplitButton();
+                    }
+                }
+
+            }
 
         }, this);
 
@@ -3930,30 +4414,52 @@ class GameScene extends Phaser.Scene {
 
         // places menu button
         menuButton = this.add.image(1375, 980, 'MenuNormal');
-        menuButton.setDepth(1000000000000000);
+        menuButton.setDepth(1000000000000);
         this.enableMenuButton();
 
         // menuScreen = this.add.rectangle(1400/2, 1000/2, 1400, 1000, 0xC0C0C0);
         menuScreen = this.add.image(1400/2, 1000/2, 'MenuScreen');
         menuScreen.scale = .926;
-        menuScreen.setDepth(1000000000000);
+        menuScreen.setDepth(1000000000);
         menuScreen.tint = 0xA9A9A9;
         menuScreen.visible = false;
 
-        // numplayers buttons + display
-        numPlayersHeader = this.add.text(390, 550, "Num. Players", {fontSize: '24px', fill: '#fff'});
-        numPlayersMinusButton = this.add.sprite(400, 600, 'nextBettorButtonNormal');
-        numPlayersMinusButton.scale = 1;
-        numPlayersPlusButton = this.add.sprite(550, 600, 'nextRoundButtonNormal');
-        numPlayersPlusButton.scale = 1;
-        numPlayersDisplay = this.add.rectangle(475, 600, 100, 40, 0x000000);
-        numPlayersText = this.add.text(465, 590, numPlayers, {fontSize: '28px', fill: '#fff'});
+        // decorative circles
+        let circley1 = this.add.circle(1400/2, 150, 5, 5);
+        circley1.setDepth(2000000000000);
+        circley1.visible = false;
 
-        numPlayersHeader.setDepth(2000000000000000);
-        numPlayersMinusButton.setDepth(2000000000000000);
-        numPlayersPlusButton.setDepth(2000000000000000);
-        numPlayersDisplay.setDepth(2000000000000000);
-        numPlayersText.setDepth(2000000000000000);
+        let circley2 = this.add.circle(300, 150, 5, 5);
+        circley2.setDepth(2000000000000);
+        circley2.visible = false;
+
+        let circley3 = this.add.circle(1100, 150, 5, 5);
+        circley3.setDepth(2000000000000);
+        circley3.visible = false;
+
+        // settings menu header
+        settingsHeader = this.add.text(540, 50, "Settings Menu", {fontSize: '40px', fill: '#fff'});
+        settingsHeader.setDepth(2000000000000);
+        settingsHeader.visible = false;
+
+        settingsDisclaimer = this.add.text(230, 100, "Settings will be applied after the current round is over.", {fontSize: '28px', fill: '#fff'});
+        settingsDisclaimer.setDepth(2000000000000);
+        settingsDisclaimer.visible = false;
+
+        // numplayers buttons + display
+        numPlayersHeader = this.add.text(387, 200, "Num. Players", {fontSize: '24px', fill: '#fff'});
+        numPlayersMinusButton = this.add.sprite(400, 250, 'minusButtonNormal');
+        numPlayersMinusButton.scale = 1;
+        numPlayersPlusButton = this.add.sprite(550, 250, 'plusButtonNormal');
+        numPlayersPlusButton.scale = 1;
+        numPlayersDisplay = this.add.rectangle(475, 250, 100, 40, 0x000000);
+        numPlayersText = this.add.text(466, 240, numPlayers, {fontSize: '28px', fill: '#fff'});
+
+        numPlayersHeader.setDepth(2000000000000);
+        numPlayersMinusButton.setDepth(2000000000000);
+        numPlayersPlusButton.setDepth(2000000000000);
+        numPlayersDisplay.setDepth(2000000000000);
+        numPlayersText.setDepth(2000000000000);
 
         numPlayersHeader.visible = false;
         numPlayersMinusButton.visible = false;
@@ -3962,12 +4468,192 @@ class GameScene extends Phaser.Scene {
         numPlayersText.visible = false;
 
         // numdecks buttons + display
+        numDecksHeader = this.add.text(405, 300, "Num. Decks", {fontSize: '24px', fill: '#fff'});
+        numDecksMinusButton = this.add.sprite(400, 350, 'minusButtonNormal');
+        numDecksMinusButton.scale = 1;
+        numDecksPlusButton = this.add.sprite(550, 350, 'plusButtonNormal');
+        numDecksPlusButton.scale = 1;
+        numDecksDisplay = this.add.rectangle(475, 350, 100, 40, 0x000000);
+        numDecksText = this.add.text(466, 340, numDecks, {fontSize: '28px', fill: '#fff'});
+
+        numDecksHeader.setDepth(2000000000000);
+        numDecksMinusButton.setDepth(2000000000000);
+        numDecksPlusButton.setDepth(2000000000000);
+        numDecksDisplay.setDepth(2000000000000);
+        numDecksText.setDepth(2000000000000);
+
+        numDecksHeader.visible = false;
+        numDecksMinusButton.visible = false;
+        numDecksPlusButton.visible = false;
+        numDecksDisplay.visible = false;
+        numDecksText.visible = false;
 
         // deckpen buttons + display
+        deckPenHeader = this.add.text(412, 400, "Deck Pen.", {fontSize: '24px', fill: '#fff'});
+        deckPenMinusButton = this.add.sprite(400, 450, 'minusButtonNormal');
+        deckPenMinusButton.scale = 1;
+        deckPenPlusButton = this.add.sprite(550, 450, 'plusButtonNormal');
+        deckPenPlusButton.scale = 1;
+        deckPenDisplay = this.add.rectangle(475, 450, 100, 40, 0x000000);
 
-        // minbet slider + display
+        if (deckPen == .25)
+        {
+            deckPenText = this.add.text(440, 440, deckPen, {fontSize: '28px', fill: '#fff', align: 'center'});
+        }
+        else if (deckPen == .33)
+        {
+            deckPenText = this.add.text(440, 440, deckPen, {fontSize: '28px', fill: '#fff', align: 'center'});
+        }
+        else if (deckPen == .5)
+        {
+            deckPenText = this.add.text(450, 440, deckPen, {fontSize: '28px', fill: '#fff', align: 'center'});
+        }
+        else if (deckPen == .66)
+        {
+            deckPenText = this.add.text(440, 440, deckPen, {fontSize: '28px', fill: '#fff', align: 'center'});
+        }
+        else if (deckPen == .75)
+        {
+            deckPenText = this.add.text(440, 440, deckPen, {fontSize: '28px', fill: '#fff', align: 'center'});
+        }
+        else if (deckPen == 1)
+        {
+            deckPenText = this.add.text(470, 440, deckPen, {fontSize: '28px', fill: '#fff', align: 'center'});
+        }
 
-        // maxbet slider + display
+        deckPenHeader.setDepth(2000000000000);
+        deckPenMinusButton.setDepth(2000000000000);
+        deckPenPlusButton.setDepth(2000000000000);
+        deckPenDisplay.setDepth(2000000000000);
+        deckPenText.setDepth(2000000000000);
+
+        deckPenHeader.visible = false;
+        deckPenMinusButton.visible = false;
+        deckPenPlusButton.visible = false;
+        deckPenDisplay.visible = false;
+        deckPenText.visible = false;
+
+        // minbet buttons + display
+        minBetHeader = this.add.text(420, 500, "Min. Bet", {fontSize: '24px', fill: '#fff'});
+        minBetMinusButton = this.add.sprite(400, 550, 'minusButtonNormal');
+        minBetMinusButton.scale = 1;
+        minBetPlusButton = this.add.sprite(550, 550, 'plusButtonNormal');
+        minBetPlusButton.scale = 1;
+        minBetDisplay = this.add.rectangle(475, 550, 100, 40, 0x000000);
+
+        if (minBet > 9 && minBet < 100)
+        {
+            minBetText = this.add.text(460, 540, minBet, {fontSize: '28px', fill: '#fff'});
+        }
+        else if (minBet == 100)
+        {
+            minBetText = this.add.text(450, 540, minBet, {fontSize: '28px', fill: '#fff'});
+        }
+        else if (minBet < 10 && minBet > 0)
+        {
+            minBetText = this.add.text(466, 540, minBet, {fontSize: '28px', fill: '#fff'});
+        }
+
+        minBetHeader.setDepth(2000000000000);
+        minBetMinusButton.setDepth(2000000000000);
+        minBetPlusButton.setDepth(2000000000000);
+        minBetDisplay.setDepth(2000000000000);
+        minBetText.setDepth(2000000000000);
+
+        minBetHeader.visible = false;
+        minBetMinusButton.visible = false;
+        minBetPlusButton.visible = false;
+        minBetDisplay.visible = false;
+        minBetText.visible = false;
+
+
+
+        // maxbet buttons + display
+        maxBetHeader = this.add.text(420, 600, "Max. Bet", {fontSize: '24px', fill: '#fff'});
+        maxBetMinusButton = this.add.sprite(400, 650, 'minusButtonNormal');
+        maxBetMinusButton.scale = 1;
+        maxBetPlusButton = this.add.sprite(550, 650, 'plusButtonNormal');
+        maxBetPlusButton.scale = 1;
+        maxBetDisplay = this.add.rectangle(475, 650, 100, 40, 0x000000);
+
+
+        if (maxBet == 1000)
+        {
+            maxBetText = this.add.text(441, 640, maxBet, {fontSize: '28px', fill: '#fff'});
+        }
+        else if (maxBet >= 500 && maxBet < 1000)
+        {
+            maxBetText = this.add.text(450, 640, maxBet, {fontSize: '28px', fill: '#fff'});
+        }
+        
+
+        maxBetHeader.setDepth(2000000000000);
+        maxBetMinusButton.setDepth(2000000000000);
+        maxBetPlusButton.setDepth(2000000000000);
+        maxBetDisplay.setDepth(2000000000000);
+        maxBetText.setDepth(2000000000000);
+
+        maxBetHeader.visible = false;
+        maxBetMinusButton.visible = false;
+        maxBetPlusButton.visible = false;
+        maxBetDisplay.visible = false;
+        maxBetText.visible = false;
+
+
+        // spoiler stuff
+        if (countSpoiler == 0)
+        {
+            runningCountSpoiler = this.add.sprite(1370, 85, 'spoiler').setInteractive();
+            runningCountSpoiler.scale = .15;
+            trueCountSpoiler = this.add.sprite(1340, 110, 'spoiler2').setInteractive();
+            trueCountSpoiler.scale = .15;
+
+            runningCountSpoiler.visible = false;
+            trueCountSpoiler.visible = false;
+        }
+        else if (countSpoiler == 1)
+        {
+            runningCountSpoiler = this.add.sprite(1370, 85, 'spoiler').setInteractive();
+            runningCountSpoiler.scale = .15;
+            trueCountSpoiler = this.add.sprite(1340, 110, 'spoiler2').setInteractive();
+            trueCountSpoiler.scale = .15;
+
+            runningCountSpoiler.visible = true;
+            trueCountSpoiler.visible = true;
+        }
+
+        // countSpoiler buttons + display
+        countSpoilerHeader = this.add.text(805, 200, "Count Spoilers", {fontSize: '24px', fill: '#fff'});
+        countSpoilerMinusButton = this.add.sprite(832, 250, 'minusButtonNormal');
+        countSpoilerMinusButton.scale = 1;
+        countSpoilerPlusButton = this.add.sprite(982, 250, 'plusButtonNormal');
+        countSpoilerPlusButton.scale = 1;
+        countSpoilerDisplay = this.add.rectangle(907, 250, 100, 40, 0x000000);
+
+        if (countSpoiler == 0)
+        {
+            countSpoilerText = this.add.text(884, 240, "Off", {fontSize: '28px', fill: '#fff'});
+        }
+        else if (countSpoiler == 1)
+        {
+            countSpoilerText = this.add.text(892, 240, "On", {fontSize: '28px', fill: '#fff'});
+        }
+
+        countSpoilerHeader.setDepth(2000000000000);
+        countSpoilerMinusButton.setDepth(2000000000000);
+        countSpoilerPlusButton.setDepth(2000000000000);
+        countSpoilerDisplay.setDepth(2000000000000);
+        countSpoilerText.setDepth(2000000000000);
+
+        countSpoilerHeader.visible = false;
+        countSpoilerMinusButton.visible = false;
+        countSpoilerPlusButton.visible = false;
+        countSpoilerDisplay.visible = false;
+        countSpoilerText.visible = false;
+
+        // OTHER SETTINGS
+        // Early Surrender (currently implemented, can surrender before dealer checks their hand for blackjack) 
+        // vs Late Surrender (can only surrender after dealer checks their hand for blackjack)
 
 
 
@@ -3975,15 +4661,17 @@ class GameScene extends Phaser.Scene {
 
 
 
+        // BUTTON BUG MIGHT BE OCCURING BECAUSE MULTIPLE INTERACTIONS ARE USING THE SAME SPRITE
 
+        // apply settings button
+        applySettingsButton = this.add.sprite(700, 800, 'normalButton');
+        applySettingsButton.setDepth(2000000000000);
+        applySettingsButton.scale = 2;
+        applySettingsText = this.add.text(673, 785, "Apply", textStyle);
+        applySettingsText.setDepth(2000000000001);
 
-
-
-
-
-
-
-
+        applySettingsButton.visible = false;
+        applySettingsText.visible = false;
 
         this.disableNextRoundButton();
         this.disableNextBettorButton();
@@ -4021,12 +4709,6 @@ class GameScene extends Phaser.Scene {
         playerSplit = this.add.sprite(1200, 845, 'lockedButton');
         playerSplit.scale = 2;
         splitText = this.add.text(1178, 830, "Split", textStyle);
-
-        // places gambling warning
-        //let gamblingWarning = this.add.graphics();
-        //gamblingWarning.fillStyle(0xFFFFFF, 1);
-        //gamblingWarning.fillRoundedRect(350, 100, 700, 500, 32);
-        //gamblingWarning.setDepth(100000);
 
         // WIP Disclaimer
         disclaimer = this.add.text(25, 25, "Work In Progress", {fontSize: '20px', fill: '#fff'});
@@ -5775,7 +6457,7 @@ class GameScene extends Phaser.Scene {
                                 else
                                     this.scene.disableDoubleButton();
 
-                                if (playerCurrency >= player2Bet * .5 && dealerCards[1] === "A" && numSplits[currentPlayer] == 0)
+                                if (playerCurrency >= player2Bet * .5 && dealerCards[1] === "A" && numSplits[currentPlayer] == 0 && insuranceRound != 2)
                                     this.scene.enableInsuranceButton();
                                 else
                                     this.scene.disableInsuranceButton();
@@ -5821,7 +6503,7 @@ class GameScene extends Phaser.Scene {
                                 else
                                     this.scene.disableDoubleButton();
 
-                                if (playerCurrency >= player3Bet * .5 && dealerCards[1] === "A" && numSplits[currentPlayer] == 0)
+                                if (playerCurrency >= player3Bet * .5 && dealerCards[1] === "A" && numSplits[currentPlayer] == 0 && insuranceRound != 2)
                                     this.scene.enableInsuranceButton();
                                 else
                                     this.scene.disableInsuranceButton();
@@ -6019,7 +6701,7 @@ class GameScene extends Phaser.Scene {
                                     else
                                         this.scene.disableDoubleButton();
 
-                                    if (playerCurrency >= player2Bet * .5 && dealerCards[1] === "A" && numSplits[currentPlayer] == 0)
+                                    if (playerCurrency >= player2Bet * .5 && dealerCards[1] === "A" && numSplits[currentPlayer] == 0 && insuranceRound != 2)
                                         this.scene.enableInsuranceButton();
                                     else
                                         this.scene.disableInsuranceButton();
@@ -6081,7 +6763,7 @@ class GameScene extends Phaser.Scene {
                                     else
                                         this.scene.disableDoubleButton();
 
-                                    if (playerCurrency >= player3Bet * .5 && dealerCards[1] === "A" && numSplits[currentPlayer] == 0)
+                                    if (playerCurrency >= player3Bet * .5 && dealerCards[1] === "A" && numSplits[currentPlayer] == 0 && insuranceRound != 2)
                                         this.scene.enableInsuranceButton();
                                     else
                                         this.scene.disableInsuranceButton();
@@ -6307,7 +6989,7 @@ class GameScene extends Phaser.Scene {
                             else
                                 this.scene.disableDoubleButton();
 
-                            if (playerCurrency >= player2Bet * .5 && dealerCards[1] === "A" && numSplits[currentPlayer] == 0)
+                            if (playerCurrency >= player2Bet * .5 && dealerCards[1] === "A" && numSplits[currentPlayer] == 0 && insuranceRound != 2)
                                 this.scene.enableInsuranceButton();
                             else
                                 this.scene.disableInsuranceButton();
@@ -6429,7 +7111,7 @@ class GameScene extends Phaser.Scene {
                             else
                                 this.scene.disableDoubleButton();
 
-                            if (playerCurrency >= player3Bet * .5 && dealerCards[1] === "A" && numSplits[currentPlayer] == 0)
+                            if (playerCurrency >= player3Bet * .5 && dealerCards[1] === "A" && numSplits[currentPlayer] == 0 && insuranceRound != 2)
                                 this.scene.enableInsuranceButton();
                             else
                                 this.scene.disableInsuranceButton();
@@ -6847,7 +7529,7 @@ class GameScene extends Phaser.Scene {
                                 else
                                     this.scene.disableDoubleButton();
 
-                                if (playerCurrency >= player2Bet * .5 && dealerCards[1] === "A" && numSplits[currentPlayer] == 0)
+                                if (playerCurrency >= player2Bet * .5 && dealerCards[1] === "A" && numSplits[currentPlayer] == 0 && insuranceRound != 2)
                                     this.scene.enableInsuranceButton();
                                 else
                                     this.scene.disableInsuranceButton();
@@ -7062,7 +7744,7 @@ class GameScene extends Phaser.Scene {
                                 else
                                     this.scene.disableDoubleButton();
 
-                                if (playerCurrency >= player3Bet * .5 && dealerCards[1] === "A" && numSplits[currentPlayer] == 0)
+                                if (playerCurrency >= player3Bet * .5 && dealerCards[1] === "A" && numSplits[currentPlayer] == 0 && insuranceRound != 2)
                                     this.scene.enableInsuranceButton();
                                 else
                                     this.scene.disableInsuranceButton();
@@ -7288,11 +7970,8 @@ class GameScene extends Phaser.Scene {
             playerStand.setTexture('clickedButton');
             // ADDING THIS NEW LINE RIGHT HERE BELOW THIS COMMENT
 
-            if (numSplits[currentPlayer] == 0)
+            if (insuranceRound == 1)
             {
-                this.scene.baseGameBasicStrategy(currentPlayer, "Stand");
-                updateInfo();
-
                 if (currentPlayer == 0)
                 {
                     if (numPlayers != 1)
@@ -7300,41 +7979,46 @@ class GameScene extends Phaser.Scene {
                         player1TurnIndicator.fillColor = 0xFFFFFF;
                         player2TurnIndicator.fillColor = 0x8E1600;
                         currentPlayer = currentPlayer + 1;
-                        this.scene.enableSurrenderButton();
-
-                        if (playerCurrency >= player2Bet)
-                            this.scene.enableDoubleButton();
-                        else
-                            this.scene.disableDoubleButton();
-
-                        if (playerCurrency >= player2Bet * .5 && dealerCards[1] === "A" && numSplits[currentPlayer] == 0)
-                            this.scene.enableInsuranceButton();
-                        else
-                            this.scene.disableInsuranceButton();
-
-                        if (playerCards[1][0] === playerCards[1][1] && numSplits[currentPlayer] < maxSplits && playerCurrency >= player2Bet)
-                            this.scene.enableSplitButton();
-                        else
-                            this.scene.disableSplitButton();
-
-                        if (numSplits[currentPlayer] == 0)
-                            this.scene.enableSurrenderButton();
-                        else
-                            this.scene.disableSurrenderButton();
                     }
                     else
                     {
-                        // plus more stuff since if its the last player
-                        dealerCard.visible = false;
-                        shuffledDeck[cardInts[dealerIndex]].setDepth(1);
-                        this.scene.revealDealerInfo(dealerCards);
-                        // dealer needs to draw to 16, and stand on 17
-                        this.scene.drawDealerCards(dealerCards, cardIndex, cardInts, dealerCards.length);
-                        cardIndex = cardIndex + dealerCards.length - 2;
-                        this.scene.isWinOrLoss();
-                        this.scene.disableActionButtons();
-                        this.scene.disableInsuranceButton();
-                        this.scene.disableSplitButton();
+                        insuranceRound = 2;
+                        if (this.scene.isBlackjack(dealerCards))
+                        {
+                            // reveal dealer cards
+                            // go to iswinorloss
+                            dealerCard.visible = false;
+                            shuffledDeck[cardInts[dealerIndex]].setDepth(1);
+                            this.scene.revealDealerInfo(dealerCards);
+                            this.scene.drawDealerCards(dealerCards, cardIndex, cardInts, dealerCards.length);
+                            cardIndex = cardIndex + dealerCards.length - 2;
+                            this.scene.isWinOrLoss();
+                            this.scene.disableActionButtons();
+                            this.scene.disableInsuranceButton();
+                            this.scene.disableSplitButton();
+                        }
+                        else
+                        {
+                            // play normal
+                            currentPlayer = 0;
+                            player1TurnIndicator.fillColor = 0x8E1600;
+                            player2TurnIndicator.fillColor = 0xFFFFFF;
+                            player3TurnIndicator.fillColor = 0xFFFFFF;
+
+                            this.scene.enableActionButtons();
+
+                            if (playerCurrency >= player1Bet)
+                                this.scene.enableDoubleButton();
+                            else
+                                this.scene.disableDoubleButton();
+
+                            if (playerCards[0][0] === playerCards[0][1] && playerCurrency >= player1Bet)
+                                this.scene.enableSplitButton();
+                            else
+                                this.scene.disableSplitButton();
+
+                            this.scene.disableInsuranceButton();
+                        }
                     }
                 }
                 else if (currentPlayer == 1)
@@ -7344,38 +8028,59 @@ class GameScene extends Phaser.Scene {
                         player2TurnIndicator.fillColor = 0xFFFFFF;
                         player3TurnIndicator.fillColor = 0x8E1600;
                         currentPlayer = currentPlayer + 1;
-                        this.scene.enableSurrenderButton();
-
-                        if (playerCurrency >= player3Bet)
-                            this.scene.enableDoubleButton();
-                        else
-                            this.scene.disableDoubleButton();
-
-                        if (playerCurrency >= player3Bet * .5 && dealerCards[1] === "A" && numSplits[currentPlayer] == 0)
-                            this.scene.enableInsuranceButton();
-                        else
-                            this.scene.disableInsuranceButton();
-
-                        if (playerCards[2][0] === playerCards[2][1] && numSplits[currentPlayer] < maxSplits && playerCurrency >= player3Bet)
-                            this.scene.enableSplitButton();
-                        else
-                            this.scene.disableSplitButton();
-
-                        if (numSplits[currentPlayer] == 0)
-                            this.scene.enableSurrenderButton();
-                        else
-                            this.scene.disableSurrenderButton();
+                        
                     }
                     else
                     {
-                        player2TurnIndicator.fillColor = 0xFFFFFF;
-                        player1TurnIndicator.fillColor = 0x8E1600;
-                        currentPlayer = 0;
+                        insuranceRound = 2;
+                        if (this.scene.isBlackjack(dealerCards))
+                        {
+                            // reveal dealer cards
+                            // go to iswinorloss
+                            dealerCard.visible = false;
+                            shuffledDeck[cardInts[dealerIndex]].setDepth(1);
+                            this.scene.revealDealerInfo(dealerCards);
+                            this.scene.drawDealerCards(dealerCards, cardIndex, cardInts, dealerCards.length);
+                            cardIndex = cardIndex + dealerCards.length - 2;
+                            this.scene.isWinOrLoss();
+                            this.scene.disableActionButtons();
+                            this.scene.disableInsuranceButton();
+                            this.scene.disableSplitButton();
+                        }
+                        else
+                        {
+                            // play normal
+                            currentPlayer = 0;
+                            player1TurnIndicator.fillColor = 0x8E1600;
+                            player2TurnIndicator.fillColor = 0xFFFFFF;
+                            player3TurnIndicator.fillColor = 0xFFFFFF;
 
+                            this.scene.enableActionButtons();
+
+                            if (playerCurrency >= player1Bet)
+                                this.scene.enableDoubleButton();
+                            else
+                                this.scene.disableDoubleButton();
+
+                            if (playerCards[0][0] === playerCards[0][1] && playerCurrency >= player1Bet)
+                                this.scene.enableSplitButton();
+                            else
+                                this.scene.disableSplitButton();
+
+                            this.scene.disableInsuranceButton();
+                        }
+                    }
+                }
+                else if (currentPlayer == 2)
+                {
+                    insuranceRound = 2;
+                    if (this.scene.isBlackjack(dealerCards))
+                    {
+                        // reveal dealer cards
+                        // go to iswinorloss
                         dealerCard.visible = false;
                         shuffledDeck[cardInts[dealerIndex]].setDepth(1);
                         this.scene.revealDealerInfo(dealerCards);
-                        // dealer needs to draw to 16, and stand on 17
                         this.scene.drawDealerCards(dealerCards, cardIndex, cardInts, dealerCards.length);
                         cardIndex = cardIndex + dealerCards.length - 2;
                         this.scene.isWinOrLoss();
@@ -7383,47 +8088,39 @@ class GameScene extends Phaser.Scene {
                         this.scene.disableInsuranceButton();
                         this.scene.disableSplitButton();
                     }
-                }
-                else if (currentPlayer == 2)
-                {
-                    player3TurnIndicator.fillColor = 0xFFFFFF;
-                    player1TurnIndicator.fillColor = 0x8E1600;
-                    currentPlayer = 0;
-                    dealerCard.visible = false;
-                    shuffledDeck[cardInts[dealerIndex]].setDepth(1);
-                    this.scene.revealDealerInfo(dealerCards);
-                    // dealer needs to draw to 16, and stand on 17
-                    this.scene.drawDealerCards(dealerCards, cardIndex, cardInts, dealerCards.length);
-                    cardIndex = cardIndex + dealerCards.length - 2;
-                    this.scene.isWinOrLoss();
-                    this.scene.disableActionButtons();
-                    this.scene.disableInsuranceButton();
-                    this.scene.disableSplitButton();
-                }
-            }
-            else if (numSplits[currentPlayer] == 1)
-            {
-                this.scene.baseGameBasicStrategy(currentPlayer, "Stand");
-                updateInfo();
-
-                if (currentPlayer == 0)
-                {
-                    // first hand out of 2
-                    if (currentHand != numSplits[currentPlayer] + 1)
+                    else
                     {
-                        handIndicator.setPosition(cardX[0][0] - splitSpacing, cardY[0][0] + handIndicatorSpacing);
-                        currentHand = currentHand + 1;
+                        // play normal
+                        currentPlayer = 0;
+                        player1TurnIndicator.fillColor = 0x8E1600;
+                        player2TurnIndicator.fillColor = 0xFFFFFF;
+                        player3TurnIndicator.fillColor = 0xFFFFFF;
+
+                        this.scene.enableActionButtons();
 
                         if (playerCurrency >= player1Bet)
                             this.scene.enableDoubleButton();
                         else
                             this.scene.disableDoubleButton();
-                    }
-                    else
-                    {
-                        // last hand of the split
-                        handIndicator.setVisible(false);
 
+                        if (playerCards[0][0] === playerCards[0][1] && playerCurrency >= player1Bet)
+                            this.scene.enableSplitButton();
+                        else
+                            this.scene.disableSplitButton();
+
+                        this.scene.disableInsuranceButton();
+                    }
+                }
+            }
+            else
+            {
+                if (numSplits[currentPlayer] == 0)
+                {
+                    this.scene.baseGameBasicStrategy(currentPlayer, "Stand");
+                    updateInfo();
+
+                    if (currentPlayer == 0)
+                    {
                         if (numPlayers != 1)
                         {
                             player1TurnIndicator.fillColor = 0xFFFFFF;
@@ -7436,7 +8133,7 @@ class GameScene extends Phaser.Scene {
                             else
                                 this.scene.disableDoubleButton();
 
-                            if (playerCurrency >= player2Bet * .5 && dealerCards[1] === "A" && numSplits[currentPlayer] == 0)
+                            if (playerCurrency >= player2Bet * .5 && dealerCards[1] === "A" && numSplits[currentPlayer] == 0 && insuranceRound != 2)
                                 this.scene.enableInsuranceButton();
                             else
                                 this.scene.disableInsuranceButton();
@@ -7454,7 +8151,6 @@ class GameScene extends Phaser.Scene {
                         else
                         {
                             // plus more stuff since if its the last player
-                            currentHand = 0;
                             dealerCard.visible = false;
                             shuffledDeck[cardInts[dealerIndex]].setDepth(1);
                             this.scene.revealDealerInfo(dealerCards);
@@ -7467,25 +8163,8 @@ class GameScene extends Phaser.Scene {
                             this.scene.disableSplitButton();
                         }
                     }
-                }
-                else if (currentPlayer == 1)
-                {
-                    // first hand out of 2
-                    if (currentHand != numSplits[currentPlayer] + 1)
+                    else if (currentPlayer == 1)
                     {
-                        handIndicator.setPosition(cardX[0][1] - splitSpacing, cardY[0][1] + handIndicatorSpacing);
-                        currentHand = currentHand + 1;
-
-                        if (playerCurrency >= player2Bet)
-                            this.scene.enableDoubleButton();
-                        else
-                            this.scene.disableDoubleButton();
-                    }
-                    else
-                    {
-                        // last hand of the split
-                        handIndicator.setVisible(false);
-
                         if (numPlayers != 2)
                         {
                             player2TurnIndicator.fillColor = 0xFFFFFF;
@@ -7498,7 +8177,7 @@ class GameScene extends Phaser.Scene {
                             else
                                 this.scene.disableDoubleButton();
 
-                            if (playerCurrency >= player3Bet * .5 && dealerCards[1] === "A" && numSplits[currentPlayer] == 0)
+                            if (playerCurrency >= player3Bet * .5 && dealerCards[1] === "A" && numSplits[currentPlayer] == 0 && insuranceRound != 2)
                                 this.scene.enableInsuranceButton();
                             else
                                 this.scene.disableInsuranceButton();
@@ -7515,6 +8194,190 @@ class GameScene extends Phaser.Scene {
                         }
                         else
                         {
+                            player2TurnIndicator.fillColor = 0xFFFFFF;
+                            player1TurnIndicator.fillColor = 0x8E1600;
+                            currentPlayer = 0;
+
+                            dealerCard.visible = false;
+                            shuffledDeck[cardInts[dealerIndex]].setDepth(1);
+                            this.scene.revealDealerInfo(dealerCards);
+                            // dealer needs to draw to 16, and stand on 17
+                            this.scene.drawDealerCards(dealerCards, cardIndex, cardInts, dealerCards.length);
+                            cardIndex = cardIndex + dealerCards.length - 2;
+                            this.scene.isWinOrLoss();
+                            this.scene.disableActionButtons();
+                            this.scene.disableInsuranceButton();
+                            this.scene.disableSplitButton();
+                        }
+                    }
+                    else if (currentPlayer == 2)
+                    {
+                        player3TurnIndicator.fillColor = 0xFFFFFF;
+                        player1TurnIndicator.fillColor = 0x8E1600;
+                        currentPlayer = 0;
+                        dealerCard.visible = false;
+                        shuffledDeck[cardInts[dealerIndex]].setDepth(1);
+                        this.scene.revealDealerInfo(dealerCards);
+                        // dealer needs to draw to 16, and stand on 17
+                        this.scene.drawDealerCards(dealerCards, cardIndex, cardInts, dealerCards.length);
+                        cardIndex = cardIndex + dealerCards.length - 2;
+                        this.scene.isWinOrLoss();
+                        this.scene.disableActionButtons();
+                        this.scene.disableInsuranceButton();
+                        this.scene.disableSplitButton();
+                    }
+                }
+                else if (numSplits[currentPlayer] == 1)
+                {
+                    this.scene.baseGameBasicStrategy(currentPlayer, "Stand");
+                    updateInfo();
+
+                    if (currentPlayer == 0)
+                    {
+                        // first hand out of 2
+                        if (currentHand != numSplits[currentPlayer] + 1)
+                        {
+                            handIndicator.setPosition(cardX[0][0] - splitSpacing, cardY[0][0] + handIndicatorSpacing);
+                            currentHand = currentHand + 1;
+
+                            if (playerCurrency >= player1Bet)
+                                this.scene.enableDoubleButton();
+                            else
+                                this.scene.disableDoubleButton();
+                        }
+                        else
+                        {
+                            // last hand of the split
+                            handIndicator.setVisible(false);
+
+                            if (numPlayers != 1)
+                            {
+                                player1TurnIndicator.fillColor = 0xFFFFFF;
+                                player2TurnIndicator.fillColor = 0x8E1600;
+                                currentPlayer = currentPlayer + 1;
+                                this.scene.enableSurrenderButton();
+
+                                if (playerCurrency >= player2Bet)
+                                    this.scene.enableDoubleButton();
+                                else
+                                    this.scene.disableDoubleButton();
+
+                                if (playerCurrency >= player2Bet * .5 && dealerCards[1] === "A" && numSplits[currentPlayer] == 0 && insuranceRound != 2)
+                                    this.scene.enableInsuranceButton();
+                                else
+                                    this.scene.disableInsuranceButton();
+
+                                if (playerCards[1][0] === playerCards[1][1] && numSplits[currentPlayer] < maxSplits && playerCurrency >= player2Bet)
+                                    this.scene.enableSplitButton();
+                                else
+                                    this.scene.disableSplitButton();
+
+                                if (numSplits[currentPlayer] == 0)
+                                    this.scene.enableSurrenderButton();
+                                else
+                                    this.scene.disableSurrenderButton();
+                            }
+                            else
+                            {
+                                // plus more stuff since if its the last player
+                                currentHand = 0;
+                                dealerCard.visible = false;
+                                shuffledDeck[cardInts[dealerIndex]].setDepth(1);
+                                this.scene.revealDealerInfo(dealerCards);
+                                // dealer needs to draw to 16, and stand on 17
+                                this.scene.drawDealerCards(dealerCards, cardIndex, cardInts, dealerCards.length);
+                                cardIndex = cardIndex + dealerCards.length - 2;
+                                this.scene.isWinOrLoss();
+                                this.scene.disableActionButtons();
+                                this.scene.disableInsuranceButton();
+                                this.scene.disableSplitButton();
+                            }
+                        }
+                    }
+                    else if (currentPlayer == 1)
+                    {
+                        // first hand out of 2
+                        if (currentHand != numSplits[currentPlayer] + 1)
+                        {
+                            handIndicator.setPosition(cardX[0][1] - splitSpacing, cardY[0][1] + handIndicatorSpacing);
+                            currentHand = currentHand + 1;
+
+                            if (playerCurrency >= player2Bet)
+                                this.scene.enableDoubleButton();
+                            else
+                                this.scene.disableDoubleButton();
+                        }
+                        else
+                        {
+                            // last hand of the split
+                            handIndicator.setVisible(false);
+
+                            if (numPlayers != 2)
+                            {
+                                player2TurnIndicator.fillColor = 0xFFFFFF;
+                                player3TurnIndicator.fillColor = 0x8E1600;
+                                currentPlayer = currentPlayer + 1;
+                                this.scene.enableSurrenderButton();
+
+                                if (playerCurrency >= player3Bet)
+                                    this.scene.enableDoubleButton();
+                                else
+                                    this.scene.disableDoubleButton();
+
+                                if (playerCurrency >= player3Bet * .5 && dealerCards[1] === "A" && numSplits[currentPlayer] == 0 && insuranceRound != 2)
+                                    this.scene.enableInsuranceButton();
+                                else
+                                    this.scene.disableInsuranceButton();
+
+                                if (playerCards[2][0] === playerCards[2][1] && numSplits[currentPlayer] < maxSplits && playerCurrency >= player3Bet)
+                                    this.scene.enableSplitButton();
+                                else
+                                    this.scene.disableSplitButton();
+
+                                if (numSplits[currentPlayer] == 0)
+                                    this.scene.enableSurrenderButton();
+                                else
+                                    this.scene.disableSurrenderButton();
+                            }
+                            else
+                            {
+                                // plus more stuff since if its the last player
+                                currentHand = 0;
+                                dealerCard.visible = false;
+                                shuffledDeck[cardInts[dealerIndex]].setDepth(1);
+                                this.scene.revealDealerInfo(dealerCards);
+                                // dealer needs to draw to 16, and stand on 17
+                                this.scene.drawDealerCards(dealerCards, cardIndex, cardInts, dealerCards.length);
+                                cardIndex = cardIndex + dealerCards.length - 2;
+                                this.scene.isWinOrLoss();
+                                this.scene.disableActionButtons();
+                                this.scene.disableInsuranceButton();
+                                this.scene.disableSplitButton();
+                            }
+                        }
+                    }
+                    else if (currentPlayer == 2)
+                    {
+                        // first hand out of 2
+                        if (currentHand != numSplits[currentPlayer] + 1)
+                        {
+                            handIndicator.setPosition(cardX[0][2] - splitSpacing, cardY[0][2] + handIndicatorSpacing);
+                            currentHand = currentHand + 1;
+
+                            if (playerCurrency >= player3Bet)
+                                this.scene.enableDoubleButton();
+                            else
+                                this.scene.disableDoubleButton();
+                        }
+                        else
+                        {
+                            // last hand of the split
+                            handIndicator.setVisible(false);
+
+                            player3TurnIndicator.fillColor = 0xFFFFFF;
+                            player1TurnIndicator.fillColor = 0x8E1600;
+                            currentPlayer = 0;
+
                             // plus more stuff since if its the last player
                             currentHand = 0;
                             dealerCard.visible = false;
@@ -7529,44 +8392,8 @@ class GameScene extends Phaser.Scene {
                             this.scene.disableSplitButton();
                         }
                     }
+
                 }
-                else if (currentPlayer == 2)
-                {
-                    // first hand out of 2
-                    if (currentHand != numSplits[currentPlayer] + 1)
-                    {
-                        handIndicator.setPosition(cardX[0][2] - splitSpacing, cardY[0][2] + handIndicatorSpacing);
-                        currentHand = currentHand + 1;
-
-                        if (playerCurrency >= player3Bet)
-                            this.scene.enableDoubleButton();
-                        else
-                            this.scene.disableDoubleButton();
-                    }
-                    else
-                    {
-                        // last hand of the split
-                        handIndicator.setVisible(false);
-
-                        player3TurnIndicator.fillColor = 0xFFFFFF;
-                        player1TurnIndicator.fillColor = 0x8E1600;
-                        currentPlayer = 0;
-
-                        // plus more stuff since if its the last player
-                        currentHand = 0;
-                        dealerCard.visible = false;
-                        shuffledDeck[cardInts[dealerIndex]].setDepth(1);
-                        this.scene.revealDealerInfo(dealerCards);
-                        // dealer needs to draw to 16, and stand on 17
-                        this.scene.drawDealerCards(dealerCards, cardIndex, cardInts, dealerCards.length);
-                        cardIndex = cardIndex + dealerCards.length - 2;
-                        this.scene.isWinOrLoss();
-                        this.scene.disableActionButtons();
-                        this.scene.disableInsuranceButton();
-                        this.scene.disableSplitButton();
-                    }
-                }
-
             }
 
         });
@@ -7593,7 +8420,7 @@ class GameScene extends Phaser.Scene {
                     else
                         this.scene.disableDoubleButton();
 
-                    if (playerCurrency >= player2Bet * .5 && dealerCards[1] === "A" && numSplits[currentPlayer] == 0)
+                    if (playerCurrency >= player2Bet * .5 && dealerCards[1] === "A" && numSplits[currentPlayer] == 0 && insuranceRound != 2)
                         this.scene.enableInsuranceButton();
                     else
                         this.scene.disableInsuranceButton();
@@ -7644,7 +8471,7 @@ class GameScene extends Phaser.Scene {
                     else
                         this.scene.disableDoubleButton();
 
-                    if (playerCurrency >= player3Bet * .5 && dealerCards[1] === "A" && numSplits[currentPlayer] == 0)
+                    if (playerCurrency >= player3Bet * .5 && dealerCards[1] === "A" && numSplits[currentPlayer] == 0 && insuranceRound != 2)
                         this.scene.enableInsuranceButton();
                     else
                         this.scene.disableInsuranceButton();
@@ -7708,7 +8535,8 @@ class GameScene extends Phaser.Scene {
 
             playerInsurance.setTexture('clickedButton');
 
-            this.scene.disableInsuranceButton();
+            if (insuranceRound == 0)
+                this.scene.disableInsuranceButton();
 
             if (currentPlayer == 0)
             {
@@ -7803,16 +8631,18 @@ class GameScene extends Phaser.Scene {
                 }
                 placeholderChipArray = [];
 
-                if (playerCurrency >= player1Bet)
-                    this.scene.enableDoubleButton();
-                else
-                    this.scene.disableDoubleButton();
+                if (insuranceRound == 0)
+                {
+                    if (playerCurrency >= player1Bet)
+                        this.scene.enableDoubleButton();
+                    else
+                        this.scene.disableDoubleButton();
 
-                if (playerCards[0][0] === playerCards[0][1] && numSplits[currentPlayer] < maxSplits && playerCurrency >= player1Bet)
-                    this.scene.enableSplitButton();
-                else
-                    this.scene.disableSplitButton();
-
+                    if (playerCards[0][0] === playerCards[0][1] && numSplits[currentPlayer] < maxSplits && playerCurrency >= player1Bet)
+                        this.scene.enableSplitButton();
+                    else
+                        this.scene.disableSplitButton();
+                }
             }
             else if (currentPlayer == 1)
             {
@@ -7906,15 +8736,18 @@ class GameScene extends Phaser.Scene {
                 }
                 placeholderChipArray = [];
 
-                if (playerCurrency >= player2Bet)
-                    this.scene.enableDoubleButton();
-                else
-                    this.scene.disableDoubleButton();
+                if (insuranceRound == 0)
+                {
+                    if (playerCurrency >= player2Bet)
+                        this.scene.enableDoubleButton();
+                    else
+                        this.scene.disableDoubleButton();
 
-                if (playerCards[1][0] === playerCards[1][1] && numSplits[currentPlayer] < maxSplits && playerCurrency >= player2Bet)
-                    this.scene.enableSplitButton();
-                else
-                    this.scene.disableSplitButton();
+                    if (playerCards[1][0] === playerCards[1][1] && numSplits[currentPlayer] < maxSplits && playerCurrency >= player2Bet)
+                        this.scene.enableSplitButton();
+                    else
+                        this.scene.disableSplitButton();
+                }
             }
             else if (currentPlayer == 2)
             {
@@ -8008,15 +8841,160 @@ class GameScene extends Phaser.Scene {
                 }
                 placeholderChipArray = [];
 
-                if (playerCurrency >= player3Bet)
-                    this.scene.enableDoubleButton();
-                else
-                    this.scene.disableDoubleButton();
+                if (insuranceRound == 0)
+                {
+                    if (playerCurrency >= player3Bet)
+                        this.scene.enableDoubleButton();
+                    else
+                        this.scene.disableDoubleButton();
 
-                if (playerCards[2][0] === playerCards[2][1] && numSplits[currentPlayer] < maxSplits && playerCurrency >= player3Bet)
-                    this.scene.enableSplitButton();
-                else
-                    this.scene.disableSplitButton();
+                    if (playerCards[2][0] === playerCards[2][1] && numSplits[currentPlayer] < maxSplits && playerCurrency >= player3Bet)
+                        this.scene.enableSplitButton();
+                    else
+                        this.scene.disableSplitButton();
+                }
+            }
+
+            if (insuranceRound == 1)
+            {
+                if (currentPlayer == 0)
+                {
+                    if (numPlayers != 1)
+                    {
+                        player1TurnIndicator.fillColor = 0xFFFFFF;
+                        player2TurnIndicator.fillColor = 0x8E1600;
+                        currentPlayer = currentPlayer + 1;
+                    }
+                    else
+                    {
+                        insuranceRound = 2;
+                        if (this.scene.isBlackjack(dealerCards))
+                        {
+                            // reveal dealer cards
+                            // go to iswinorloss
+                            dealerCard.visible = false;
+                            shuffledDeck[cardInts[dealerIndex]].setDepth(1);
+                            this.scene.revealDealerInfo(dealerCards);
+                            this.scene.drawDealerCards(dealerCards, cardIndex, cardInts, dealerCards.length);
+                            cardIndex = cardIndex + dealerCards.length - 2;
+                            this.scene.isWinOrLoss();
+                            this.scene.disableActionButtons();
+                            this.scene.disableInsuranceButton();
+                            this.scene.disableSplitButton();
+                        }
+                        else
+                        {
+                            // play normal
+                            currentPlayer = 0;
+                            player1TurnIndicator.fillColor = 0x8E1600;
+                            player2TurnIndicator.fillColor = 0xFFFFFF;
+                            player3TurnIndicator.fillColor = 0xFFFFFF;
+
+                            this.scene.enableActionButtons();
+
+                            if (playerCurrency >= player1Bet)
+                                this.scene.enableDoubleButton();
+                            else
+                                this.scene.disableDoubleButton();
+
+                            if (playerCards[0][0] === playerCards[0][1] && playerCurrency >= player1Bet)
+                                this.scene.enableSplitButton();
+                            else
+                                this.scene.disableSplitButton();
+
+                            this.scene.disableInsuranceButton();
+                        }
+                    }
+                }
+                else if (currentPlayer == 1)
+                {
+                    if (numPlayers != 2)
+                    {
+                        player2TurnIndicator.fillColor = 0xFFFFFF;
+                        player3TurnIndicator.fillColor = 0x8E1600;
+                        currentPlayer = currentPlayer + 1;
+                    }
+                    else
+                    {
+                        insuranceRound = 2;
+                        if (this.scene.isBlackjack(dealerCards))
+                        {
+                            // reveal dealer cards
+                            // go to iswinorloss
+                            dealerCard.visible = false;
+                            shuffledDeck[cardInts[dealerIndex]].setDepth(1);
+                            this.scene.revealDealerInfo(dealerCards);
+                            this.scene.drawDealerCards(dealerCards, cardIndex, cardInts, dealerCards.length);
+                            cardIndex = cardIndex + dealerCards.length - 2;
+                            this.scene.isWinOrLoss();
+                            this.scene.disableActionButtons();
+                            this.scene.disableInsuranceButton();
+                            this.scene.disableSplitButton();
+                        }
+                        else
+                        {
+                            // play normal
+                            currentPlayer = 0;
+                            player1TurnIndicator.fillColor = 0x8E1600;
+                            player2TurnIndicator.fillColor = 0xFFFFFF;
+                            player3TurnIndicator.fillColor = 0xFFFFFF;
+
+                            this.scene.enableActionButtons();
+
+                            if (playerCurrency >= player1Bet)
+                                this.scene.enableDoubleButton();
+                            else
+                                this.scene.disableDoubleButton();
+
+                            if (playerCards[0][0] === playerCards[0][1] && playerCurrency >= player1Bet)
+                                this.scene.enableSplitButton();
+                            else
+                                this.scene.disableSplitButton();
+
+                            this.scene.disableInsuranceButton();
+                        }
+                    }
+                }
+                else if (currentPlayer == 2)
+                {
+                    insuranceRound = 2;
+                    if (this.scene.isBlackjack(dealerCards))
+                    {
+                        // reveal dealer cards
+                        // go to iswinorloss
+                        dealerCard.visible = false;
+                        shuffledDeck[cardInts[dealerIndex]].setDepth(1);
+                        this.scene.revealDealerInfo(dealerCards);
+                        this.scene.drawDealerCards(dealerCards, cardIndex, cardInts, dealerCards.length);
+                        cardIndex = cardIndex + dealerCards.length - 2;
+                        this.scene.isWinOrLoss();
+                        this.scene.disableActionButtons();
+                        this.scene.disableInsuranceButton();
+                        this.scene.disableSplitButton();
+                    }
+                    else
+                    {
+                        // play normal
+                        currentPlayer = 0;
+                        player1TurnIndicator.fillColor = 0x8E1600;
+                        player2TurnIndicator.fillColor = 0xFFFFFF;
+                        player3TurnIndicator.fillColor = 0xFFFFFF;
+
+                        this.scene.enableActionButtons();
+
+                        if (playerCurrency >= player1Bet)
+                            this.scene.enableDoubleButton();
+                        else
+                            this.scene.disableDoubleButton();
+
+                        if (playerCards[0][0] === playerCards[0][1] && playerCurrency >= player1Bet)
+                            this.scene.enableSplitButton();
+                        else
+                            this.scene.disableSplitButton();
+
+                        this.scene.disableInsuranceButton();
+                    }
+                }
             }
 
         });
@@ -8546,7 +9524,17 @@ class GameScene extends Phaser.Scene {
 
             if (menuScreen.visible == true)
             {
+
+                this.scene.moveButtonsBack();
+
+                circley1.visible = false;
+                circley2.visible = false;
+                circley3.visible = false;
                 menuScreen.visible = false;
+                settingsHeader.visible = false;
+                settingsDisclaimer.visible = false;
+                applySettingsButton.visible = false;
+                applySettingsText.visible = false;
                 this.scene.disableSettingsButtons();
 
                 numPlayersHeader.visible = false;
@@ -8555,11 +9543,51 @@ class GameScene extends Phaser.Scene {
                 numPlayersDisplay.visible = false;
                 numPlayersText.visible = false;
 
+                numDecksHeader.visible = false;
+                numDecksMinusButton.visible = false;
+                numDecksPlusButton.visible = false;
+                numDecksDisplay.visible = false;
+                numDecksText.visible = false;
+
+                deckPenHeader.visible = false;
+                deckPenMinusButton.visible = false;
+                deckPenPlusButton.visible = false;
+                deckPenDisplay.visible = false;
+                deckPenText.visible = false;
+
+                minBetHeader.visible = false;
+                minBetMinusButton.visible = false;
+                minBetPlusButton.visible = false;
+                minBetDisplay.visible = false;
+                minBetText.visible = false;
+
+                maxBetHeader.visible = false;
+                maxBetMinusButton.visible = false;
+                maxBetPlusButton.visible = false;
+                maxBetDisplay.visible = false;
+                maxBetText.visible = false;
+
+                countSpoilerHeader.visible = false;
+                countSpoilerMinusButton.visible = false;
+                countSpoilerPlusButton.visible = false;
+                countSpoilerDisplay.visible = false;
+                countSpoilerText.visible = false;
 
             }
             else if (menuScreen.visible == false)
             {
+
+                this.scene.moveButtonsAway();
+
+                circley1.visible = true;
+                circley2.visible = true;
+                circley3.visible = true;
                 menuScreen.visible = true;
+
+                settingsHeader.visible = true;
+                settingsDisclaimer.visible = true;
+                applySettingsButton.visible = true;
+                applySettingsText.visible = true;
                 this.scene.enableSettingsButtons();
 
                 numPlayersHeader.visible = true;
@@ -8567,6 +9595,36 @@ class GameScene extends Phaser.Scene {
                 numPlayersPlusButton.visible = true;
                 numPlayersDisplay.visible = true;
                 numPlayersText.visible = true;
+
+                numDecksHeader.visible = true;
+                numDecksMinusButton.visible = true;
+                numDecksPlusButton.visible = true;
+                numDecksDisplay.visible = true;
+                numDecksText.visible = true;
+
+                deckPenHeader.visible = true;
+                deckPenMinusButton.visible = true;
+                deckPenPlusButton.visible = true;
+                deckPenDisplay.visible = true;
+                deckPenText.visible = true;
+
+                minBetHeader.visible = true;
+                minBetMinusButton.visible = true;
+                minBetPlusButton.visible = true;
+                minBetDisplay.visible = true;
+                minBetText.visible = true;
+
+                maxBetHeader.visible = true;
+                maxBetMinusButton.visible = true;
+                maxBetPlusButton.visible = true;
+                maxBetDisplay.visible = true;
+                maxBetText.visible = true;
+
+                countSpoilerHeader.visible = true;
+                countSpoilerMinusButton.visible = true;
+                countSpoilerPlusButton.visible = true;
+                countSpoilerDisplay.visible = true;
+                countSpoilerText.visible = true;
             }
 
             // do this when changing numDecks or deck pen
@@ -8591,7 +9649,7 @@ class GameScene extends Phaser.Scene {
         numPlayersMinusButton.on('pointerdown', function(){
             if (settingsNumPlayers > 1)
             {
-                numPlayersMinusButton.setTexture('minusButtonClicked')
+                numPlayersMinusButton.setTexture('minusButtonClicked');
                 settingsNumPlayers = settingsNumPlayers - 1;
                 numPlayersText.setText(settingsNumPlayers);
             }
@@ -8600,12 +9658,289 @@ class GameScene extends Phaser.Scene {
         numPlayersPlusButton.on('pointerdown', function(){
             if (settingsNumPlayers < 3)
             {
-                numPlayersPlusButton.setTexture('plusButtonClicked')
+                numPlayersPlusButton.setTexture('plusButtonClicked');
                 settingsNumPlayers = settingsNumPlayers + 1;
                 numPlayersText.setText(settingsNumPlayers);
             }
         });
 
+        numDecksMinusButton.on('pointerdown', function(){
+            if (settingsNumDecks > 1)
+            {
+                numDecksMinusButton.setTexture('minusButtonClicked');
+                settingsNumDecks = settingsNumDecks - 1;
+                numDecksText.setText(settingsNumDecks);
+            }
+        });
+
+        numDecksPlusButton.on('pointerdown', function(){
+            if (settingsNumDecks < 8)
+            {
+                numDecksPlusButton.setTexture('plusButtonClicked');
+                settingsNumDecks = settingsNumDecks + 1;
+                numDecksText.setText(settingsNumDecks);
+            }
+        });
+
+        deckPenMinusButton.on('pointerdown', function(){
+            if (settingsDeckPen > .25)
+            {
+                deckPenMinusButton.setTexture('minusButtonClicked');
+
+                if (settingsDeckPen == 1)
+                {
+                    settingsDeckPen = .75;
+                    deckPenText.setPosition(440, 440);
+                }
+                else if (settingsDeckPen == .75)
+                {
+                    settingsDeckPen = .66;
+                    deckPenText.setPosition(440, 440);
+                }
+                else if (settingsDeckPen == .66)
+                {
+                    settingsDeckPen = .5;
+                    deckPenText.setPosition(450, 440);
+                }
+                else if (settingsDeckPen == .5)
+                {
+                    settingsDeckPen = .33;
+                    deckPenText.setPosition(440, 440);
+                }
+                else if (settingsDeckPen == .33)
+                {
+                    settingsDeckPen = .25;
+                    deckPenText.setPosition(440, 440);
+                }
+
+                deckPenText.setText(settingsDeckPen);
+            }
+
+        });
+
+        deckPenPlusButton.on('pointerdown', function(){
+            if (settingsDeckPen < 1)
+            {
+                deckPenPlusButton.setTexture('plusButtonClicked');
+                if (settingsDeckPen == .25)
+                {
+                    settingsDeckPen = .33;
+                    deckPenText.setPosition(440, 440);
+                }
+                else if (settingsDeckPen == .33)
+                {
+                    settingsDeckPen = .5;
+                    deckPenText.setPosition(450, 440);
+                }
+                else if (settingsDeckPen == .5)
+                {
+                    settingsDeckPen = .66;
+                    deckPenText.setPosition(440, 440);
+                }
+                else if (settingsDeckPen == .66)
+                {
+                    settingsDeckPen = .75;
+                    deckPenText.setPosition(440, 440);
+                }
+                else if (settingsDeckPen == .75)
+                {
+                    settingsDeckPen = 1.0;
+                    deckPenText.setPosition(470, 440);
+                }
+
+                deckPenText.setText(settingsDeckPen);
+            }
+        });
+
+        minBetMinusButton.on('pointerdown', function(){
+
+            if (settingsMinBet > 5)
+            {
+                minBetMinusButton.setTexture('minusButtonClicked');
+                settingsMinBet = settingsMinBet - 5;
+
+                if (settingsMinBet > 9 && settingsMinBet < 100)
+                {
+                    minBetText.setPosition(460, 540);
+                }
+                else if (settingsMinBet == 100)
+                {
+                    minBetText.setPosition(450, 540);
+                }
+                else if (settingsMinBet < 10 && settingsMinBet > 0)
+                {
+                    minBetText.setPosition(466, 540);
+                }
+
+                minBetText.setText(settingsMinBet);
+            }
+
+        });
+
+        minBetPlusButton.on('pointerdown', function(){
+
+            if (settingsMinBet < 100)
+            {
+                minBetPlusButton.setTexture('plusButtonClicked');
+                settingsMinBet = settingsMinBet + 5;
+
+                if (settingsMinBet > 9 && settingsMinBet < 100)
+                {
+                    minBetText.setPosition(460, 540);
+                }
+                else if (settingsMinBet == 100)
+                {
+                    minBetText.setPosition(450, 540);
+                }
+                else if (settingsMinBet < 10 && settingsMinBet > 0)
+                {
+                    minBetText.setPosition(466, 540);
+                }
+
+                minBetText.setText(settingsMinBet);
+            }
+
+        });
+
+        maxBetMinusButton.on('pointerdown', function(){
+
+            if (settingsMaxBet > 250)
+            {
+                maxBetMinusButton.setTexture('minusButtonClicked');
+                settingsMaxBet = settingsMaxBet - 50;
+
+                if (settingsMaxBet == 1000)
+                {
+                    maxBetText.setPosition(441, 640);
+                }
+                else if (settingsMaxBet >= 250 && settingsMaxBet < 1000)
+                {
+                    maxBetText.setPosition(450, 640);
+                }
+
+                maxBetText.setText(settingsMaxBet);
+            }
+
+        });
+
+        maxBetPlusButton.on('pointerdown', function(){
+
+            if (settingsMaxBet < 1000)
+            {
+                maxBetPlusButton.setTexture('plusButtonClicked');
+                settingsMaxBet = settingsMaxBet + 50;
+
+                if (settingsMaxBet == 1000)
+                {
+                    maxBetText.setPosition(441, 640);
+                }
+                else if (settingsMaxBet >= 250 && settingsMaxBet < 1000)
+                {
+                    maxBetText.setPosition(450, 640);
+                }
+
+                maxBetText.setText(settingsMaxBet);
+            }
+
+        });
+
+        countSpoilerMinusButton.on('pointerdown', function(){
+
+            if (settingsCountSpoiler == 1)
+            {
+                countSpoilerMinusButton.setTexture('minusButtonClicked');
+                settingsCountSpoiler = 0;
+                countSpoilerText.setPosition(884, 240);
+                countSpoilerText.setText("Off");
+            }
+        });
+
+        countSpoilerPlusButton.on('pointerdown', function(){
+
+            if (settingsCountSpoiler == 0)
+            {
+                countSpoilerPlusButton.setTexture('plusButtonClicked');
+                settingsCountSpoiler = 1;
+                countSpoilerText.setPosition(892, 240);
+                countSpoilerText.setText("On");
+            }
+        });
+
+        if (countSpoiler == 1)
+        {
+            runningCountSpoiler.on("pointerover", () => { runningCountSpoiler.visible = false; });
+            runningCountSpoiler.on("pointerout", () => { runningCountSpoiler.visible = true; });
+    
+            trueCountSpoiler.on("pointerover", () => { trueCountSpoiler.visible = false; });
+            trueCountSpoiler.on("pointerout", () => { trueCountSpoiler.visible = true; });
+        }
+
+
+
+
+        applySettingsButton.on('pointerdown', function(){
+            applySettingsButton.setTexture('clickedButton');
+
+            if (settingsDeckPen != confirmedSettingsDeckPen || settingsNumDecks != confirmedSettingsNumDecks)
+                applyDeckSettingsFlag = 1;
+
+            confirmedSettingsNumPlayers = settingsNumPlayers;
+            confirmedSettingsNumDecks = settingsNumDecks;
+            confirmedSettingsDeckPen = settingsDeckPen;
+            confirmedSettingsMinBet = settingsMinBet;
+            confirmedSettingsMaxBet = settingsMaxBet;
+            confirmedSettingsCountSpoiler = settingsCountSpoiler;
+
+            applySettingsFlag = 1;
+
+            this.scene.moveButtonsBack();
+
+            circley1.visible = false;
+            circley2.visible = false;
+            circley3.visible = false;
+            menuScreen.visible = false;
+            settingsHeader.visible = false;
+            settingsDisclaimer.visible = false;
+            applySettingsButton.visible = false;
+            applySettingsText.visible = false;
+            this.scene.disableSettingsButtons();
+
+            numPlayersHeader.visible = false;
+            numPlayersMinusButton.visible = false;
+            numPlayersPlusButton.visible = false;
+            numPlayersDisplay.visible = false;
+            numPlayersText.visible = false;
+
+            numDecksHeader.visible = false;
+            numDecksMinusButton.visible = false;
+            numDecksPlusButton.visible = false;
+            numDecksDisplay.visible = false;
+            numDecksText.visible = false;
+
+            deckPenHeader.visible = false;
+            deckPenMinusButton.visible = false;
+            deckPenPlusButton.visible = false;
+            deckPenDisplay.visible = false;
+            deckPenText.visible = false;
+
+            minBetHeader.visible = false;
+            minBetMinusButton.visible = false;
+            minBetPlusButton.visible = false;
+            minBetDisplay.visible = false;
+            minBetText.visible = false;
+
+            maxBetHeader.visible = false;
+            maxBetMinusButton.visible = false;
+            maxBetPlusButton.visible = false;
+            maxBetDisplay.visible = false;
+            maxBetText.visible = false;
+
+            countSpoilerHeader.visible = false;
+            countSpoilerMinusButton.visible = false;
+            countSpoilerPlusButton.visible = false;
+            countSpoilerDisplay.visible = false;
+            countSpoilerText.visible = false;
+        });
 
     };  
 
