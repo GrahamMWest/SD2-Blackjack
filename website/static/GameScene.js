@@ -4516,7 +4516,7 @@ class GameScene extends Phaser.Scene {
         }
         else if (deckPen == 1)
         {
-            deckPenText = this.add.text(470, 440, deckPen, {fontSize: '28px', fill: '#fff', align: 'center'});
+            deckPenText = this.add.text(468, 440, deckPen, {fontSize: '28px', fill: '#fff', align: 'center'});
         }
 
         deckPenHeader.setDepth(2000000000000);
@@ -9743,7 +9743,7 @@ class GameScene extends Phaser.Scene {
                 else if (settingsDeckPen == .75)
                 {
                     settingsDeckPen = 1.0;
-                    deckPenText.setPosition(470, 440);
+                    deckPenText.setPosition(468, 440);
                 }
 
                 deckPenText.setText(settingsDeckPen);
