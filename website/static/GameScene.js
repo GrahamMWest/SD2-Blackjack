@@ -51,7 +51,7 @@ let trueCount = 0;
 let cardIndex = 0;
 
 // unchangeable settings
-let playerCurrency = 500;
+let playerCurrency = 1000;
 let playerPoints = 0;
 let maxSplits = 1; // cant go higher due to graphics constraints
 let insuranceOption = 1; // 1 = late, 0 = early (SHOULD ALWAYS REMAIN 1)
@@ -60,7 +60,7 @@ let insuranceOption = 1; // 1 = late, 0 = early (SHOULD ALWAYS REMAIN 1)
 let numDecks = 8;
 let numPlayers = 3;
 let deckPen = .25;
-let minBet = 30;
+let minBet = 50;
 let maxBet = 500;
 let countSpoiler = 0; // 1 = true, 0 = false (cant get working due to hitboxes)
 
@@ -4928,7 +4928,7 @@ class GameScene extends Phaser.Scene {
         // j = player
 
         currentPlayer = 0;
-        numChips = 1;
+        numChips = 10;
         currentBet = minBet;
         player1Bet = minBet;
         player2Bet = minBet;
