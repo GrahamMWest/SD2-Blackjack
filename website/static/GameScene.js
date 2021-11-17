@@ -55,7 +55,6 @@ let playerCurrency = 500;
 let playerPoints = 0;
 let maxSplits = 1; // cant go higher due to graphics constraints
 let insuranceOption = 1; // 1 = late, 0 = early (SHOULD ALWAYS REMAIN 1)
-let peekingOption = 1; // 1 = peeking, 0 = no peeking / peeking is advantagous for player (ALWAYS KEEP PEEKING 1) (this is equivalent to early/late surrender, 1 = late surrender, 0 = early surrender)
 
 // changeable settings
 let numDecks = 4;
@@ -64,6 +63,7 @@ let deckPen = .25;
 let minBet = 5;
 let maxBet = 500;
 let countSpoiler = 0; // 1 = true, 0 = false (cant get working due to hitboxes)
+let peekingOption = 1; // 1 = peeking, 0 = no peeking, 2 = no surrender at all / peeking is advantagous for player (ALWAYS KEEP PEEKING 1) (this is equivalent to early/late surrender, 1 = late surrender, 0 = early surrender)
 
 // not allowing surrender (like at all)
 // blackjack payout (6/5 vs 3/2)
@@ -77,7 +77,6 @@ let settingsDeckPen = deckPen;
 let settingsMinBet = minBet;
 let settingsMaxBet = maxBet;
 let settingsCountSpoiler = countSpoiler;
-let settingsInsuranceOption = insuranceOption;
 let settingsPeekingOption = peekingOption;
 
 let confirmedSettingsNumDecks = numDecks;
@@ -86,7 +85,6 @@ let confirmedSettingsDeckPen = deckPen;
 let confirmedSettingsMinBet = minBet;
 let confirmedSettingsMaxBet = maxBet;
 let confirmedSettingsCountSpoiler = countSpoiler;
-let confirmedSettingsInsuranceOption = insuranceOption;
 let confirmedSettingsPeekingOption = peekingOption;
 
 let applySettingsFlag = 0;
