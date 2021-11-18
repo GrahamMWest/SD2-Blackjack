@@ -51,21 +51,21 @@ let trueCount = 0;
 let cardIndex = 0;
 
 // unchangeable settings
-let playerCurrency = 1000;
+let playerCurrency = 50000;
 let playerPoints = 0;
 let maxSplits = 1; // cant go higher due to graphics constraints
 let insuranceOption = 1; // 1 = late, 0 = early (SHOULD ALWAYS REMAIN 1)
 
 // changeable settings
-let numDecks = 8;
+let numDecks = 4;
 let numPlayers = 3;
-let deckPen = .25;
-let minBet = 50;
+let deckPen = .5;
+let minBet = 10;
 let maxBet = 500;
 let countSpoiler = 0; // 1 = true, 0 = false (cant get working due to hitboxes)
 
 let peekingOption = 1; // 1 = peeking, 0 = no peeking, 2 = no surrender at all / peeking is advantagous for player (ALWAYS KEEP PEEKING 1) (this is equivalent to early/late surrender, 1 = late surrender, 0 = early surrender)
-let blackjackPayout = 3/2;
+let blackjackPayout = 3/2; // 1:1, 6:5, 3:2
 let hitSplitAces = 1; // 1 = yes, 0 = no
 let doubleAfterSplit = 1; // 1 = yes, 0 = no
 let hitStandSoft17 = 0; // 1 = hit, 0 = stand
@@ -306,12 +306,14 @@ let splitChipSpacing = 45;
 let handIndicatorSpacing = -15;
 
 
-
 //TODO:
-// test when minbet is multiple chips (like 30)
-// make settings menu
-// make buttons grayed out when they should be
-// CANT DOUBLE ON SPLIT ACE
+// implement surrender (peeking) setting
+
+// friday
+// bug test (a lot)
+
+// implement rest of settings
+// maybe have settings text boxes reset if u dont apply anything in the settings menu
 
 // fix point system (insurance/surrender/can Split or Not/True Count)
 // CHECK WHETHER I NEED TO LOOK FOR WHETHER USER CAN DOUBLE OR NOT (MAYBE A VARIABLE CALLED 'firstAction' OR SOMETHING)
@@ -321,28 +323,9 @@ let handIndicatorSpacing = -15;
 // add variation to shoe cutoff (professor suggestion)
 
 
-
-
-// (WHAT GRAHAM SHOULD BE DOING)
-// get email auth and password reset working (including the drop down)
-// add new columns to database (isAuthenticated, acceptedDisclaimer, didTutorial)
-// change currency column in database to float if it isnt already
-// send user info to GameScene.js (username, currency, points)
-// update user currencies in iswinorloss function (database wise)
-// give all authenticated users 500 currency a day
-
-// iron out kinks in the account creation and login process
-//    * when logging in, should say "login failed" rather than specifying username or password being bad
-//    * check for valid date when creating account
-// make a gambling disclaimer (show example pic)
-// fix up navbar (make bigger and bold the current users page)
-
 // BUGS/TESTING:
-// make sure iswinorloss plays after dealerdraw animation finishes (might not be possible)
-// test payouts (make sure theyre correct, especially with splits)
 
 // NOTES:
-// early surrender is currently implemented, will add a toggle to only allow late surrender (after dealer checks for BJ)
 // should only take insurance at a TRUE 3 or above
 
 let gameOptions = {
@@ -3340,204 +3323,438 @@ class GameScene extends Phaser.Scene {
     enableSettingsButtons() {
 
         // numPlayers
-        numPlayersMinusButton.setInteractive({ useHandCursor: true });
-        numPlayersMinusButton.setTexture('minusButtonNormal');
-
-        numPlayersMinusButton.on('pointerover', function(){
-            numPlayersMinusButton.setTexture('minusButtonHovered');
-        })
-
-        numPlayersMinusButton.on('pointerout', function(){
+        if (settingsNumPlayers > 1)
+        {
+            numPlayersMinusButton.setInteractive({ useHandCursor: true });
             numPlayersMinusButton.setTexture('minusButtonNormal');
-        })
 
-        numPlayersMinusButton.on('pointerup', function(){
-            numPlayersMinusButton.setTexture('minusButtonHovered');
-        })
+            numPlayersMinusButton.on('pointerover', function(){
+                numPlayersMinusButton.setTexture('minusButtonHovered');
+            })
 
+            numPlayersMinusButton.on('pointerout', function(){
+                numPlayersMinusButton.setTexture('minusButtonNormal');
+            })
 
-        numPlayersPlusButton.setInteractive({ useHandCursor: true });
-        numPlayersPlusButton.setTexture('plusButtonNormal');
+            numPlayersMinusButton.on('pointerup', function(){
+                numPlayersMinusButton.setTexture('minusButtonHovered');
+            })
+        }
+        else
+        {
+            numPlayersMinusButton.disableInteractive();
+            numPlayersMinusButton.setTexture('minusButtonLocked');
 
-        numPlayersPlusButton.on('pointerover', function(){
-            numPlayersPlusButton.setTexture('plusButtonHovered');
-        })
+            numPlayersMinusButton.on('pointerover', function(){
+                numPlayersMinusButton.setTexture('minusButtonLocked');
+            })
 
-        numPlayersPlusButton.on('pointerout', function(){
+            numPlayersMinusButton.on('pointerout', function(){
+                numPlayersMinusButton.setTexture('minusButtonLocked');
+            })
+
+            numPlayersMinusButton.on('pointerup', function(){
+                numPlayersMinusButton.setTexture('minusButtonLocked');
+            })
+        }
+
+        if (settingsNumPlayers < 3)
+        {
+            numPlayersPlusButton.setInteractive({ useHandCursor: true });
             numPlayersPlusButton.setTexture('plusButtonNormal');
-        })
 
-        numPlayersPlusButton.on('pointerup', function(){
-            numPlayersPlusButton.setTexture('plusButtonHovered');
-        })
+            numPlayersPlusButton.on('pointerover', function(){
+                numPlayersPlusButton.setTexture('plusButtonHovered');
+            })
+
+            numPlayersPlusButton.on('pointerout', function(){
+                numPlayersPlusButton.setTexture('plusButtonNormal');
+            })
+
+            numPlayersPlusButton.on('pointerup', function(){
+                numPlayersPlusButton.setTexture('plusButtonHovered');
+            })
+        }
+        else
+        {
+            numPlayersPlusButton.disableInteractive();
+            numPlayersPlusButton.setTexture('plusButtonLocked');
+
+            numPlayersPlusButton.on('pointerover', function(){
+                numPlayersPlusButton.setTexture('plusButtonLocked');
+            })
+
+            numPlayersPlusButton.on('pointerout', function(){
+                numPlayersPlusButton.setTexture('plusButtonLocked');
+            })
+
+            numPlayersPlusButton.on('pointerup', function(){
+                numPlayersPlusButton.setTexture('plusButtonLocked');
+            })
+        }
 
 
         // numDecks
-        numDecksMinusButton.setInteractive({ useHandCursor: true });
-        numDecksMinusButton.setTexture('minusButtonNormal');
-
-        numDecksMinusButton.on('pointerover', function(){
-            numDecksMinusButton.setTexture('minusButtonHovered');
-        })
-
-        numDecksMinusButton.on('pointerout', function(){
+        if (settingsNumDecks > 1)
+        {
+            numDecksMinusButton.setInteractive({ useHandCursor: true });
             numDecksMinusButton.setTexture('minusButtonNormal');
-        })
 
-        numDecksMinusButton.on('pointerup', function(){
-            numDecksMinusButton.setTexture('minusButtonHovered');
-        })
+            numDecksMinusButton.on('pointerover', function(){
+                numDecksMinusButton.setTexture('minusButtonHovered');
+            })
 
+            numDecksMinusButton.on('pointerout', function(){
+                numDecksMinusButton.setTexture('minusButtonNormal');
+            })
 
-        numDecksPlusButton.setInteractive({ useHandCursor: true });
-        numDecksPlusButton.setTexture('plusButtonNormal');
+            numDecksMinusButton.on('pointerup', function(){
+                numDecksMinusButton.setTexture('minusButtonHovered');
+            })
+        }
+        else
+        {
+            numDecksMinusButton.disableInteractive();
+            numDecksMinusButton.setTexture('minusButtonLocked');
 
-        numDecksPlusButton.on('pointerover', function(){
-            numDecksPlusButton.setTexture('plusButtonHovered');
-        })
+            numDecksMinusButton.on('pointerover', function(){
+                numDecksMinusButton.setTexture('minusButtonLocked');
+            })
 
-        numDecksPlusButton.on('pointerout', function(){
+            numDecksMinusButton.on('pointerout', function(){
+                numDecksMinusButton.setTexture('minusButtonLocked');
+            })
+
+            numDecksMinusButton.on('pointerup', function(){
+                numDecksMinusButton.setTexture('minusButtonLocked');
+            })
+        }
+
+        if (settingsNumDecks < 8)
+        {
+            numDecksPlusButton.setInteractive({ useHandCursor: true });
             numDecksPlusButton.setTexture('plusButtonNormal');
-        })
 
-        numDecksPlusButton.on('pointerup', function(){
-            numDecksPlusButton.setTexture('plusButtonHovered');
-        })
+            numDecksPlusButton.on('pointerover', function(){
+                numDecksPlusButton.setTexture('plusButtonHovered');
+            })
+
+            numDecksPlusButton.on('pointerout', function(){
+                numDecksPlusButton.setTexture('plusButtonNormal');
+            })
+
+            numDecksPlusButton.on('pointerup', function(){
+                numDecksPlusButton.setTexture('plusButtonHovered');
+            })
+        }
+        else
+        {
+            numDecksPlusButton.disableInteractive();
+            numDecksPlusButton.setTexture('plusButtonLocked');
+
+            numDecksPlusButton.on('pointerover', function(){
+                numDecksPlusButton.setTexture('plusButtonLocked');
+            })
+
+            numDecksPlusButton.on('pointerout', function(){
+                numDecksPlusButton.setTexture('plusButtonLocked');
+            })
+
+            numDecksPlusButton.on('pointerup', function(){
+                numDecksPlusButton.setTexture('plusButtonLocked');
+            })
+        }
+
 
         // deckPen
-        deckPenMinusButton.setInteractive({ useHandCursor: true });
-        deckPenMinusButton.setTexture('minusButtonNormal');
-
-        deckPenMinusButton.on('pointerover', function(){
-            deckPenMinusButton.setTexture('minusButtonHovered');
-        })
-
-        deckPenMinusButton.on('pointerout', function(){
+        if (settingsDeckPen > .25)
+        {
+            deckPenMinusButton.setInteractive({ useHandCursor: true });
             deckPenMinusButton.setTexture('minusButtonNormal');
-        })
 
-        deckPenMinusButton.on('pointerup', function(){
-            deckPenMinusButton.setTexture('minusButtonHovered');
-        })
+            deckPenMinusButton.on('pointerover', function(){
+                deckPenMinusButton.setTexture('minusButtonHovered');
+            })
 
+            deckPenMinusButton.on('pointerout', function(){
+                deckPenMinusButton.setTexture('minusButtonNormal');
+            })
 
-        deckPenPlusButton.setInteractive({ useHandCursor: true });
-        deckPenPlusButton.setTexture('plusButtonNormal');
+            deckPenMinusButton.on('pointerup', function(){
+                deckPenMinusButton.setTexture('minusButtonHovered');
+            })
+        }
+        else
+        {
+            deckPenMinusButton.disableInteractive();
+            deckPenMinusButton.setTexture('minusButtonLocked');
 
-        deckPenPlusButton.on('pointerover', function(){
-            deckPenPlusButton.setTexture('plusButtonHovered');
-        })
+            deckPenMinusButton.on('pointerover', function(){
+                deckPenMinusButton.setTexture('minusButtonLocked');
+            })
 
-        deckPenPlusButton.on('pointerout', function(){
+            deckPenMinusButton.on('pointerout', function(){
+                deckPenMinusButton.setTexture('minusButtonLocked');
+            })
+
+            deckPenMinusButton.on('pointerup', function(){
+                deckPenMinusButton.setTexture('minusButtonLocked');
+            })
+        }
+
+        if (settingsDeckPen < 1)
+        {
+            deckPenPlusButton.setInteractive({ useHandCursor: true });
             deckPenPlusButton.setTexture('plusButtonNormal');
-        })
 
-        deckPenPlusButton.on('pointerup', function(){
-            deckPenPlusButton.setTexture('plusButtonHovered');
-        })
+            deckPenPlusButton.on('pointerover', function(){
+                deckPenPlusButton.setTexture('plusButtonHovered');
+            })
+
+            deckPenPlusButton.on('pointerout', function(){
+                deckPenPlusButton.setTexture('plusButtonNormal');
+            })
+
+            deckPenPlusButton.on('pointerup', function(){
+                deckPenPlusButton.setTexture('plusButtonHovered');
+            })
+        }
+        else
+        {
+            deckPenPlusButton.disableInteractive();
+            deckPenPlusButton.setTexture('plusButtonLocked');
+
+            deckPenPlusButton.on('pointerover', function(){
+                deckPenPlusButton.setTexture('plusButtonLocked');
+            })
+
+            deckPenPlusButton.on('pointerout', function(){
+                deckPenPlusButton.setTexture('plusButtonLocked');
+            })
+
+            deckPenPlusButton.on('pointerup', function(){
+                deckPenPlusButton.setTexture('plusButtonLocked');
+            })
+        }
 
 
 
         // minBet
-        minBetMinusButton.setInteractive({ useHandCursor: true });
-        minBetMinusButton.setTexture('minusButtonNormal');
-
-        minBetMinusButton.on('pointerover', function(){
-            minBetMinusButton.setTexture('minusButtonHovered');
-        })
-
-        minBetMinusButton.on('pointerout', function(){
+        if (settingsMinBet > 5)
+        {
+            minBetMinusButton.setInteractive({ useHandCursor: true });
             minBetMinusButton.setTexture('minusButtonNormal');
-        })
 
-        minBetMinusButton.on('pointerup', function(){
-            minBetMinusButton.setTexture('minusButtonHovered');
-        })
+            minBetMinusButton.on('pointerover', function(){
+                minBetMinusButton.setTexture('minusButtonHovered');
+            })
 
+            minBetMinusButton.on('pointerout', function(){
+                minBetMinusButton.setTexture('minusButtonNormal');
+            })
 
-        minBetPlusButton.setInteractive({ useHandCursor: true });
-        minBetPlusButton.setTexture('plusButtonNormal');
+            minBetMinusButton.on('pointerup', function(){
+                minBetMinusButton.setTexture('minusButtonHovered');
+            })
+        }
+        else
+        {
+            minBetMinusButton.disableInteractive();
+            minBetMinusButton.setTexture('minusButtonLocked');
 
-        minBetPlusButton.on('pointerover', function(){
-            minBetPlusButton.setTexture('plusButtonHovered');
-        })
+            minBetMinusButton.on('pointerover', function(){
+                minBetMinusButton.setTexture('minusButtonLocked');
+            })
 
-        minBetPlusButton.on('pointerout', function(){
+            minBetMinusButton.on('pointerout', function(){
+                minBetMinusButton.setTexture('minusButtonLocked');
+            })
+
+            minBetMinusButton.on('pointerup', function(){
+                minBetMinusButton.setTexture('minusButtonLocked');
+            })
+        }
+        
+        if (settingsMinBet < 100)
+        {
+            minBetPlusButton.setInteractive({ useHandCursor: true });
             minBetPlusButton.setTexture('plusButtonNormal');
-        })
 
-        minBetPlusButton.on('pointerup', function(){
-            minBetPlusButton.setTexture('plusButtonHovered');
-        })
+            minBetPlusButton.on('pointerover', function(){
+                minBetPlusButton.setTexture('plusButtonHovered');
+            })
+
+            minBetPlusButton.on('pointerout', function(){
+                minBetPlusButton.setTexture('plusButtonNormal');
+            })
+
+            minBetPlusButton.on('pointerup', function(){
+                minBetPlusButton.setTexture('plusButtonHovered');
+            })
+        }
+        else
+        {
+            minBetPlusButton.disableInteractive();
+            minBetPlusButton.setTexture('plusButtonLocked');
+
+            minBetPlusButton.on('pointerover', function(){
+                minBetPlusButton.setTexture('plusButtonLocked');
+            })
+
+            minBetPlusButton.on('pointerout', function(){
+                minBetPlusButton.setTexture('plusButtonLocked');
+            })
+
+            minBetPlusButton.on('pointerup', function(){
+                minBetPlusButton.setTexture('plusButtonLocked');
+            })
+        }
 
 
 
         // maxBet
-        maxBetMinusButton.setInteractive({ useHandCursor: true });
-        maxBetMinusButton.setTexture('minusButtonNormal');
-
-        maxBetMinusButton.on('pointerover', function(){
-            maxBetMinusButton.setTexture('minusButtonHovered');
-        })
-
-        maxBetMinusButton.on('pointerout', function(){
+        if (settingsMaxBet > 250)
+        {
+            maxBetMinusButton.setInteractive({ useHandCursor: true });
             maxBetMinusButton.setTexture('minusButtonNormal');
-        })
 
-        maxBetMinusButton.on('pointerup', function(){
-            maxBetMinusButton.setTexture('minusButtonHovered');
-        })
+            maxBetMinusButton.on('pointerover', function(){
+                maxBetMinusButton.setTexture('minusButtonHovered');
+            })
 
+            maxBetMinusButton.on('pointerout', function(){
+                maxBetMinusButton.setTexture('minusButtonNormal');
+            })
 
-        maxBetPlusButton.setInteractive({ useHandCursor: true });
-        maxBetPlusButton.setTexture('plusButtonNormal');
+            maxBetMinusButton.on('pointerup', function(){
+                maxBetMinusButton.setTexture('minusButtonHovered');
+            })
+        }
+        else
+        {
+            maxBetMinusButton.disableInteractive();
+            maxBetMinusButton.setTexture('minusButtonLocked');
 
-        maxBetPlusButton.on('pointerover', function(){
-            maxBetPlusButton.setTexture('plusButtonHovered');
-        })
+            maxBetMinusButton.on('pointerover', function(){
+                maxBetMinusButton.setTexture('minusButtonLocked');
+            })
 
-        maxBetPlusButton.on('pointerout', function(){
+            maxBetMinusButton.on('pointerout', function(){
+                maxBetMinusButton.setTexture('minusButtonLocked');
+            })
+
+            maxBetMinusButton.on('pointerup', function(){
+                maxBetMinusButton.setTexture('minusButtonLocked');
+            })
+        }
+
+        if (settingsMaxBet < 2500)
+        {
+            maxBetPlusButton.setInteractive({ useHandCursor: true });
             maxBetPlusButton.setTexture('plusButtonNormal');
-        })
 
-        maxBetPlusButton.on('pointerup', function(){
-            maxBetPlusButton.setTexture('plusButtonHovered');
-        })
+            maxBetPlusButton.on('pointerover', function(){
+                maxBetPlusButton.setTexture('plusButtonHovered');
+            })
+
+            maxBetPlusButton.on('pointerout', function(){
+                maxBetPlusButton.setTexture('plusButtonNormal');
+            })
+
+            maxBetPlusButton.on('pointerup', function(){
+                maxBetPlusButton.setTexture('plusButtonHovered');
+            })
+        }
+        else
+        {
+            maxBetPlusButton.disableInteractive();
+            maxBetPlusButton.setTexture('plusButtonLocked');
+
+            maxBetPlusButton.on('pointerover', function(){
+                maxBetPlusButton.setTexture('plusButtonLocked');
+            })
+
+            maxBetPlusButton.on('pointerout', function(){
+                maxBetPlusButton.setTexture('plusButtonLocked');
+            })
+
+            maxBetPlusButton.on('pointerup', function(){
+                maxBetPlusButton.setTexture('plusButtonLocked');
+            })
+        }
 
 
 
         // countSpoiler
-        countSpoilerMinusButton.setInteractive({ useHandCursor: true });
-        countSpoilerMinusButton.setTexture('minusButtonNormal');
-
-        countSpoilerMinusButton.on('pointerover', function(){
-            countSpoilerMinusButton.setTexture('minusButtonHovered');
-        })
-
-        countSpoilerMinusButton.on('pointerout', function(){
+        if (settingsCountSpoiler > 0)
+        {
+            countSpoilerMinusButton.setInteractive({ useHandCursor: true });
             countSpoilerMinusButton.setTexture('minusButtonNormal');
-        })
 
-        countSpoilerMinusButton.on('pointerup', function(){
-            countSpoilerMinusButton.setTexture('minusButtonHovered');
-        })
+            countSpoilerMinusButton.on('pointerover', function(){
+                countSpoilerMinusButton.setTexture('minusButtonHovered');
+            })
 
+            countSpoilerMinusButton.on('pointerout', function(){
+                countSpoilerMinusButton.setTexture('minusButtonNormal');
+            })
 
-        countSpoilerPlusButton.setInteractive({ useHandCursor: true });
-        countSpoilerPlusButton.setTexture('plusButtonNormal');
+            countSpoilerMinusButton.on('pointerup', function(){
+                countSpoilerMinusButton.setTexture('minusButtonHovered');
+            })
+        }
+        else
+        {
+            countSpoilerMinusButton.disableInteractive();
+            countSpoilerMinusButton.setTexture('minusButtonLocked');
 
-        countSpoilerPlusButton.on('pointerover', function(){
-            countSpoilerPlusButton.setTexture('plusButtonHovered');
-        })
+            countSpoilerMinusButton.on('pointerover', function(){
+                countSpoilerMinusButton.setTexture('minusButtonLocked');
+            })
 
-        countSpoilerPlusButton.on('pointerout', function(){
+            countSpoilerMinusButton.on('pointerout', function(){
+                countSpoilerMinusButton.setTexture('minusButtonLocked');
+            })
+
+            countSpoilerMinusButton.on('pointerup', function(){
+                countSpoilerMinusButton.setTexture('minusButtonLocked');
+            })
+        }
+
+        if (settingsCountSpoiler < 1)
+        {
+            countSpoilerPlusButton.setInteractive({ useHandCursor: true });
             countSpoilerPlusButton.setTexture('plusButtonNormal');
-        })
 
-        countSpoilerPlusButton.on('pointerup', function(){
-            countSpoilerPlusButton.setTexture('plusButtonHovered');
-        })
+            countSpoilerPlusButton.on('pointerover', function(){
+                countSpoilerPlusButton.setTexture('plusButtonHovered');
+            })
 
+            countSpoilerPlusButton.on('pointerout', function(){
+                countSpoilerPlusButton.setTexture('plusButtonNormal');
+            })
+
+            countSpoilerPlusButton.on('pointerup', function(){
+                countSpoilerPlusButton.setTexture('plusButtonHovered');
+            })
+        }
+        else
+        {
+            countSpoilerPlusButton.disableInteractive();
+            countSpoilerPlusButton.setTexture('plusButtonLocked');
+
+            countSpoilerPlusButton.on('pointerover', function(){
+                countSpoilerPlusButton.setTexture('plusButtonLocked');
+            })
+
+            countSpoilerPlusButton.on('pointerout', function(){
+                countSpoilerPlusButton.setTexture('plusButtonLocked');
+            })
+
+            countSpoilerPlusButton.on('pointerup', function(){
+                countSpoilerPlusButton.setTexture('plusButtonLocked');
+            })
+        }
 
 
 
@@ -4361,6 +4578,7 @@ class GameScene extends Phaser.Scene {
         this.load.image('chip_25_angle', '/static/assets/25ChipAngle.png');
         this.load.image('chip_100', '/static/assets/100Chip.png');
         this.load.image('chip_100_angle', '/static/assets/100ChipAngle.png');
+        this.load.image('chip_500', '/static/assets/500Chip.png');
 
         // for splits
         this.load.image('handIndication', '/static/assets/handIndicator.png');
@@ -4634,7 +4852,7 @@ class GameScene extends Phaser.Scene {
         maxBetDisplay = this.add.rectangle(475, 650, 100, 40, 0x000000);
 
 
-        if (maxBet == 1000)
+        if (maxBet >= 1000)
         {
             maxBetText = this.add.text(441, 640, maxBet, {fontSize: '28px', fill: '#fff'});
         }
@@ -4928,7 +5146,7 @@ class GameScene extends Phaser.Scene {
         // j = player
 
         currentPlayer = 0;
-        numChips = 10;
+        numChips = 1;
         currentBet = minBet;
         player1Bet = minBet;
         player2Bet = minBet;
@@ -5224,6 +5442,7 @@ class GameScene extends Phaser.Scene {
                     player1Bet = currentBet;
                     this.scene.enableBettingButtons();
                     this.scene.enableNextBettorButton();
+                    numChips = player2ChipCount.length;
                 }
                 else
                 {
@@ -5242,6 +5461,7 @@ class GameScene extends Phaser.Scene {
                     player2Bet = currentBet;
                     this.scene.enableBettingButtons();
                     this.scene.enableNextBettorButton();
+                    numChips = player3ChipCount.length;
                 }
                 else
                 {
@@ -5261,8 +5481,9 @@ class GameScene extends Phaser.Scene {
                 this.scene.newRound();
             }
 
-            currentBet = 5;
-            numChips = 1;
+            // currentBet = 5;
+            currentBet = minBet;
+            // numChips = 1;
             // this.scene.disableNextBettorButton();
             // this.scene.enableBettingButtons();
         });
@@ -5311,6 +5532,18 @@ class GameScene extends Phaser.Scene {
                     }
 
                     numChips = player1ChipCount.length;
+
+                    while (placeholderBet - 500 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords, playerChipYCoords - (k * 5), 'chip_500');
+                        placeholderChipArray[k].scale = chipScaling;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 500;
+
+                        player1ChipCount = placeholderChipArray;
+                        numChips = player1ChipCount.length;
+                        k++;
+                    }
 
                     while (placeholderBet - 100 >= 0)
                     {
@@ -5385,6 +5618,18 @@ class GameScene extends Phaser.Scene {
 
                     numChips = player2ChipCount.length;
 
+                    while (placeholderBet - 500 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords, playerChipYCoords - (k * 5), 'chip_500');
+                        placeholderChipArray[k].scale = chipScaling;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 500;
+
+                        player2ChipCount = placeholderChipArray;
+                        numChips = player2ChipCount.length;
+                        k++;
+                    }
+
                     while (placeholderBet - 100 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords, playerChipYCoords - (k * 5), 'chip_100');
@@ -5457,6 +5702,18 @@ class GameScene extends Phaser.Scene {
                     }
 
                     numChips = player3ChipCount.length;
+
+                    while (placeholderBet - 500 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords, playerChipYCoords - (k * 5), 'chip_500');
+                        placeholderChipArray[k].scale = chipScaling;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 500;
+
+                        player3ChipCount = placeholderChipArray;
+                        numChips = player3ChipCount.length;
+                        k++;
+                    }
 
                     while (placeholderBet - 100 >= 0)
                     {
@@ -5570,6 +5827,18 @@ class GameScene extends Phaser.Scene {
 
                     numChips = player1ChipCount.length;
 
+                    while (placeholderBet - 500 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords, playerChipYCoords - (k * 5), 'chip_500');
+                        placeholderChipArray[k].scale = chipScaling;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 500;
+
+                        player1ChipCount = placeholderChipArray;
+                        numChips = player1ChipCount.length;
+                        k++;
+                    }
+
                     while (placeholderBet - 100 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords, playerChipYCoords - (k * 5), 'chip_100');
@@ -5643,6 +5912,18 @@ class GameScene extends Phaser.Scene {
 
                     numChips = player2ChipCount.length;
 
+                    while (placeholderBet - 500 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords, playerChipYCoords - (k * 5), 'chip_500');
+                        placeholderChipArray[k].scale = chipScaling;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 500;
+
+                        player2ChipCount = placeholderChipArray;
+                        numChips = player2ChipCount.length;
+                        k++;
+                    }
+
                     while (placeholderBet - 100 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords, playerChipYCoords - (k * 5), 'chip_100');
@@ -5715,6 +5996,18 @@ class GameScene extends Phaser.Scene {
                     }
 
                     numChips = player3ChipCount.length;
+
+                    while (placeholderBet - 500 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords, playerChipYCoords - (k * 5), 'chip_500');
+                        placeholderChipArray[k].scale = chipScaling;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 500;
+
+                        player3ChipCount = placeholderChipArray;
+                        numChips = player3ChipCount.length;
+                        k++;
+                    }
 
                     while (placeholderBet - 100 >= 0)
                     {
@@ -5828,6 +6121,18 @@ class GameScene extends Phaser.Scene {
 
                     numChips = player1ChipCount.length;
 
+                    while (placeholderBet - 500 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords, playerChipYCoords - (k * 5), 'chip_500');
+                        placeholderChipArray[k].scale = chipScaling;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 500;
+
+                        player1ChipCount = placeholderChipArray;
+                        numChips = player1ChipCount.length;
+                        k++;
+                    }
+
                     while (placeholderBet - 100 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords, playerChipYCoords - (k * 5), 'chip_100');
@@ -5901,6 +6206,18 @@ class GameScene extends Phaser.Scene {
 
                     numChips = player2ChipCount.length;
 
+                    while (placeholderBet - 500 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords, playerChipYCoords - (k * 5), 'chip_500');
+                        placeholderChipArray[k].scale = chipScaling;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 500;
+
+                        player2ChipCount = placeholderChipArray;
+                        numChips = player2ChipCount.length;
+                        k++;
+                    }
+
                     while (placeholderBet - 100 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords, playerChipYCoords - (k * 5), 'chip_100');
@@ -5973,6 +6290,18 @@ class GameScene extends Phaser.Scene {
                     }
 
                     numChips = player3ChipCount.length;
+
+                    while (placeholderBet - 500 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords, playerChipYCoords - (k * 5), 'chip_500');
+                        placeholderChipArray[k].scale = chipScaling;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 500;
+
+                        player3ChipCount = placeholderChipArray;
+                        numChips = player3ChipCount.length;
+                        k++;
+                    }
 
                     while (placeholderBet - 100 >= 0)
                     {
@@ -6086,6 +6415,18 @@ class GameScene extends Phaser.Scene {
 
                     numChips = player1ChipCount.length;
 
+                    while (placeholderBet - 500 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords, playerChipYCoords - (k * 5), 'chip_500');
+                        placeholderChipArray[k].scale = chipScaling;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 500;
+
+                        player1ChipCount = placeholderChipArray;
+                        numChips = player1ChipCount.length;
+                        k++;
+                    }
+
                     while (placeholderBet - 100 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords, playerChipYCoords - (k * 5), 'chip_100');
@@ -6159,6 +6500,18 @@ class GameScene extends Phaser.Scene {
 
                     numChips = player2ChipCount.length;
 
+                    while (placeholderBet - 500 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords, playerChipYCoords - (k * 5), 'chip_500');
+                        placeholderChipArray[k].scale = chipScaling;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 500;
+
+                        player2ChipCount = placeholderChipArray;
+                        numChips = player2ChipCount.length;
+                        k++;
+                    }
+
                     while (placeholderBet - 100 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords, playerChipYCoords - (k * 5), 'chip_100');
@@ -6231,6 +6584,18 @@ class GameScene extends Phaser.Scene {
                     }
 
                     numChips = player3ChipCount.length;
+
+                    while (placeholderBet - 500 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords, playerChipYCoords - (k * 5), 'chip_500');
+                        placeholderChipArray[k].scale = chipScaling;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 500;
+
+                        player3ChipCount = placeholderChipArray;
+                        numChips = player3ChipCount.length;
+                        k++;
+                    }
 
                     while (placeholderBet - 100 >= 0)
                     {
@@ -6344,6 +6709,18 @@ class GameScene extends Phaser.Scene {
 
                     numChips = player1ChipCount.length;
 
+                    while (placeholderBet - 500 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords, playerChipYCoords - (k * 5), 'chip_500');
+                        placeholderChipArray[k].scale = chipScaling;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 500;
+
+                        player1ChipCount = placeholderChipArray;
+                        numChips = player1ChipCount.length;
+                        k++;
+                    }
+
                     while (placeholderBet - 100 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords, playerChipYCoords - (k * 5), 'chip_100');
@@ -6417,6 +6794,18 @@ class GameScene extends Phaser.Scene {
 
                     numChips = player2ChipCount.length;
 
+                    while (placeholderBet - 500 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords, playerChipYCoords - (k * 5), 'chip_500');
+                        placeholderChipArray[k].scale = chipScaling;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 500;
+
+                        player2ChipCount = placeholderChipArray;
+                        numChips = player2ChipCount.length;
+                        k++;
+                    }
+
                     while (placeholderBet - 100 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords, playerChipYCoords - (k * 5), 'chip_100');
@@ -6489,6 +6878,18 @@ class GameScene extends Phaser.Scene {
                     }
 
                     numChips = player3ChipCount.length;
+
+                    while (placeholderBet - 500 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords, playerChipYCoords - (k * 5), 'chip_500');
+                        placeholderChipArray[k].scale = chipScaling;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 500;
+
+                        player3ChipCount = placeholderChipArray;
+                        numChips = player3ChipCount.length;
+                        k++;
+                    }
 
                     while (placeholderBet - 100 >= 0)
                     {
@@ -7094,6 +7495,18 @@ class GameScene extends Phaser.Scene {
                             }
         
                             numChips = player1DoubleChipCount.length;
+
+                            while (placeholderBet - 500 >= 0)
+                            {
+                                placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords + 45, playerChipYCoords + 25 - (k * 5), 'chip_500');
+                                placeholderChipArray[k].scale = chipScaling;
+                                placeholderChipArray[k].setDepth(100 + k);
+                                placeholderBet = placeholderBet - 500;
+        
+                                player1DoubleChipCount = placeholderChipArray;
+                                numChips = player1DoubleChipCount.length;
+                                k++;
+                            }
         
                             while (placeholderBet - 100 >= 0)
                             {
@@ -7216,6 +7629,18 @@ class GameScene extends Phaser.Scene {
                             }
         
                             numChips = player2DoubleChipCount.length;
+
+                            while (placeholderBet - 500 >= 0)
+                            {
+                                placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords + 45, playerChipYCoords + 25 - (k * 5), 'chip_500');
+                                placeholderChipArray[k].scale = chipScaling;
+                                placeholderChipArray[k].setDepth(100 + k);
+                                placeholderBet = placeholderBet - 500;
+        
+                                player2DoubleChipCount = placeholderChipArray;
+                                numChips = player2DoubleChipCount.length;
+                                k++;
+                            }
         
                             while (placeholderBet - 100 >= 0)
                             {
@@ -7342,6 +7767,18 @@ class GameScene extends Phaser.Scene {
                             }
         
                             numChips = player3DoubleChipCount.length;
+
+                            while (placeholderBet - 500 >= 0)
+                            {
+                                placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords + 45, playerChipYCoords + 25 - (k * 5), 'chip_500');
+                                placeholderChipArray[k].scale = chipScaling;
+                                placeholderChipArray[k].setDepth(100 + k);
+                                placeholderBet = placeholderBet - 500;
+        
+                                player3DoubleChipCount = placeholderChipArray;
+                                numChips = player3DoubleChipCount.length;
+                                k++;
+                            }
         
                             while (placeholderBet - 100 >= 0)
                             {
@@ -7544,6 +7981,18 @@ class GameScene extends Phaser.Scene {
                                 }
             
                                 numChips = player1DoubleChipArrays[currentHand-1].length;
+
+                                while (placeholderBet - 500 >= 0)
+                                {
+                                    placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords + (splitChipSpacing + 45), playerChipYCoords + 25 - (k * 5), 'chip_500');
+                                    placeholderChipArray[k].scale = chipScaling;
+                                    placeholderChipArray[k].setDepth(100 + k);
+                                    placeholderBet = placeholderBet - 500;
+            
+                                    player1DoubleChipArrays[currentHand-1] = placeholderChipArray;
+                                    numChips = player1DoubleChipArrays[currentHand-1].length;
+                                    k++;
+                                }
             
                                 while (placeholderBet - 100 >= 0)
                                 {
@@ -7632,6 +8081,18 @@ class GameScene extends Phaser.Scene {
                                 }
             
                                 numChips = player1DoubleChipArrays[currentHand-1].length;
+
+                                while (placeholderBet - 500 >= 0)
+                                {
+                                    placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords + (splitChipSpacing + 45), playerChipYCoords + 25 - (k * 5), 'chip_500');
+                                    placeholderChipArray[k].scale = chipScaling;
+                                    placeholderChipArray[k].setDepth(100 + k);
+                                    placeholderBet = placeholderBet - 500;
+            
+                                    player1DoubleChipArrays[currentHand-1] = placeholderChipArray;
+                                    numChips = player1DoubleChipArrays[currentHand-1].length;
+                                    k++;
+                                }
             
                                 while (placeholderBet - 100 >= 0)
                                 {
@@ -7759,6 +8220,18 @@ class GameScene extends Phaser.Scene {
                                 }
             
                                 numChips = player2DoubleChipArrays[currentHand-1].length;
+
+                                while (placeholderBet - 500 >= 0)
+                                {
+                                    placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords + (splitChipSpacing + 45), playerChipYCoords + 25 - (k * 5), 'chip_500');
+                                    placeholderChipArray[k].scale = chipScaling;
+                                    placeholderChipArray[k].setDepth(100 + k);
+                                    placeholderBet = placeholderBet - 500;
+            
+                                    player2DoubleChipArrays[currentHand-1] = placeholderChipArray;
+                                    numChips = player2DoubleChipArrays[currentHand-1].length;
+                                    k++;
+                                }
             
                                 while (placeholderBet - 100 >= 0)
                                 {
@@ -7847,6 +8320,18 @@ class GameScene extends Phaser.Scene {
                                 }
             
                                 numChips = player2DoubleChipArrays[currentHand-1].length;
+
+                                while (placeholderBet - 500 >= 0)
+                                {
+                                    placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords + (splitChipSpacing + 45), playerChipYCoords + 25 - (k * 5), 'chip_500');
+                                    placeholderChipArray[k].scale = chipScaling;
+                                    placeholderChipArray[k].setDepth(100 + k);
+                                    placeholderBet = placeholderBet - 500;
+            
+                                    player2DoubleChipArrays[currentHand-1] = placeholderChipArray;
+                                    numChips = player2DoubleChipArrays[currentHand-1].length;
+                                    k++;
+                                }
             
                                 while (placeholderBet - 100 >= 0)
                                 {
@@ -7974,6 +8459,18 @@ class GameScene extends Phaser.Scene {
                                 }
             
                                 numChips = player3DoubleChipArrays[currentHand-1].length;
+
+                                while (placeholderBet - 500 >= 0)
+                                {
+                                    placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords + (splitChipSpacing + 45), playerChipYCoords + 25 - (k * 5), 'chip_500');
+                                    placeholderChipArray[k].scale = chipScaling;
+                                    placeholderChipArray[k].setDepth(100 + k);
+                                    placeholderBet = placeholderBet - 500;
+            
+                                    player3DoubleChipArrays[currentHand-1] = placeholderChipArray;
+                                    numChips = player3DoubleChipArrays[currentHand-1].length;
+                                    k++;
+                                }
             
                                 while (placeholderBet - 100 >= 0)
                                 {
@@ -8062,6 +8559,18 @@ class GameScene extends Phaser.Scene {
                                 }
             
                                 numChips = player3DoubleChipArrays[currentHand-1].length;
+
+                                while (placeholderBet - 500 >= 0)
+                                {
+                                    placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords + (splitChipSpacing + 45), playerChipYCoords + 25 - (k * 5), 'chip_500');
+                                    placeholderChipArray[k].scale = chipScaling;
+                                    placeholderChipArray[k].setDepth(100 + k);
+                                    placeholderBet = placeholderBet - 500;
+            
+                                    player3DoubleChipArrays[currentHand-1] = placeholderChipArray;
+                                    numChips = player3DoubleChipArrays[currentHand-1].length;
+                                    k++;
+                                }
             
                                 while (placeholderBet - 100 >= 0)
                                 {
@@ -8738,6 +9247,18 @@ class GameScene extends Phaser.Scene {
 
                     numChips = player1InsuranceChips.length;
 
+                    while (placeholderBet - 500 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords, playerChipYCoords + 50 - (k * 5), 'chip_500');
+                        placeholderChipArray[k].scale = chipScaling;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 500;
+
+                        player1InsuranceChips = placeholderChipArray;
+                        numChips = player1InsuranceChips.length;
+                        k++;
+                    }
+
                     while (placeholderBet - 100 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player1ChipXCoords, playerChipYCoords + 50 - (k * 5), 'chip_100');
@@ -8844,6 +9365,18 @@ class GameScene extends Phaser.Scene {
 
                     numChips = player2InsuranceChips.length;
 
+                    while (placeholderBet - 500 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords, playerChipYCoords + 50 - (k * 5), 'chip_500');
+                        placeholderChipArray[k].scale = chipScaling;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 500;
+
+                        player2InsuranceChips = placeholderChipArray;
+                        numChips = player2InsuranceChips.length;
+                        k++;
+                    }
+
                     while (placeholderBet - 100 >= 0)
                     {
                         placeholderChipArray[k] = this.scene.add.image(player2ChipXCoords, playerChipYCoords + 50 - (k * 5), 'chip_100');
@@ -8948,6 +9481,18 @@ class GameScene extends Phaser.Scene {
                     }
 
                     numChips = player3InsuranceChips.length;
+
+                    while (placeholderBet - 500 >= 0)
+                    {
+                        placeholderChipArray[k] = this.scene.add.image(player3ChipXCoords, playerChipYCoords + 50 - (k * 5), 'chip_500');
+                        placeholderChipArray[k].scale = chipScaling;
+                        placeholderChipArray[k].setDepth(100 + k);
+                        placeholderBet = placeholderBet - 500;
+
+                        player3InsuranceChips = placeholderChipArray;
+                        numChips = player3InsuranceChips.length;
+                        k++;
+                    }
 
                     while (placeholderBet - 100 >= 0)
                     {
@@ -9250,6 +9795,21 @@ class GameScene extends Phaser.Scene {
                         }
     
                         numChips = player1ChipArrays[0].length;
+
+                        while (placeholderBet - 500 >= 0)
+                        {
+                            player1ChipArrays[0][k] = this.scene.add.image(player1ChipXCoords + splitChipSpacing, playerChipYCoords - (k * 5), 'chip_500');
+                            player1ChipArrays[0][k].scale = chipScaling;
+                            player1ChipArrays[0][k].setDepth(100 + k);
+
+                            player1ChipArrays[1][k] = this.scene.add.image(player1ChipXCoords - splitChipSpacing, playerChipYCoords - (k * 5), 'chip_500');
+                            player1ChipArrays[1][k].scale = chipScaling;
+                            player1ChipArrays[1][k].setDepth(100 + k);
+
+                            placeholderBet = placeholderBet - 500;
+                            numChips = player1ChipArrays[0].length;
+                            k++;
+                        }
     
                         while (placeholderBet - 100 >= 0)
                         {
@@ -9402,6 +9962,21 @@ class GameScene extends Phaser.Scene {
                         }
     
                         numChips = player2ChipArrays[0].length;
+
+                        while (placeholderBet - 500 >= 0)
+                        {
+                            player2ChipArrays[0][k] = this.scene.add.image(player2ChipXCoords + splitChipSpacing, playerChipYCoords - (k * 5), 'chip_500');
+                            player2ChipArrays[0][k].scale = chipScaling;
+                            player2ChipArrays[0][k].setDepth(100 + k);
+
+                            player2ChipArrays[1][k] = this.scene.add.image(player2ChipXCoords - splitChipSpacing, playerChipYCoords - (k * 5), 'chip_500');
+                            player2ChipArrays[1][k].scale = chipScaling;
+                            player2ChipArrays[1][k].setDepth(100 + k);
+
+                            placeholderBet = placeholderBet - 500;
+                            numChips = player2ChipArrays[0].length;
+                            k++;
+                        }
     
                         while (placeholderBet - 100 >= 0)
                         {
@@ -9554,6 +10129,21 @@ class GameScene extends Phaser.Scene {
                         }
     
                         numChips = player3ChipArrays[0].length;
+
+                        while (placeholderBet - 500 >= 0)
+                        {
+                            player3ChipArrays[0][k] = this.scene.add.image(player3ChipXCoords + splitChipSpacing, playerChipYCoords - (k * 5), 'chip_500');
+                            player3ChipArrays[0][k].scale = chipScaling;
+                            player3ChipArrays[0][k].setDepth(100 + k);
+
+                            player3ChipArrays[1][k] = this.scene.add.image(player3ChipXCoords - splitChipSpacing, playerChipYCoords - (k * 5), 'chip_500');
+                            player3ChipArrays[1][k].scale = chipScaling;
+                            player3ChipArrays[1][k].setDepth(100 + k);
+
+                            placeholderBet = placeholderBet - 500;
+                            numChips = player3ChipArrays[0].length;
+                            k++;
+                        }
     
                         while (placeholderBet - 100 >= 0)
                         {
@@ -9906,6 +10496,76 @@ class GameScene extends Phaser.Scene {
                 settingsNumPlayers = settingsNumPlayers - 1;
                 numPlayersText.setText(settingsNumPlayers);
             }
+
+            if (settingsNumPlayers > 1)
+            {
+                numPlayersMinusButton.setInteractive({ useHandCursor: true });
+                numPlayersMinusButton.setTexture('minusButtonNormal');
+
+                numPlayersMinusButton.on('pointerover', function(){
+                    numPlayersMinusButton.setTexture('minusButtonHovered');
+                })
+
+                numPlayersMinusButton.on('pointerout', function(){
+                    numPlayersMinusButton.setTexture('minusButtonNormal');
+                })
+
+                numPlayersMinusButton.on('pointerup', function(){
+                    numPlayersMinusButton.setTexture('minusButtonHovered');
+                })
+            }
+            else
+            {
+                numPlayersMinusButton.disableInteractive();
+                numPlayersMinusButton.setTexture('minusButtonLocked');
+
+                numPlayersMinusButton.on('pointerover', function(){
+                    numPlayersMinusButton.setTexture('minusButtonLocked');
+                })
+
+                numPlayersMinusButton.on('pointerout', function(){
+                    numPlayersMinusButton.setTexture('minusButtonLocked');
+                })
+
+                numPlayersMinusButton.on('pointerup', function(){
+                    numPlayersMinusButton.setTexture('minusButtonLocked');
+                })
+            }
+
+            if (settingsNumPlayers < 3)
+            {
+                numPlayersPlusButton.setInteractive({ useHandCursor: true });
+                numPlayersPlusButton.setTexture('plusButtonNormal');
+
+                numPlayersPlusButton.on('pointerover', function(){
+                    numPlayersPlusButton.setTexture('plusButtonHovered');
+                })
+
+                numPlayersPlusButton.on('pointerout', function(){
+                    numPlayersPlusButton.setTexture('plusButtonNormal');
+                })
+
+                numPlayersPlusButton.on('pointerup', function(){
+                    numPlayersPlusButton.setTexture('plusButtonHovered');
+                })
+            }
+            else
+            {
+                numPlayersPlusButton.disableInteractive();
+                numPlayersPlusButton.setTexture('plusButtonLocked');
+
+                numPlayersPlusButton.on('pointerover', function(){
+                    numPlayersPlusButton.setTexture('plusButtonLocked');
+                })
+
+                numPlayersPlusButton.on('pointerout', function(){
+                    numPlayersPlusButton.setTexture('plusButtonLocked');
+                })
+
+                numPlayersPlusButton.on('pointerup', function(){
+                    numPlayersPlusButton.setTexture('plusButtonLocked');
+                })
+            }
         });
 
         numPlayersPlusButton.on('pointerdown', function(){
@@ -9915,6 +10575,77 @@ class GameScene extends Phaser.Scene {
                 settingsNumPlayers = settingsNumPlayers + 1;
                 numPlayersText.setText(settingsNumPlayers);
             }
+
+            if (settingsNumPlayers > 1)
+            {
+                numPlayersMinusButton.setInteractive({ useHandCursor: true });
+                numPlayersMinusButton.setTexture('minusButtonNormal');
+
+                numPlayersMinusButton.on('pointerover', function(){
+                    numPlayersMinusButton.setTexture('minusButtonHovered');
+                })
+
+                numPlayersMinusButton.on('pointerout', function(){
+                    numPlayersMinusButton.setTexture('minusButtonNormal');
+                })
+
+                numPlayersMinusButton.on('pointerup', function(){
+                    numPlayersMinusButton.setTexture('minusButtonHovered');
+                })
+            }
+            else
+            {
+                numPlayersMinusButton.disableInteractive();
+                numPlayersMinusButton.setTexture('minusButtonLocked');
+
+                numPlayersMinusButton.on('pointerover', function(){
+                    numPlayersMinusButton.setTexture('minusButtonLocked');
+                })
+
+                numPlayersMinusButton.on('pointerout', function(){
+                    numPlayersMinusButton.setTexture('minusButtonLocked');
+                })
+
+                numPlayersMinusButton.on('pointerup', function(){
+                    numPlayersMinusButton.setTexture('minusButtonLocked');
+                })
+            }
+
+            if (settingsNumPlayers < 3)
+            {
+                numPlayersPlusButton.setInteractive({ useHandCursor: true });
+                numPlayersPlusButton.setTexture('plusButtonNormal');
+
+                numPlayersPlusButton.on('pointerover', function(){
+                    numPlayersPlusButton.setTexture('plusButtonHovered');
+                })
+
+                numPlayersPlusButton.on('pointerout', function(){
+                    numPlayersPlusButton.setTexture('plusButtonNormal');
+                })
+
+                numPlayersPlusButton.on('pointerup', function(){
+                    numPlayersPlusButton.setTexture('plusButtonHovered');
+                })
+            }
+            else
+            {
+                numPlayersPlusButton.disableInteractive();
+                numPlayersPlusButton.setTexture('plusButtonLocked');
+
+                numPlayersPlusButton.on('pointerover', function(){
+                    numPlayersPlusButton.setTexture('plusButtonLocked');
+                })
+
+                numPlayersPlusButton.on('pointerout', function(){
+                    numPlayersPlusButton.setTexture('plusButtonLocked');
+                })
+
+                numPlayersPlusButton.on('pointerup', function(){
+                    numPlayersPlusButton.setTexture('plusButtonLocked');
+                })
+            }
+
         });
 
         numDecksMinusButton.on('pointerdown', function(){
@@ -9924,6 +10655,76 @@ class GameScene extends Phaser.Scene {
                 settingsNumDecks = settingsNumDecks - 1;
                 numDecksText.setText(settingsNumDecks);
             }
+
+            if (settingsNumDecks > 1)
+            {
+                numDecksMinusButton.setInteractive({ useHandCursor: true });
+                numDecksMinusButton.setTexture('minusButtonNormal');
+
+                numDecksMinusButton.on('pointerover', function(){
+                    numDecksMinusButton.setTexture('minusButtonHovered');
+                })
+
+                numDecksMinusButton.on('pointerout', function(){
+                    numDecksMinusButton.setTexture('minusButtonNormal');
+                })
+
+                numDecksMinusButton.on('pointerup', function(){
+                    numDecksMinusButton.setTexture('minusButtonHovered');
+                })
+            }
+            else
+            {
+                numDecksMinusButton.disableInteractive();
+                numDecksMinusButton.setTexture('minusButtonLocked');
+
+                numDecksMinusButton.on('pointerover', function(){
+                    numDecksMinusButton.setTexture('minusButtonLocked');
+                })
+
+                numDecksMinusButton.on('pointerout', function(){
+                    numDecksMinusButton.setTexture('minusButtonLocked');
+                })
+
+                numDecksMinusButton.on('pointerup', function(){
+                    numDecksMinusButton.setTexture('minusButtonLocked');
+                })
+            }
+
+            if (settingsNumDecks < 8)
+            {
+                numDecksPlusButton.setInteractive({ useHandCursor: true });
+                numDecksPlusButton.setTexture('plusButtonNormal');
+
+                numDecksPlusButton.on('pointerover', function(){
+                    numDecksPlusButton.setTexture('plusButtonHovered');
+                })
+
+                numDecksPlusButton.on('pointerout', function(){
+                    numDecksPlusButton.setTexture('plusButtonNormal');
+                })
+
+                numDecksPlusButton.on('pointerup', function(){
+                    numDecksPlusButton.setTexture('plusButtonHovered');
+                })
+            }
+            else
+            {
+                numDecksPlusButton.disableInteractive();
+                numDecksPlusButton.setTexture('plusButtonLocked');
+
+                numDecksPlusButton.on('pointerover', function(){
+                    numDecksPlusButton.setTexture('plusButtonLocked');
+                })
+
+                numDecksPlusButton.on('pointerout', function(){
+                    numDecksPlusButton.setTexture('plusButtonLocked');
+                })
+
+                numDecksPlusButton.on('pointerup', function(){
+                    numDecksPlusButton.setTexture('plusButtonLocked');
+                })
+            }
         });
 
         numDecksPlusButton.on('pointerdown', function(){
@@ -9932,6 +10733,76 @@ class GameScene extends Phaser.Scene {
                 numDecksPlusButton.setTexture('plusButtonClicked');
                 settingsNumDecks = settingsNumDecks + 1;
                 numDecksText.setText(settingsNumDecks);
+            }
+
+            if (settingsNumDecks > 1)
+            {
+                numDecksMinusButton.setInteractive({ useHandCursor: true });
+                numDecksMinusButton.setTexture('minusButtonNormal');
+
+                numDecksMinusButton.on('pointerover', function(){
+                    numDecksMinusButton.setTexture('minusButtonHovered');
+                })
+
+                numDecksMinusButton.on('pointerout', function(){
+                    numDecksMinusButton.setTexture('minusButtonNormal');
+                })
+
+                numDecksMinusButton.on('pointerup', function(){
+                    numDecksMinusButton.setTexture('minusButtonHovered');
+                })
+            }
+            else
+            {
+                numDecksMinusButton.disableInteractive();
+                numDecksMinusButton.setTexture('minusButtonLocked');
+
+                numDecksMinusButton.on('pointerover', function(){
+                    numDecksMinusButton.setTexture('minusButtonLocked');
+                })
+
+                numDecksMinusButton.on('pointerout', function(){
+                    numDecksMinusButton.setTexture('minusButtonLocked');
+                })
+
+                numDecksMinusButton.on('pointerup', function(){
+                    numDecksMinusButton.setTexture('minusButtonLocked');
+                })
+            }
+
+            if (settingsNumDecks < 8)
+            {
+                numDecksPlusButton.setInteractive({ useHandCursor: true });
+                numDecksPlusButton.setTexture('plusButtonNormal');
+
+                numDecksPlusButton.on('pointerover', function(){
+                    numDecksPlusButton.setTexture('plusButtonHovered');
+                })
+
+                numDecksPlusButton.on('pointerout', function(){
+                    numDecksPlusButton.setTexture('plusButtonNormal');
+                })
+
+                numDecksPlusButton.on('pointerup', function(){
+                    numDecksPlusButton.setTexture('plusButtonHovered');
+                })
+            }
+            else
+            {
+                numDecksPlusButton.disableInteractive();
+                numDecksPlusButton.setTexture('plusButtonLocked');
+
+                numDecksPlusButton.on('pointerover', function(){
+                    numDecksPlusButton.setTexture('plusButtonLocked');
+                })
+
+                numDecksPlusButton.on('pointerout', function(){
+                    numDecksPlusButton.setTexture('plusButtonLocked');
+                })
+
+                numDecksPlusButton.on('pointerup', function(){
+                    numDecksPlusButton.setTexture('plusButtonLocked');
+                })
             }
         });
 
@@ -9969,6 +10840,76 @@ class GameScene extends Phaser.Scene {
                 deckPenText.setText(settingsDeckPen);
             }
 
+            if (settingsDeckPen > .25)
+            {
+                deckPenMinusButton.setInteractive({ useHandCursor: true });
+                deckPenMinusButton.setTexture('minusButtonNormal');
+
+                deckPenMinusButton.on('pointerover', function(){
+                    deckPenMinusButton.setTexture('minusButtonHovered');
+                })
+
+                deckPenMinusButton.on('pointerout', function(){
+                    deckPenMinusButton.setTexture('minusButtonNormal');
+                })
+
+                deckPenMinusButton.on('pointerup', function(){
+                    deckPenMinusButton.setTexture('minusButtonHovered');
+                })
+            }
+            else
+            {
+                deckPenMinusButton.disableInteractive();
+                deckPenMinusButton.setTexture('minusButtonLocked');
+
+                deckPenMinusButton.on('pointerover', function(){
+                    deckPenMinusButton.setTexture('minusButtonLocked');
+                })
+
+                deckPenMinusButton.on('pointerout', function(){
+                    deckPenMinusButton.setTexture('minusButtonLocked');
+                })
+
+                deckPenMinusButton.on('pointerup', function(){
+                    deckPenMinusButton.setTexture('minusButtonLocked');
+                })
+            }
+
+            if (settingsDeckPen < 1)
+            {
+                deckPenPlusButton.setInteractive({ useHandCursor: true });
+                deckPenPlusButton.setTexture('plusButtonNormal');
+
+                deckPenPlusButton.on('pointerover', function(){
+                    deckPenPlusButton.setTexture('plusButtonHovered');
+                })
+
+                deckPenPlusButton.on('pointerout', function(){
+                    deckPenPlusButton.setTexture('plusButtonNormal');
+                })
+
+                deckPenPlusButton.on('pointerup', function(){
+                    deckPenPlusButton.setTexture('plusButtonHovered');
+                })
+            }
+            else
+            {
+                deckPenPlusButton.disableInteractive();
+                deckPenPlusButton.setTexture('plusButtonLocked');
+
+                deckPenPlusButton.on('pointerover', function(){
+                    deckPenPlusButton.setTexture('plusButtonLocked');
+                })
+
+                deckPenPlusButton.on('pointerout', function(){
+                    deckPenPlusButton.setTexture('plusButtonLocked');
+                })
+
+                deckPenPlusButton.on('pointerup', function(){
+                    deckPenPlusButton.setTexture('plusButtonLocked');
+                })
+            }
+
         });
 
         deckPenPlusButton.on('pointerdown', function(){
@@ -10003,6 +10944,76 @@ class GameScene extends Phaser.Scene {
 
                 deckPenText.setText(settingsDeckPen);
             }
+
+            if (settingsDeckPen > .25)
+            {
+                deckPenMinusButton.setInteractive({ useHandCursor: true });
+                deckPenMinusButton.setTexture('minusButtonNormal');
+
+                deckPenMinusButton.on('pointerover', function(){
+                    deckPenMinusButton.setTexture('minusButtonHovered');
+                })
+
+                deckPenMinusButton.on('pointerout', function(){
+                    deckPenMinusButton.setTexture('minusButtonNormal');
+                })
+
+                deckPenMinusButton.on('pointerup', function(){
+                    deckPenMinusButton.setTexture('minusButtonHovered');
+                })
+            }
+            else
+            {
+                deckPenMinusButton.disableInteractive();
+                deckPenMinusButton.setTexture('minusButtonLocked');
+
+                deckPenMinusButton.on('pointerover', function(){
+                    deckPenMinusButton.setTexture('minusButtonLocked');
+                })
+
+                deckPenMinusButton.on('pointerout', function(){
+                    deckPenMinusButton.setTexture('minusButtonLocked');
+                })
+
+                deckPenMinusButton.on('pointerup', function(){
+                    deckPenMinusButton.setTexture('minusButtonLocked');
+                })
+            }
+
+            if (settingsDeckPen < 1)
+            {
+                deckPenPlusButton.setInteractive({ useHandCursor: true });
+                deckPenPlusButton.setTexture('plusButtonNormal');
+
+                deckPenPlusButton.on('pointerover', function(){
+                    deckPenPlusButton.setTexture('plusButtonHovered');
+                })
+
+                deckPenPlusButton.on('pointerout', function(){
+                    deckPenPlusButton.setTexture('plusButtonNormal');
+                })
+
+                deckPenPlusButton.on('pointerup', function(){
+                    deckPenPlusButton.setTexture('plusButtonHovered');
+                })
+            }
+            else
+            {
+                deckPenPlusButton.disableInteractive();
+                deckPenPlusButton.setTexture('plusButtonLocked');
+
+                deckPenPlusButton.on('pointerover', function(){
+                    deckPenPlusButton.setTexture('plusButtonLocked');
+                })
+
+                deckPenPlusButton.on('pointerout', function(){
+                    deckPenPlusButton.setTexture('plusButtonLocked');
+                })
+
+                deckPenPlusButton.on('pointerup', function(){
+                    deckPenPlusButton.setTexture('plusButtonLocked');
+                })
+            }
         });
 
         minBetMinusButton.on('pointerdown', function(){
@@ -10026,6 +11037,76 @@ class GameScene extends Phaser.Scene {
                 }
 
                 minBetText.setText(settingsMinBet);
+            }
+
+            if (settingsMinBet > 5)
+            {
+                minBetMinusButton.setInteractive({ useHandCursor: true });
+                minBetMinusButton.setTexture('minusButtonNormal');
+
+                minBetMinusButton.on('pointerover', function(){
+                    minBetMinusButton.setTexture('minusButtonHovered');
+                })
+
+                minBetMinusButton.on('pointerout', function(){
+                    minBetMinusButton.setTexture('minusButtonNormal');
+                })
+
+                minBetMinusButton.on('pointerup', function(){
+                    minBetMinusButton.setTexture('minusButtonHovered');
+                })
+            }
+            else
+            {
+                minBetMinusButton.disableInteractive();
+                minBetMinusButton.setTexture('minusButtonLocked');
+
+                minBetMinusButton.on('pointerover', function(){
+                    minBetMinusButton.setTexture('minusButtonLocked');
+                })
+
+                minBetMinusButton.on('pointerout', function(){
+                    minBetMinusButton.setTexture('minusButtonLocked');
+                })
+
+                minBetMinusButton.on('pointerup', function(){
+                    minBetMinusButton.setTexture('minusButtonLocked');
+                })
+            }
+            
+            if (settingsMinBet < 100)
+            {
+                minBetPlusButton.setInteractive({ useHandCursor: true });
+                minBetPlusButton.setTexture('plusButtonNormal');
+
+                minBetPlusButton.on('pointerover', function(){
+                    minBetPlusButton.setTexture('plusButtonHovered');
+                })
+
+                minBetPlusButton.on('pointerout', function(){
+                    minBetPlusButton.setTexture('plusButtonNormal');
+                })
+
+                minBetPlusButton.on('pointerup', function(){
+                    minBetPlusButton.setTexture('plusButtonHovered');
+                })
+            }
+            else
+            {
+                minBetPlusButton.disableInteractive();
+                minBetPlusButton.setTexture('plusButtonLocked');
+
+                minBetPlusButton.on('pointerover', function(){
+                    minBetPlusButton.setTexture('plusButtonLocked');
+                })
+
+                minBetPlusButton.on('pointerout', function(){
+                    minBetPlusButton.setTexture('plusButtonLocked');
+                })
+
+                minBetPlusButton.on('pointerup', function(){
+                    minBetPlusButton.setTexture('plusButtonLocked');
+                })
             }
 
         });
@@ -10053,6 +11134,76 @@ class GameScene extends Phaser.Scene {
                 minBetText.setText(settingsMinBet);
             }
 
+            if (settingsMinBet > 5)
+            {
+                minBetMinusButton.setInteractive({ useHandCursor: true });
+                minBetMinusButton.setTexture('minusButtonNormal');
+
+                minBetMinusButton.on('pointerover', function(){
+                    minBetMinusButton.setTexture('minusButtonHovered');
+                })
+
+                minBetMinusButton.on('pointerout', function(){
+                    minBetMinusButton.setTexture('minusButtonNormal');
+                })
+
+                minBetMinusButton.on('pointerup', function(){
+                    minBetMinusButton.setTexture('minusButtonHovered');
+                })
+            }
+            else
+            {
+                minBetMinusButton.disableInteractive();
+                minBetMinusButton.setTexture('minusButtonLocked');
+
+                minBetMinusButton.on('pointerover', function(){
+                    minBetMinusButton.setTexture('minusButtonLocked');
+                })
+
+                minBetMinusButton.on('pointerout', function(){
+                    minBetMinusButton.setTexture('minusButtonLocked');
+                })
+
+                minBetMinusButton.on('pointerup', function(){
+                    minBetMinusButton.setTexture('minusButtonLocked');
+                })
+            }
+            
+            if (settingsMinBet < 100)
+            {
+                minBetPlusButton.setInteractive({ useHandCursor: true });
+                minBetPlusButton.setTexture('plusButtonNormal');
+
+                minBetPlusButton.on('pointerover', function(){
+                    minBetPlusButton.setTexture('plusButtonHovered');
+                })
+
+                minBetPlusButton.on('pointerout', function(){
+                    minBetPlusButton.setTexture('plusButtonNormal');
+                })
+
+                minBetPlusButton.on('pointerup', function(){
+                    minBetPlusButton.setTexture('plusButtonHovered');
+                })
+            }
+            else
+            {
+                minBetPlusButton.disableInteractive();
+                minBetPlusButton.setTexture('plusButtonLocked');
+
+                minBetPlusButton.on('pointerover', function(){
+                    minBetPlusButton.setTexture('plusButtonLocked');
+                })
+
+                minBetPlusButton.on('pointerout', function(){
+                    minBetPlusButton.setTexture('plusButtonLocked');
+                })
+
+                minBetPlusButton.on('pointerup', function(){
+                    minBetPlusButton.setTexture('plusButtonLocked');
+                })
+            }
+
         });
 
         maxBetMinusButton.on('pointerdown', function(){
@@ -10062,7 +11213,7 @@ class GameScene extends Phaser.Scene {
                 maxBetMinusButton.setTexture('minusButtonClicked');
                 settingsMaxBet = settingsMaxBet - 50;
 
-                if (settingsMaxBet == 1000)
+                if (settingsMaxBet >= 1000)
                 {
                     maxBetText.setPosition(441, 640);
                 }
@@ -10074,16 +11225,86 @@ class GameScene extends Phaser.Scene {
                 maxBetText.setText(settingsMaxBet);
             }
 
+            if (settingsMaxBet > 250)
+            {
+                maxBetMinusButton.setInteractive({ useHandCursor: true });
+                maxBetMinusButton.setTexture('minusButtonNormal');
+
+                maxBetMinusButton.on('pointerover', function(){
+                    maxBetMinusButton.setTexture('minusButtonHovered');
+                })
+
+                maxBetMinusButton.on('pointerout', function(){
+                    maxBetMinusButton.setTexture('minusButtonNormal');
+                })
+
+                maxBetMinusButton.on('pointerup', function(){
+                    maxBetMinusButton.setTexture('minusButtonHovered');
+                })
+            }
+            else
+            {
+                maxBetMinusButton.disableInteractive();
+                maxBetMinusButton.setTexture('minusButtonLocked');
+
+                maxBetMinusButton.on('pointerover', function(){
+                    maxBetMinusButton.setTexture('minusButtonLocked');
+                })
+
+                maxBetMinusButton.on('pointerout', function(){
+                    maxBetMinusButton.setTexture('minusButtonLocked');
+                })
+
+                maxBetMinusButton.on('pointerup', function(){
+                    maxBetMinusButton.setTexture('minusButtonLocked');
+                })
+            }
+
+            if (settingsMaxBet < 2500)
+            {
+                maxBetPlusButton.setInteractive({ useHandCursor: true });
+                maxBetPlusButton.setTexture('plusButtonNormal');
+
+                maxBetPlusButton.on('pointerover', function(){
+                    maxBetPlusButton.setTexture('plusButtonHovered');
+                })
+
+                maxBetPlusButton.on('pointerout', function(){
+                    maxBetPlusButton.setTexture('plusButtonNormal');
+                })
+
+                maxBetPlusButton.on('pointerup', function(){
+                    maxBetPlusButton.setTexture('plusButtonHovered');
+                })
+            }
+            else
+            {
+                maxBetPlusButton.disableInteractive();
+                maxBetPlusButton.setTexture('plusButtonLocked');
+
+                maxBetPlusButton.on('pointerover', function(){
+                    maxBetPlusButton.setTexture('plusButtonLocked');
+                })
+
+                maxBetPlusButton.on('pointerout', function(){
+                    maxBetPlusButton.setTexture('plusButtonLocked');
+                })
+
+                maxBetPlusButton.on('pointerup', function(){
+                    maxBetPlusButton.setTexture('plusButtonLocked');
+                })
+            }
+
         });
 
         maxBetPlusButton.on('pointerdown', function(){
 
-            if (settingsMaxBet < 1000)
+            if (settingsMaxBet < 2500)
             {
                 maxBetPlusButton.setTexture('plusButtonClicked');
                 settingsMaxBet = settingsMaxBet + 50;
 
-                if (settingsMaxBet == 1000)
+                if (settingsMaxBet >= 1000)
                 {
                     maxBetText.setPosition(441, 640);
                 }
@@ -10093,6 +11314,76 @@ class GameScene extends Phaser.Scene {
                 }
 
                 maxBetText.setText(settingsMaxBet);
+            }
+
+            if (settingsMaxBet > 250)
+            {
+                maxBetMinusButton.setInteractive({ useHandCursor: true });
+                maxBetMinusButton.setTexture('minusButtonNormal');
+
+                maxBetMinusButton.on('pointerover', function(){
+                    maxBetMinusButton.setTexture('minusButtonHovered');
+                })
+
+                maxBetMinusButton.on('pointerout', function(){
+                    maxBetMinusButton.setTexture('minusButtonNormal');
+                })
+
+                maxBetMinusButton.on('pointerup', function(){
+                    maxBetMinusButton.setTexture('minusButtonHovered');
+                })
+            }
+            else
+            {
+                maxBetMinusButton.disableInteractive();
+                maxBetMinusButton.setTexture('minusButtonLocked');
+
+                maxBetMinusButton.on('pointerover', function(){
+                    maxBetMinusButton.setTexture('minusButtonLocked');
+                })
+
+                maxBetMinusButton.on('pointerout', function(){
+                    maxBetMinusButton.setTexture('minusButtonLocked');
+                })
+
+                maxBetMinusButton.on('pointerup', function(){
+                    maxBetMinusButton.setTexture('minusButtonLocked');
+                })
+            }
+
+            if (settingsMaxBet < 2500)
+            {
+                maxBetPlusButton.setInteractive({ useHandCursor: true });
+                maxBetPlusButton.setTexture('plusButtonNormal');
+
+                maxBetPlusButton.on('pointerover', function(){
+                    maxBetPlusButton.setTexture('plusButtonHovered');
+                })
+
+                maxBetPlusButton.on('pointerout', function(){
+                    maxBetPlusButton.setTexture('plusButtonNormal');
+                })
+
+                maxBetPlusButton.on('pointerup', function(){
+                    maxBetPlusButton.setTexture('plusButtonHovered');
+                })
+            }
+            else
+            {
+                maxBetPlusButton.disableInteractive();
+                maxBetPlusButton.setTexture('plusButtonLocked');
+
+                maxBetPlusButton.on('pointerover', function(){
+                    maxBetPlusButton.setTexture('plusButtonLocked');
+                })
+
+                maxBetPlusButton.on('pointerout', function(){
+                    maxBetPlusButton.setTexture('plusButtonLocked');
+                })
+
+                maxBetPlusButton.on('pointerup', function(){
+                    maxBetPlusButton.setTexture('plusButtonLocked');
+                })
             }
 
         });
@@ -10106,6 +11397,76 @@ class GameScene extends Phaser.Scene {
                 countSpoilerText.setPosition(451, 740);
                 countSpoilerText.setText("Off");
             }
+
+            if (settingsCountSpoiler > 0)
+            {
+                countSpoilerMinusButton.setInteractive({ useHandCursor: true });
+                countSpoilerMinusButton.setTexture('minusButtonNormal');
+
+                countSpoilerMinusButton.on('pointerover', function(){
+                    countSpoilerMinusButton.setTexture('minusButtonHovered');
+                })
+
+                countSpoilerMinusButton.on('pointerout', function(){
+                    countSpoilerMinusButton.setTexture('minusButtonNormal');
+                })
+
+                countSpoilerMinusButton.on('pointerup', function(){
+                    countSpoilerMinusButton.setTexture('minusButtonHovered');
+                })
+            }
+            else
+            {
+                countSpoilerMinusButton.disableInteractive();
+                countSpoilerMinusButton.setTexture('minusButtonLocked');
+
+                countSpoilerMinusButton.on('pointerover', function(){
+                    countSpoilerMinusButton.setTexture('minusButtonLocked');
+                })
+
+                countSpoilerMinusButton.on('pointerout', function(){
+                    countSpoilerMinusButton.setTexture('minusButtonLocked');
+                })
+
+                countSpoilerMinusButton.on('pointerup', function(){
+                    countSpoilerMinusButton.setTexture('minusButtonLocked');
+                })
+            }
+
+            if (settingsCountSpoiler < 1)
+            {
+                countSpoilerPlusButton.setInteractive({ useHandCursor: true });
+                countSpoilerPlusButton.setTexture('plusButtonNormal');
+
+                countSpoilerPlusButton.on('pointerover', function(){
+                    countSpoilerPlusButton.setTexture('plusButtonHovered');
+                })
+
+                countSpoilerPlusButton.on('pointerout', function(){
+                    countSpoilerPlusButton.setTexture('plusButtonNormal');
+                })
+
+                countSpoilerPlusButton.on('pointerup', function(){
+                    countSpoilerPlusButton.setTexture('plusButtonHovered');
+                })
+            }
+            else
+            {
+                countSpoilerPlusButton.disableInteractive();
+                countSpoilerPlusButton.setTexture('plusButtonLocked');
+
+                countSpoilerPlusButton.on('pointerover', function(){
+                    countSpoilerPlusButton.setTexture('plusButtonLocked');
+                })
+
+                countSpoilerPlusButton.on('pointerout', function(){
+                    countSpoilerPlusButton.setTexture('plusButtonLocked');
+                })
+
+                countSpoilerPlusButton.on('pointerup', function(){
+                    countSpoilerPlusButton.setTexture('plusButtonLocked');
+                })
+            }
         });
 
         countSpoilerPlusButton.on('pointerdown', function(){
@@ -10116,6 +11477,76 @@ class GameScene extends Phaser.Scene {
                 settingsCountSpoiler = 1;
                 countSpoilerText.setPosition(459, 740);
                 countSpoilerText.setText("On");
+            }
+
+            if (settingsCountSpoiler > 0)
+            {
+                countSpoilerMinusButton.setInteractive({ useHandCursor: true });
+                countSpoilerMinusButton.setTexture('minusButtonNormal');
+
+                countSpoilerMinusButton.on('pointerover', function(){
+                    countSpoilerMinusButton.setTexture('minusButtonHovered');
+                })
+
+                countSpoilerMinusButton.on('pointerout', function(){
+                    countSpoilerMinusButton.setTexture('minusButtonNormal');
+                })
+
+                countSpoilerMinusButton.on('pointerup', function(){
+                    countSpoilerMinusButton.setTexture('minusButtonHovered');
+                })
+            }
+            else
+            {
+                countSpoilerMinusButton.disableInteractive();
+                countSpoilerMinusButton.setTexture('minusButtonLocked');
+
+                countSpoilerMinusButton.on('pointerover', function(){
+                    countSpoilerMinusButton.setTexture('minusButtonLocked');
+                })
+
+                countSpoilerMinusButton.on('pointerout', function(){
+                    countSpoilerMinusButton.setTexture('minusButtonLocked');
+                })
+
+                countSpoilerMinusButton.on('pointerup', function(){
+                    countSpoilerMinusButton.setTexture('minusButtonLocked');
+                })
+            }
+
+            if (settingsCountSpoiler < 1)
+            {
+                countSpoilerPlusButton.setInteractive({ useHandCursor: true });
+                countSpoilerPlusButton.setTexture('plusButtonNormal');
+
+                countSpoilerPlusButton.on('pointerover', function(){
+                    countSpoilerPlusButton.setTexture('plusButtonHovered');
+                })
+
+                countSpoilerPlusButton.on('pointerout', function(){
+                    countSpoilerPlusButton.setTexture('plusButtonNormal');
+                })
+
+                countSpoilerPlusButton.on('pointerup', function(){
+                    countSpoilerPlusButton.setTexture('plusButtonHovered');
+                })
+            }
+            else
+            {
+                countSpoilerPlusButton.disableInteractive();
+                countSpoilerPlusButton.setTexture('plusButtonLocked');
+
+                countSpoilerPlusButton.on('pointerover', function(){
+                    countSpoilerPlusButton.setTexture('plusButtonLocked');
+                })
+
+                countSpoilerPlusButton.on('pointerout', function(){
+                    countSpoilerPlusButton.setTexture('plusButtonLocked');
+                })
+
+                countSpoilerPlusButton.on('pointerup', function(){
+                    countSpoilerPlusButton.setTexture('plusButtonLocked');
+                })
             }
         });
 
