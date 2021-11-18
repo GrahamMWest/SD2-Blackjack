@@ -36,8 +36,19 @@
     height: 600px;
 }
 
-canvas {
+/* canvas {
     padding-top: 100px;
+    padding-left: 0;
+    padding-right: 0;
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: 5%;
+    margin-bottom: 5%;
+    display: block;
+} */
+
+.canvasContainer {
+    /*padding-top: 100px;*/
     padding-left: 0;
     padding-right: 0;
     margin-left: auto;
