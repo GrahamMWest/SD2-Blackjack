@@ -6,7 +6,8 @@
 // const cardY = [[425, 425, 425, 65], [420, 420, 420, 70], [415, 415, 415, 75], [410, 410, 410, 80], [405, 405, 405, 85], [400, 400, 400, 90]];
 // const cardA = [0, 0, 0, 0];
 
-const cardX = [[965, 705, 425, 705], [952, 692, 412, 718], [939, 679, 399, 731], [926, 666, 386, 744], [913, 653, 373, 757], [900, 640, 360, 770], [887, 627, 347, 787]];
+// const cardX = [[965, 705, 425, 705], [952, 692, 412, 718], [939, 679, 399, 731], [926, 666, 386, 744], [913, 653, 373, 757], [900, 640, 360, 770], [887, 627, 347, 787]];
+const cardX = [[965, 705, 425, 705], [978, 718, 438, 718], [991, 731, 451, 731], [1004, 744, 464, 744], [1017, 757, 477, 757], [1030, 770, 490, 770], [1043, 783, 503, 787]];
 const cardY = [[425, 425, 425, 65], [405, 405, 405, 85], [385, 385, 385, 105], [365, 365, 365, 125], [345, 345, 345, 145], [325, 325, 325, 165], [305, 305, 305, 185]];
 const cardA = [0, 0, 0, 0];
 
@@ -62,7 +63,7 @@ let numPlayers = 3;
 let deckPen = .5;
 let minBet = 10;
 let maxBet = 500;
-let countSpoiler = 0; // 1 = true, 0 = false (cant get working due to hitboxes)
+let countSpoiler = 0; // 1 = true, 0 = false
 
 let peekingOption = 1; // 1 = peeking, 0 = no peeking, 2 = no surrender at all / peeking is advantagous for player (ALWAYS KEEP PEEKING 1) (this is equivalent to early/late surrender, 1 = late surrender, 0 = early surrender)
 let blackjackPayout = 3/2; // 1:1, 6:5, 3:2
@@ -70,7 +71,6 @@ let hitSplitAces = 1; // 1 = yes, 0 = no
 let doubleAfterSplit = 1; // 1 = yes, 0 = no
 let hitStandSoft17 = 0; // 1 = hit, 0 = stand
 let doubleOption = 0; // 0 = double on any first 2 cards, 1 = 9-11 only, 2 = 9-10
-
 
 let settingsNumDecks = numDecks;
 let settingsNumPlayers = numPlayers;
@@ -307,20 +307,18 @@ let handIndicatorSpacing = -15;
 
 
 //TODO:
-// implement surrender (peeking) setting
-
-// friday
-// bug test (a lot)
-
-// implement rest of settings
-// maybe have settings text boxes reset if u dont apply anything in the settings menu
+// test how settings work with diff number of players
 
 // fix point system (insurance/surrender/can Split or Not/True Count)
 // CHECK WHETHER I NEED TO LOOK FOR WHETHER USER CAN DOUBLE OR NOT (MAYBE A VARIABLE CALLED 'firstAction' OR SOMETHING)
 // make suggestion displays on the right side (same y-level as corresponding player displays), also
 // show "Correct" or "Incorrect" for the users actions, as well as how much each hand profited/lost that round
 
+// POLISH:
+// bug test (a lot)
+// maybe have settings text boxes reset if u dont apply anything in the settings menu
 // add variation to shoe cutoff (professor suggestion)
+// maybe make indicator that there was no BJ when peekingOption == 1 or 2
 
 
 // BUGS/TESTING:
@@ -692,6 +690,9 @@ class GameScene extends Phaser.Scene {
     drawDealerCards(dealerCards, cardIndex, cardInts, i) {
        
         const enableNextRoundButton = this.enableNextRoundButton;
+
+        var isSoft = 0;
+        var minusAceSum = 0;
         
         if (numPlayers == 1 && numSplits[0] == 0)
         {
@@ -713,6 +714,44 @@ class GameScene extends Phaser.Scene {
 
                     i++;
                     cardIndex++;
+                }
+
+                for (let k = 0; k < dealerCards.length; k++)
+                {
+                    if (dealerCards[k] === "10" || dealerCards[k] === "J" || dealerCards[k] === "Q" || dealerCards[k] === "K")
+                    {
+                        minusAceSum = minusAceSum + 10;
+                    }
+                    else if (dealerCards[k] === "A" && isSoft == 0)
+                    {
+                        isSoft = 1;
+                    }
+                    else if (dealerCards[k] === "A")
+                    {
+                        minusAceSum = minusAceSum + 1;
+                    }
+                    else
+                    {
+                        minusAceSum = minusAceSum + parseInt(dealerCards[k], 10);
+                    }
+                }
+
+                if (isSoft === 1 && this.getHandValue(dealerCards) === 17 && minusAceSum === 6 && hitStandSoft17 === 1)
+                {
+                    dealerCards[i] = (this.getValue(cardInts, cardIndex));
+                    this.dealCard(cardInts[cardIndex], shuffledDeck, timeline, i, 3, 0, dealerCard);
+
+                    i++;
+                    cardIndex++;
+
+                    while (this.getHandValue(dealerCards) < 17)
+                    {
+                        dealerCards[i] = (this.getValue(cardInts, cardIndex));
+                        this.dealCard(cardInts[cardIndex], shuffledDeck, timeline, i, 3, 0, dealerCard);
+
+                        i++;
+                        cardIndex++;
+                    }
                 }
 
                 timeline.play();
@@ -743,6 +782,44 @@ class GameScene extends Phaser.Scene {
                     i++;
                     cardIndex++;
                 }
+
+                for (let k = 0; k < dealerCards.length; k++)
+                {
+                    if (dealerCards[k] === "10" || dealerCards[k] === "J" || dealerCards[k] === "Q" || dealerCards[k] === "K")
+                    {
+                        minusAceSum = minusAceSum + 10;
+                    }
+                    else if (dealerCards[k] === "A" && isSoft == 0)
+                    {
+                        isSoft = 1;
+                    }
+                    else if (dealerCards[k] === "A")
+                    {
+                        minusAceSum = minusAceSum + 1;
+                    }
+                    else
+                    {
+                        minusAceSum = minusAceSum + parseInt(dealerCards[k], 10);
+                    }
+                }
+
+                if (isSoft === 1 && this.getHandValue(dealerCards) === 17 && minusAceSum === 6 && hitStandSoft17 === 1)
+                {
+                    dealerCards[i] = (this.getValue(cardInts, cardIndex));
+                    this.dealCard(cardInts[cardIndex], shuffledDeck, timeline, i, 3, 0, dealerCard);
+
+                    i++;
+                    cardIndex++;
+
+                    while (this.getHandValue(dealerCards) < 17)
+                    {
+                        dealerCards[i] = (this.getValue(cardInts, cardIndex));
+                        this.dealCard(cardInts[cardIndex], shuffledDeck, timeline, i, 3, 0, dealerCard);
+
+                        i++;
+                        cardIndex++;
+                    }
+                }
         
                 timeline.play();
         
@@ -771,6 +848,44 @@ class GameScene extends Phaser.Scene {
         
                     i++;
                     cardIndex++;
+                }
+
+                for (let k = 0; k < dealerCards.length; k++)
+                {
+                    if (dealerCards[k] === "10" || dealerCards[k] === "J" || dealerCards[k] === "Q" || dealerCards[k] === "K")
+                    {
+                        minusAceSum = minusAceSum + 10;
+                    }
+                    else if (dealerCards[k] === "A" && isSoft == 0)
+                    {
+                        isSoft = 1;
+                    }
+                    else if (dealerCards[k] === "A")
+                    {
+                        minusAceSum = minusAceSum + 1;
+                    }
+                    else
+                    {
+                        minusAceSum = minusAceSum + parseInt(dealerCards[k], 10);
+                    }
+                }
+
+                if (isSoft === 1 && this.getHandValue(dealerCards) === 17 && minusAceSum === 6 && hitStandSoft17 === 1)
+                {
+                    dealerCards[i] = (this.getValue(cardInts, cardIndex));
+                    this.dealCard(cardInts[cardIndex], shuffledDeck, timeline, i, 3, 0, dealerCard);
+
+                    i++;
+                    cardIndex++;
+
+                    while (this.getHandValue(dealerCards) < 17)
+                    {
+                        dealerCards[i] = (this.getValue(cardInts, cardIndex));
+                        this.dealCard(cardInts[cardIndex], shuffledDeck, timeline, i, 3, 0, dealerCard);
+
+                        i++;
+                        cardIndex++;
+                    }
                 }
         
                 timeline.play();
@@ -801,6 +916,44 @@ class GameScene extends Phaser.Scene {
                     i++;
                     cardIndex++;
                 }
+
+                for (let k = 0; k < dealerCards.length; k++)
+                {
+                    if (dealerCards[k] === "10" || dealerCards[k] === "J" || dealerCards[k] === "Q" || dealerCards[k] === "K")
+                    {
+                        minusAceSum = minusAceSum + 10;
+                    }
+                    else if (dealerCards[k] === "A" && isSoft == 0)
+                    {
+                        isSoft = 1;
+                    }
+                    else if (dealerCards[k] === "A")
+                    {
+                        minusAceSum = minusAceSum + 1;
+                    }
+                    else
+                    {
+                        minusAceSum = minusAceSum + parseInt(dealerCards[k], 10);
+                    }
+                }
+
+                if (isSoft === 1 && this.getHandValue(dealerCards) === 17 && minusAceSum === 6 && hitStandSoft17 === 1)
+                {
+                    dealerCards[i] = (this.getValue(cardInts, cardIndex));
+                    this.dealCard(cardInts[cardIndex], shuffledDeck, timeline, i, 3, 0, dealerCard);
+
+                    i++;
+                    cardIndex++;
+
+                    while (this.getHandValue(dealerCards) < 17)
+                    {
+                        dealerCards[i] = (this.getValue(cardInts, cardIndex));
+                        this.dealCard(cardInts[cardIndex], shuffledDeck, timeline, i, 3, 0, dealerCard);
+
+                        i++;
+                        cardIndex++;
+                    }
+                }
         
                 timeline.play();
         
@@ -829,6 +982,44 @@ class GameScene extends Phaser.Scene {
         
                     i++;
                     cardIndex++;
+                }
+
+                for (let k = 0; k < dealerCards.length; k++)
+                {
+                    if (dealerCards[k] === "10" || dealerCards[k] === "J" || dealerCards[k] === "Q" || dealerCards[k] === "K")
+                    {
+                        minusAceSum = minusAceSum + 10;
+                    }
+                    else if (dealerCards[k] === "A" && isSoft == 0)
+                    {
+                        isSoft = 1;
+                    }
+                    else if (dealerCards[k] === "A")
+                    {
+                        minusAceSum = minusAceSum + 1;
+                    }
+                    else
+                    {
+                        minusAceSum = minusAceSum + parseInt(dealerCards[k], 10);
+                    }
+                }
+
+                if (isSoft === 1 && this.getHandValue(dealerCards) === 17 && minusAceSum === 6 && hitStandSoft17 === 1)
+                {
+                    dealerCards[i] = (this.getValue(cardInts, cardIndex));
+                    this.dealCard(cardInts[cardIndex], shuffledDeck, timeline, i, 3, 0, dealerCard);
+
+                    i++;
+                    cardIndex++;
+
+                    while (this.getHandValue(dealerCards) < 17)
+                    {
+                        dealerCards[i] = (this.getValue(cardInts, cardIndex));
+                        this.dealCard(cardInts[cardIndex], shuffledDeck, timeline, i, 3, 0, dealerCard);
+
+                        i++;
+                        cardIndex++;
+                    }
                 }
         
                 timeline.play();
@@ -859,6 +1050,44 @@ class GameScene extends Phaser.Scene {
                     i++;
                     cardIndex++;
                 }
+
+                for (let k = 0; k < dealerCards.length; k++)
+                {
+                    if (dealerCards[k] === "10" || dealerCards[k] === "J" || dealerCards[k] === "Q" || dealerCards[k] === "K")
+                    {
+                        minusAceSum = minusAceSum + 10;
+                    }
+                    else if (dealerCards[k] === "A" && isSoft == 0)
+                    {
+                        isSoft = 1;
+                    }
+                    else if (dealerCards[k] === "A")
+                    {
+                        minusAceSum = minusAceSum + 1;
+                    }
+                    else
+                    {
+                        minusAceSum = minusAceSum + parseInt(dealerCards[k], 10);
+                    }
+                }
+
+                if (isSoft === 1 && this.getHandValue(dealerCards) === 17 && minusAceSum === 6 && hitStandSoft17 === 1)
+                {
+                    dealerCards[i] = (this.getValue(cardInts, cardIndex));
+                    this.dealCard(cardInts[cardIndex], shuffledDeck, timeline, i, 3, 0, dealerCard);
+
+                    i++;
+                    cardIndex++;
+
+                    while (this.getHandValue(dealerCards) < 17)
+                    {
+                        dealerCards[i] = (this.getValue(cardInts, cardIndex));
+                        this.dealCard(cardInts[cardIndex], shuffledDeck, timeline, i, 3, 0, dealerCard);
+
+                        i++;
+                        cardIndex++;
+                    }
+                }
         
                 timeline.play();
         
@@ -887,6 +1116,44 @@ class GameScene extends Phaser.Scene {
         
                     i++;
                     cardIndex++;
+                }
+
+                for (let k = 0; k < dealerCards.length; k++)
+                {
+                    if (dealerCards[k] === "10" || dealerCards[k] === "J" || dealerCards[k] === "Q" || dealerCards[k] === "K")
+                    {
+                        minusAceSum = minusAceSum + 10;
+                    }
+                    else if (dealerCards[k] === "A" && isSoft == 0)
+                    {
+                        isSoft = 1;
+                    }
+                    else if (dealerCards[k] === "A")
+                    {
+                        minusAceSum = minusAceSum + 1;
+                    }
+                    else
+                    {
+                        minusAceSum = minusAceSum + parseInt(dealerCards[k], 10);
+                    }
+                }
+
+                if (isSoft === 1 && this.getHandValue(dealerCards) === 17 && minusAceSum === 6 && hitStandSoft17 === 1)
+                {
+                    dealerCards[i] = (this.getValue(cardInts, cardIndex));
+                    this.dealCard(cardInts[cardIndex], shuffledDeck, timeline, i, 3, 0, dealerCard);
+
+                    i++;
+                    cardIndex++;
+
+                    while (this.getHandValue(dealerCards) < 17)
+                    {
+                        dealerCards[i] = (this.getValue(cardInts, cardIndex));
+                        this.dealCard(cardInts[cardIndex], shuffledDeck, timeline, i, 3, 0, dealerCard);
+
+                        i++;
+                        cardIndex++;
+                    }
                 }
         
                 timeline.play();
@@ -917,6 +1184,44 @@ class GameScene extends Phaser.Scene {
                     i++;
                     cardIndex++;
                 }
+
+                for (let k = 0; k < dealerCards.length; k++)
+                {
+                    if (dealerCards[k] === "10" || dealerCards[k] === "J" || dealerCards[k] === "Q" || dealerCards[k] === "K")
+                    {
+                        minusAceSum = minusAceSum + 10;
+                    }
+                    else if (dealerCards[k] === "A" && isSoft == 0)
+                    {
+                        isSoft = 1;
+                    }
+                    else if (dealerCards[k] === "A")
+                    {
+                        minusAceSum = minusAceSum + 1;
+                    }
+                    else
+                    {
+                        minusAceSum = minusAceSum + parseInt(dealerCards[k], 10);
+                    }
+                }
+
+                if (isSoft === 1 && this.getHandValue(dealerCards) === 17 && minusAceSum === 6 && hitStandSoft17 === 1)
+                {
+                    dealerCards[i] = (this.getValue(cardInts, cardIndex));
+                    this.dealCard(cardInts[cardIndex], shuffledDeck, timeline, i, 3, 0, dealerCard);
+
+                    i++;
+                    cardIndex++;
+
+                    while (this.getHandValue(dealerCards) < 17)
+                    {
+                        dealerCards[i] = (this.getValue(cardInts, cardIndex));
+                        this.dealCard(cardInts[cardIndex], shuffledDeck, timeline, i, 3, 0, dealerCard);
+
+                        i++;
+                        cardIndex++;
+                    }
+                }
         
                 timeline.play();
         
@@ -945,6 +1250,44 @@ class GameScene extends Phaser.Scene {
         
                     i++;
                     cardIndex++;
+                }
+
+                for (let k = 0; k < dealerCards.length; k++)
+                {
+                    if (dealerCards[k] === "10" || dealerCards[k] === "J" || dealerCards[k] === "Q" || dealerCards[k] === "K")
+                    {
+                        minusAceSum = minusAceSum + 10;
+                    }
+                    else if (dealerCards[k] === "A" && isSoft == 0)
+                    {
+                        isSoft = 1;
+                    }
+                    else if (dealerCards[k] === "A")
+                    {
+                        minusAceSum = minusAceSum + 1;
+                    }
+                    else
+                    {
+                        minusAceSum = minusAceSum + parseInt(dealerCards[k], 10);
+                    }
+                }
+
+                if (isSoft === 1 && this.getHandValue(dealerCards) === 17 && minusAceSum === 6 && hitStandSoft17 === 1)
+                {
+                    dealerCards[i] = (this.getValue(cardInts, cardIndex));
+                    this.dealCard(cardInts[cardIndex], shuffledDeck, timeline, i, 3, 0, dealerCard);
+
+                    i++;
+                    cardIndex++;
+
+                    while (this.getHandValue(dealerCards) < 17)
+                    {
+                        dealerCards[i] = (this.getValue(cardInts, cardIndex));
+                        this.dealCard(cardInts[cardIndex], shuffledDeck, timeline, i, 3, 0, dealerCard);
+
+                        i++;
+                        cardIndex++;
+                    }
                 }
         
                 timeline.play();
@@ -975,6 +1318,44 @@ class GameScene extends Phaser.Scene {
                     i++;
                     cardIndex++;
                 }
+
+                for (let k = 0; k < dealerCards.length; k++)
+                {
+                    if (dealerCards[k] === "10" || dealerCards[k] === "J" || dealerCards[k] === "Q" || dealerCards[k] === "K")
+                    {
+                        minusAceSum = minusAceSum + 10;
+                    }
+                    else if (dealerCards[k] === "A" && isSoft == 0)
+                    {
+                        isSoft = 1;
+                    }
+                    else if (dealerCards[k] === "A")
+                    {
+                        minusAceSum = minusAceSum + 1;
+                    }
+                    else
+                    {
+                        minusAceSum = minusAceSum + parseInt(dealerCards[k], 10);
+                    }
+                }
+
+                if (isSoft === 1 && this.getHandValue(dealerCards) === 17 && minusAceSum === 6 && hitStandSoft17 === 1)
+                {
+                    dealerCards[i] = (this.getValue(cardInts, cardIndex));
+                    this.dealCard(cardInts[cardIndex], shuffledDeck, timeline, i, 3, 0, dealerCard);
+
+                    i++;
+                    cardIndex++;
+
+                    while (this.getHandValue(dealerCards) < 17)
+                    {
+                        dealerCards[i] = (this.getValue(cardInts, cardIndex));
+                        this.dealCard(cardInts[cardIndex], shuffledDeck, timeline, i, 3, 0, dealerCard);
+
+                        i++;
+                        cardIndex++;
+                    }
+                }
         
                 timeline.play();
         
@@ -1003,6 +1384,44 @@ class GameScene extends Phaser.Scene {
         
                     i++;
                     cardIndex++;
+                }
+
+                for (let k = 0; k < dealerCards.length; k++)
+                {
+                    if (dealerCards[k] === "10" || dealerCards[k] === "J" || dealerCards[k] === "Q" || dealerCards[k] === "K")
+                    {
+                        minusAceSum = minusAceSum + 10;
+                    }
+                    else if (dealerCards[k] === "A" && isSoft == 0)
+                    {
+                        isSoft = 1;
+                    }
+                    else if (dealerCards[k] === "A")
+                    {
+                        minusAceSum = minusAceSum + 1;
+                    }
+                    else
+                    {
+                        minusAceSum = minusAceSum + parseInt(dealerCards[k], 10);
+                    }
+                }
+
+                if (isSoft === 1 && this.getHandValue(dealerCards) === 17 && minusAceSum === 6 && hitStandSoft17 === 1)
+                {
+                    dealerCards[i] = (this.getValue(cardInts, cardIndex));
+                    this.dealCard(cardInts[cardIndex], shuffledDeck, timeline, i, 3, 0, dealerCard);
+
+                    i++;
+                    cardIndex++;
+
+                    while (this.getHandValue(dealerCards) < 17)
+                    {
+                        dealerCards[i] = (this.getValue(cardInts, cardIndex));
+                        this.dealCard(cardInts[cardIndex], shuffledDeck, timeline, i, 3, 0, dealerCard);
+
+                        i++;
+                        cardIndex++;
+                    }
                 }
         
                 timeline.play();
@@ -1033,6 +1452,44 @@ class GameScene extends Phaser.Scene {
                     i++;
                     cardIndex++;
                 }
+
+                for (let k = 0; k < dealerCards.length; k++)
+                {
+                    if (dealerCards[k] === "10" || dealerCards[k] === "J" || dealerCards[k] === "Q" || dealerCards[k] === "K")
+                    {
+                        minusAceSum = minusAceSum + 10;
+                    }
+                    else if (dealerCards[k] === "A" && isSoft == 0)
+                    {
+                        isSoft = 1;
+                    }
+                    else if (dealerCards[k] === "A")
+                    {
+                        minusAceSum = minusAceSum + 1;
+                    }
+                    else
+                    {
+                        minusAceSum = minusAceSum + parseInt(dealerCards[k], 10);
+                    }
+                }
+
+                if (isSoft === 1 && this.getHandValue(dealerCards) === 17 && minusAceSum === 6 && hitStandSoft17 === 1)
+                {
+                    dealerCards[i] = (this.getValue(cardInts, cardIndex));
+                    this.dealCard(cardInts[cardIndex], shuffledDeck, timeline, i, 3, 0, dealerCard);
+
+                    i++;
+                    cardIndex++;
+
+                    while (this.getHandValue(dealerCards) < 17)
+                    {
+                        dealerCards[i] = (this.getValue(cardInts, cardIndex));
+                        this.dealCard(cardInts[cardIndex], shuffledDeck, timeline, i, 3, 0, dealerCard);
+
+                        i++;
+                        cardIndex++;
+                    }
+                }
         
                 timeline.play();
         
@@ -1061,6 +1518,44 @@ class GameScene extends Phaser.Scene {
         
                     i++;
                     cardIndex++;
+                }
+
+                for (let k = 0; k < dealerCards.length; k++)
+                {
+                    if (dealerCards[k] === "10" || dealerCards[k] === "J" || dealerCards[k] === "Q" || dealerCards[k] === "K")
+                    {
+                        minusAceSum = minusAceSum + 10;
+                    }
+                    else if (dealerCards[k] === "A" && isSoft == 0)
+                    {
+                        isSoft = 1;
+                    }
+                    else if (dealerCards[k] === "A")
+                    {
+                        minusAceSum = minusAceSum + 1;
+                    }
+                    else
+                    {
+                        minusAceSum = minusAceSum + parseInt(dealerCards[k], 10);
+                    }
+                }
+
+                if (isSoft === 1 && this.getHandValue(dealerCards) === 17 && minusAceSum === 6 && hitStandSoft17 === 1)
+                {
+                    dealerCards[i] = (this.getValue(cardInts, cardIndex));
+                    this.dealCard(cardInts[cardIndex], shuffledDeck, timeline, i, 3, 0, dealerCard);
+
+                    i++;
+                    cardIndex++;
+
+                    while (this.getHandValue(dealerCards) < 17)
+                    {
+                        dealerCards[i] = (this.getValue(cardInts, cardIndex));
+                        this.dealCard(cardInts[cardIndex], shuffledDeck, timeline, i, 3, 0, dealerCard);
+
+                        i++;
+                        cardIndex++;
+                    }
                 }
         
                 timeline.play();
@@ -1091,6 +1586,44 @@ class GameScene extends Phaser.Scene {
                     i++;
                     cardIndex++;
                 }
+
+                for (let k = 0; k < dealerCards.length; k++)
+                {
+                    if (dealerCards[k] === "10" || dealerCards[k] === "J" || dealerCards[k] === "Q" || dealerCards[k] === "K")
+                    {
+                        minusAceSum = minusAceSum + 10;
+                    }
+                    else if (dealerCards[k] === "A" && isSoft == 0)
+                    {
+                        isSoft = 1;
+                    }
+                    else if (dealerCards[k] === "A")
+                    {
+                        minusAceSum = minusAceSum + 1;
+                    }
+                    else
+                    {
+                        minusAceSum = minusAceSum + parseInt(dealerCards[k], 10);
+                    }
+                }
+
+                if (isSoft === 1 && this.getHandValue(dealerCards) === 17 && minusAceSum === 6 && hitStandSoft17 === 1)
+                {
+                    dealerCards[i] = (this.getValue(cardInts, cardIndex));
+                    this.dealCard(cardInts[cardIndex], shuffledDeck, timeline, i, 3, 0, dealerCard);
+
+                    i++;
+                    cardIndex++;
+
+                    while (this.getHandValue(dealerCards) < 17)
+                    {
+                        dealerCards[i] = (this.getValue(cardInts, cardIndex));
+                        this.dealCard(cardInts[cardIndex], shuffledDeck, timeline, i, 3, 0, dealerCard);
+
+                        i++;
+                        cardIndex++;
+                    }
+                }
         
                 timeline.play();
         
@@ -1112,6 +1645,44 @@ class GameScene extends Phaser.Scene {
     
                 i++;
                 cardIndex++;
+            }
+
+            for (let k = 0; k < dealerCards.length; k++)
+            {
+                if (dealerCards[k] === "10" || dealerCards[k] === "J" || dealerCards[k] === "Q" || dealerCards[k] === "K")
+                {
+                    minusAceSum = minusAceSum + 10;
+                }
+                else if (dealerCards[k] === "A" && isSoft == 0)
+                {
+                    isSoft = 1;
+                }
+                else if (dealerCards[k] === "A")
+                {
+                    minusAceSum = minusAceSum + 1;
+                }
+                else
+                {
+                    minusAceSum = minusAceSum + parseInt(dealerCards[k], 10);
+                }
+            }
+
+            if (isSoft === 1 && this.getHandValue(dealerCards) === 17 && minusAceSum === 6 && hitStandSoft17 === 1)
+            {
+                dealerCards[i] = (this.getValue(cardInts, cardIndex));
+                this.dealCard(cardInts[cardIndex], shuffledDeck, timeline, i, 3, 0, dealerCard);
+
+                i++;
+                cardIndex++;
+
+                while (this.getHandValue(dealerCards) < 17)
+                {
+                    dealerCards[i] = (this.getValue(cardInts, cardIndex));
+                    this.dealCard(cardInts[cardIndex], shuffledDeck, timeline, i, 3, 0, dealerCard);
+
+                    i++;
+                    cardIndex++;
+                }
             }
     
             timeline.play();
@@ -1262,6 +1833,147 @@ class GameScene extends Phaser.Scene {
             })
         }
 
+    };
+
+    hitDoubleCard(cardIndex, shuffledDeck, i, j) {
+
+        // const updateInfo = this.updateInfo;
+        const isBust = this.isBust;
+        this.tweens.add({
+            targets: shuffledDeck[cardIndex],
+            x: cardX[i][j],
+            y: cardY[i][j],
+            angle: 90,
+            ease: 'Linear',
+            duration: 200,
+            // repeat: 0,
+            yoyo: false,
+            delay: 500,
+            onComplete: function() {
+
+                shuffledDeck[cardIndex].setDepth(i);
+
+                updateInfo(i, j);
+
+                if (isBust(playerCards[j]))
+                {
+                    if (j == 0)
+                    {
+                        player1CardDisplay.setTint(0x8E1600);
+                    }
+                    else if (j == 1)
+                    {
+                        player2CardDisplay.setTint(0x8E1600);
+                    }
+                    else if (j == 2)
+                    {
+                        player3CardDisplay.setTint(0x8E1600);
+                    }
+                }
+            }
+        })
+    };
+
+    hitDoubleSplitCard(cardIndex, shuffledDeck, i, j, currentHand)
+    {
+        const splitIsBust = this.splitIsBust;
+
+        // currentHand = 1, to the right
+        // currentHand = 2, to the left
+        if (currentHand == 1)
+        {
+            this.tweens.add({
+                targets: shuffledDeck[cardIndex],
+                x: cardX[i][j] + splitSpacing, // change X coord
+                y: cardY[i][j],
+                angle: 90,
+                ease: 'Linear',
+                duration: 200,
+                // repeat: 0,
+                yoyo: false,
+                delay: 500,
+                onComplete: function() {
+        
+                    shuffledDeck[cardIndex].setDepth(i+1);
+        
+                    if (currentPlayer == 0)
+                    {
+                        updateInfo(player1Hands[currentHand-1].length-1, currentHand-1);
+                        if (splitIsBust(player1Hands[0]))
+                            player1Hand1Display.setTint(0x8E1600);
+
+                        if (splitIsBust(player1Hands[1]))
+                            player1Hand2Display.setTint(0x8E1600);
+                    }
+                    else if (currentPlayer == 1)
+                    {
+                        updateInfo(player2Hands[currentHand-1].length-1, currentHand-1);
+                        if (splitIsBust(player2Hands[0]))
+                            player2Hand1Display.setTint(0x8E1600);
+
+                        if (splitIsBust(player2Hands[1]))
+                            player2Hand2Display.setTint(0x8E1600);
+                    }
+                    else if (currentPlayer == 2)
+                    {
+                        updateInfo(player3Hands[currentHand-1].length-1, currentHand-1);
+                        if (splitIsBust(player3Hands[0]))
+                            player3Hand1Display.setTint(0x8E1600);
+
+                        if (splitIsBust(player3Hands[1]))
+                            player3Hand2Display.setTint(0x8E1600);
+                    }
+    
+                }
+            })
+        }
+        else if (currentHand == 2)
+        {
+            this.tweens.add({
+                targets: shuffledDeck[cardIndex],
+                x: cardX[i][j] - splitSpacing, // change X coord
+                y: cardY[i][j],
+                angle: 90,
+                ease: 'Linear',
+                duration: 200,
+                // repeat: 0,
+                yoyo: false,
+                delay: 500,
+                onComplete: function() {
+        
+                    shuffledDeck[cardIndex].setDepth(i+1);
+        
+                    if (currentPlayer == 0)
+                    {
+                        updateInfo(player1Hands[currentHand-1].length-1, currentHand-1);
+                        if (splitIsBust(player1Hands[0]))
+                            player1Hand1Display.setTint(0x8E1600);
+
+                        if (splitIsBust(player1Hands[1]))
+                            player1Hand2Display.setTint(0x8E1600);
+                    }
+                    else if (currentPlayer == 1)
+                    {
+                        updateInfo(player2Hands[currentHand-1].length-1, currentHand-1);
+                        if (splitIsBust(player2Hands[0]))
+                            player2Hand1Display.setTint(0x8E1600);
+
+                        if (splitIsBust(player2Hands[1]))
+                            player2Hand2Display.setTint(0x8E1600);
+                    }
+                    else if (currentPlayer == 2)
+                    {
+                        // -1 to length
+                        updateInfo(player3Hands[currentHand-1].length-1, currentHand-1);
+                        if (splitIsBust(player3Hands[0]))
+                            player3Hand1Display.setTint(0x8E1600);
+                        
+                        if (splitIsBust(player3Hands[1]))
+                            player3Hand2Display.setTint(0x8E1600);
+                    }
+                }
+            })
+        }
     };
     
     // plays card dealing animations
@@ -1608,7 +2320,7 @@ class GameScene extends Phaser.Scene {
                 {
                     // blackjack
                     player1CardDisplay.setTint(0xFFD700);
-                    playerCurrency = playerCurrency + (1.5 * player1Bet) + player1Bet;
+                    playerCurrency = playerCurrency + (blackjackPayout * player1Bet) + player1Bet;
                 }
                 else if ((this.getHandValue(playerCards[0]) > dealerHandValue && this.getHandValue(playerCards[0]) < 22) || (this.getHandValue(playerCards[0]) < 22 && dealerHandValue > 21))
                 {
@@ -1735,7 +2447,7 @@ class GameScene extends Phaser.Scene {
                 {
                     // blackjack
                     player2CardDisplay.setTint(0xFFD700);
-                    playerCurrency = playerCurrency + (1.5 * player2Bet) + player2Bet;
+                    playerCurrency = playerCurrency + (blackjackPayout * player2Bet) + player2Bet;
                 }
                 else if ((this.getHandValue(playerCards[1]) > dealerHandValue && this.getHandValue(playerCards[1]) < 22) || (this.getHandValue(playerCards[1]) < 22 && dealerHandValue > 21))
                 {
@@ -1861,7 +2573,7 @@ class GameScene extends Phaser.Scene {
                 {
                     // blackjack
                     player3CardDisplay.setTint(0xFFD700);
-                    playerCurrency = playerCurrency + (1.5 * player3Bet) + player3Bet;
+                    playerCurrency = playerCurrency + (blackjackPayout * player3Bet) + player3Bet;
                 }
                 else if ((this.getHandValue(playerCards[2]) > dealerHandValue && this.getHandValue(playerCards[2]) < 22) || (this.getHandValue(playerCards[2]) < 22 && dealerHandValue > 21))
                 {
@@ -2800,12 +3512,16 @@ class GameScene extends Phaser.Scene {
         playerHit.setInteractive({ useHandCursor: true });
         playerDouble.setInteractive({ useHandCursor: true });
         playerStand.setInteractive({ useHandCursor: true });
-        playerSurrender.setInteractive({ useHandCursor: true});
+
+        if (peekingOption != 2)
+            playerSurrender.setInteractive({ useHandCursor: true});
 
         playerHit.setTexture('normalButton');
         playerDouble.setTexture('normalButton');
         playerStand.setTexture('normalButton');
-        playerSurrender.setTexture('normalButton');
+
+        if (peekingOption != 2)
+            playerSurrender.setTexture('normalButton');
 
         playerHit.on('pointerover', function(){
             playerHit.setTexture('hoveredButton');
@@ -2819,9 +3535,12 @@ class GameScene extends Phaser.Scene {
             playerStand.setTexture('hoveredButton');
         })
 
-        playerSurrender.on('pointerover', function(){
-            playerSurrender.setTexture('hoveredButton');
-        })
+        if (peekingOption != 2)
+        {
+            playerSurrender.on('pointerover', function(){
+                playerSurrender.setTexture('hoveredButton');
+            })
+        }
 
         playerHit.on('pointerout', function(){
             playerHit.setTexture('normalButton');
@@ -2835,9 +3554,12 @@ class GameScene extends Phaser.Scene {
             playerStand.setTexture('normalButton');
         })
 
-        playerSurrender.on('pointerout', function(){
-            playerSurrender.setTexture('normalButton');
-        })
+        if (peekingOption != 2)
+        {
+            playerSurrender.on('pointerout', function(){
+                playerSurrender.setTexture('normalButton');
+            })
+        }
 
         // idk if these below are needed
         playerHit.on('pointerup', function(){
@@ -2852,9 +3574,12 @@ class GameScene extends Phaser.Scene {
             playerStand.setTexture('hoveredButton');
         })
 
-        playerSurrender.on('pointerup', function(){
-            playerSurrender.setTexture('hoveredButton');
-        })
+        if (peekingOption != 2)
+        {
+            playerSurrender.on('pointerup', function(){
+                playerSurrender.setTexture('hoveredButton');
+            })
+        }
     };
 
     disableStandButton() {
@@ -3314,6 +4039,48 @@ class GameScene extends Phaser.Scene {
         countSpoilerMinusButton.setTexture('minusButtonLocked');
         countSpoilerPlusButton.setTexture('plusButtonLocked');
 
+        // peekingOption
+        peekingOptionMinusButton.disableInteractive();
+        peekingOptionPlusButton.disableInteractive();
+
+        peekingOptionMinusButton.setTexture('minusButtonLocked');
+        peekingOptionPlusButton.setTexture('plusButtonLocked');
+
+        // doubleOption
+        doubleOptionMinusButton.disableInteractive();
+        doubleOptionPlusButton.disableInteractive();
+
+        doubleOptionMinusButton.setTexture('minusButtonLocked');
+        doubleOptionPlusButton.setTexture('plusButtonLocked');
+
+        // hitSplitAces
+        hitSplitAcesMinusButton.disableInteractive();
+        hitSplitAcesPlusButton.disableInteractive();
+
+        hitSplitAcesMinusButton.setTexture('minusButtonLocked');
+        hitSplitAcesPlusButton.setTexture('plusButtonLocked');
+
+        // doubleAfterSplit
+        doubleAfterSplitMinusButton.disableInteractive();
+        doubleAfterSplitPlusButton.disableInteractive();
+
+        doubleAfterSplitMinusButton.setTexture('minusButtonLocked');
+        doubleAfterSplitPlusButton.setTexture('plusButtonLocked');
+
+        // hitStandSoft17
+        hitStandSoft17MinusButton.disableInteractive();
+        hitStandSoft17PlusButton.disableInteractive();
+
+        hitStandSoft17MinusButton.setTexture('minusButtonLocked');
+        hitStandSoft17PlusButton.setTexture('plusButtonLocked');
+
+        // blackjackPayout
+        blackjackPayoutMinusButton.disableInteractive();
+        blackjackPayoutPlusButton.disableInteractive();
+
+        blackjackPayoutMinusButton.setTexture('minusButtonLocked');
+        blackjackPayoutPlusButton.setTexture('plusButtonLocked');
+
         // apply button
         applySettingsButton.disableInteractive();
 
@@ -3756,7 +4523,431 @@ class GameScene extends Phaser.Scene {
             })
         }
 
+        // peekingOption
+        if (settingsPeekingOption > 0)
+        {
+            peekingOptionMinusButton.setInteractive({ useHandCursor: true });
+            peekingOptionMinusButton.setTexture('minusButtonNormal');
 
+            peekingOptionMinusButton.on('pointerover', function(){
+                peekingOptionMinusButton.setTexture('minusButtonHovered');
+            })
+
+            peekingOptionMinusButton.on('pointerout', function(){
+                peekingOptionMinusButton.setTexture('minusButtonNormal');
+            })
+
+            peekingOptionMinusButton.on('pointerup', function(){
+                peekingOptionMinusButton.setTexture('minusButtonHovered');
+            })
+        }
+        else
+        {
+            peekingOptionMinusButton.disableInteractive();
+            peekingOptionMinusButton.setTexture('minusButtonLocked');
+
+            peekingOptionMinusButton.on('pointerover', function(){
+                peekingOptionMinusButton.setTexture('minusButtonLocked');
+            })
+
+            peekingOptionMinusButton.on('pointerout', function(){
+                peekingOptionMinusButton.setTexture('minusButtonLocked');
+            })
+
+            peekingOptionMinusButton.on('pointerup', function(){
+                peekingOptionMinusButton.setTexture('minusButtonLocked');
+            })
+        }
+
+        if (settingsPeekingOption < 2)
+        {
+            peekingOptionPlusButton.setInteractive({ useHandCursor: true });
+            peekingOptionPlusButton.setTexture('plusButtonNormal');
+
+            peekingOptionPlusButton.on('pointerover', function(){
+                peekingOptionPlusButton.setTexture('plusButtonHovered');
+            })
+
+            peekingOptionPlusButton.on('pointerout', function(){
+                peekingOptionPlusButton.setTexture('plusButtonNormal');
+            })
+
+            peekingOptionPlusButton.on('pointerup', function(){
+                peekingOptionPlusButton.setTexture('plusButtonHovered');
+            })
+        }
+        else
+        {
+            peekingOptionPlusButton.disableInteractive();
+            peekingOptionPlusButton.setTexture('plusButtonLocked');
+
+            peekingOptionPlusButton.on('pointerover', function(){
+                peekingOptionPlusButton.setTexture('plusButtonLocked');
+            })
+
+            peekingOptionPlusButton.on('pointerout', function(){
+                peekingOptionPlusButton.setTexture('plusButtonLocked');
+            })
+
+            peekingOptionPlusButton.on('pointerup', function(){
+                peekingOptionPlusButton.setTexture('plusButtonLocked');
+            })
+        }
+
+        // doubleOption
+        if (settingsDoubleOption > 0)
+        {
+            doubleOptionMinusButton.setInteractive({ useHandCursor: true });
+            doubleOptionMinusButton.setTexture('minusButtonNormal');
+
+            doubleOptionMinusButton.on('pointerover', function(){
+                doubleOptionMinusButton.setTexture('minusButtonHovered');
+            })
+
+            doubleOptionMinusButton.on('pointerout', function(){
+                doubleOptionMinusButton.setTexture('minusButtonNormal');
+            })
+
+            doubleOptionMinusButton.on('pointerup', function(){
+                doubleOptionMinusButton.setTexture('minusButtonHovered');
+            })
+        }
+        else
+        {
+            doubleOptionMinusButton.disableInteractive();
+            doubleOptionMinusButton.setTexture('minusButtonLocked');
+
+            doubleOptionMinusButton.on('pointerover', function(){
+                doubleOptionMinusButton.setTexture('minusButtonLocked');
+            })
+
+            doubleOptionMinusButton.on('pointerout', function(){
+                doubleOptionMinusButton.setTexture('minusButtonLocked');
+            })
+
+            doubleOptionMinusButton.on('pointerup', function(){
+                doubleOptionMinusButton.setTexture('minusButtonLocked');
+            })
+        }
+
+        if (settingsDoubleOption < 2)
+        {
+            doubleOptionPlusButton.setInteractive({ useHandCursor: true });
+            doubleOptionPlusButton.setTexture('plusButtonNormal');
+
+            doubleOptionPlusButton.on('pointerover', function(){
+                doubleOptionPlusButton.setTexture('plusButtonHovered');
+            })
+
+            doubleOptionPlusButton.on('pointerout', function(){
+                doubleOptionPlusButton.setTexture('plusButtonNormal');
+            })
+
+            doubleOptionPlusButton.on('pointerup', function(){
+                doubleOptionPlusButton.setTexture('plusButtonHovered');
+            })
+        }
+        else
+        {
+            doubleOptionPlusButton.disableInteractive();
+            doubleOptionPlusButton.setTexture('plusButtonLocked');
+
+            doubleOptionPlusButton.on('pointerover', function(){
+                doubleOptionPlusButton.setTexture('plusButtonLocked');
+            })
+
+            doubleOptionPlusButton.on('pointerout', function(){
+                doubleOptionPlusButton.setTexture('plusButtonLocked');
+            })
+
+            doubleOptionPlusButton.on('pointerup', function(){
+                doubleOptionPlusButton.setTexture('plusButtonLocked');
+            })
+        }
+
+        // hitSplitAces
+        if (settingsHitSplitAces > 0)
+        {
+            hitSplitAcesMinusButton.setInteractive({ useHandCursor: true });
+            hitSplitAcesMinusButton.setTexture('minusButtonNormal');
+
+            hitSplitAcesMinusButton.on('pointerover', function(){
+                hitSplitAcesMinusButton.setTexture('minusButtonHovered');
+            })
+
+            hitSplitAcesMinusButton.on('pointerout', function(){
+                hitSplitAcesMinusButton.setTexture('minusButtonNormal');
+            })
+
+            hitSplitAcesMinusButton.on('pointerup', function(){
+                hitSplitAcesMinusButton.setTexture('minusButtonHovered');
+            })
+        }
+        else
+        {
+            hitSplitAcesMinusButton.disableInteractive();
+            hitSplitAcesMinusButton.setTexture('minusButtonLocked');
+
+            hitSplitAcesMinusButton.on('pointerover', function(){
+                hitSplitAcesMinusButton.setTexture('minusButtonLocked');
+            })
+
+            hitSplitAcesMinusButton.on('pointerout', function(){
+                hitSplitAcesMinusButton.setTexture('minusButtonLocked');
+            })
+
+            hitSplitAcesMinusButton.on('pointerup', function(){
+                hitSplitAcesMinusButton.setTexture('minusButtonLocked');
+            })
+        }
+
+        if (settingsHitSplitAces < 1)
+        {
+            hitSplitAcesPlusButton.setInteractive({ useHandCursor: true });
+            hitSplitAcesPlusButton.setTexture('plusButtonNormal');
+
+            hitSplitAcesPlusButton.on('pointerover', function(){
+                hitSplitAcesPlusButton.setTexture('plusButtonHovered');
+            })
+
+            hitSplitAcesPlusButton.on('pointerout', function(){
+                hitSplitAcesPlusButton.setTexture('plusButtonNormal');
+            })
+
+            hitSplitAcesPlusButton.on('pointerup', function(){
+                hitSplitAcesPlusButton.setTexture('plusButtonHovered');
+            })
+        }
+        else
+        {
+            hitSplitAcesPlusButton.disableInteractive();
+            hitSplitAcesPlusButton.setTexture('plusButtonLocked');
+
+            hitSplitAcesPlusButton.on('pointerover', function(){
+                hitSplitAcesPlusButton.setTexture('plusButtonLocked');
+            })
+
+            hitSplitAcesPlusButton.on('pointerout', function(){
+                hitSplitAcesPlusButton.setTexture('plusButtonLocked');
+            })
+
+            hitSplitAcesPlusButton.on('pointerup', function(){
+                hitSplitAcesPlusButton.setTexture('plusButtonLocked');
+            })
+        }
+
+        // doubleAfterSplit
+        if (settingsDoubleAfterSplit > 0)
+        {
+            doubleAfterSplitMinusButton.setInteractive({ useHandCursor: true });
+            doubleAfterSplitMinusButton.setTexture('minusButtonNormal');
+
+            doubleAfterSplitMinusButton.on('pointerover', function(){
+                doubleAfterSplitMinusButton.setTexture('minusButtonHovered');
+            })
+
+            doubleAfterSplitMinusButton.on('pointerout', function(){
+                doubleAfterSplitMinusButton.setTexture('minusButtonNormal');
+            })
+
+            doubleAfterSplitMinusButton.on('pointerup', function(){
+                doubleAfterSplitMinusButton.setTexture('minusButtonHovered');
+            })
+        }
+        else
+        {
+            doubleAfterSplitMinusButton.disableInteractive();
+            doubleAfterSplitMinusButton.setTexture('minusButtonLocked');
+
+            doubleAfterSplitMinusButton.on('pointerover', function(){
+                doubleAfterSplitMinusButton.setTexture('minusButtonLocked');
+            })
+
+            doubleAfterSplitMinusButton.on('pointerout', function(){
+                doubleAfterSplitMinusButton.setTexture('minusButtonLocked');
+            })
+
+            doubleAfterSplitMinusButton.on('pointerup', function(){
+                doubleAfterSplitMinusButton.setTexture('minusButtonLocked');
+            })
+        }
+
+        if (settingsDoubleAfterSplit < 1)
+        {
+            doubleAfterSplitPlusButton.setInteractive({ useHandCursor: true });
+            doubleAfterSplitPlusButton.setTexture('plusButtonNormal');
+
+            doubleAfterSplitPlusButton.on('pointerover', function(){
+                doubleAfterSplitPlusButton.setTexture('plusButtonHovered');
+            })
+
+            doubleAfterSplitPlusButton.on('pointerout', function(){
+                doubleAfterSplitPlusButton.setTexture('plusButtonNormal');
+            })
+
+            doubleAfterSplitPlusButton.on('pointerup', function(){
+                doubleAfterSplitPlusButton.setTexture('plusButtonHovered');
+            })
+        }
+        else
+        {
+            doubleAfterSplitPlusButton.disableInteractive();
+            doubleAfterSplitPlusButton.setTexture('plusButtonLocked');
+
+            doubleAfterSplitPlusButton.on('pointerover', function(){
+                doubleAfterSplitPlusButton.setTexture('plusButtonLocked');
+            })
+
+            doubleAfterSplitPlusButton.on('pointerout', function(){
+                doubleAfterSplitPlusButton.setTexture('plusButtonLocked');
+            })
+
+            doubleAfterSplitPlusButton.on('pointerup', function(){
+                doubleAfterSplitPlusButton.setTexture('plusButtonLocked');
+            })
+        }
+
+        // hitStandSoft17
+        if (settingsHitStandSoft17 > 0)
+        {
+            hitStandSoft17MinusButton.setInteractive({ useHandCursor: true });
+            hitStandSoft17MinusButton.setTexture('minusButtonNormal');
+
+            hitStandSoft17MinusButton.on('pointerover', function(){
+                hitStandSoft17MinusButton.setTexture('minusButtonHovered');
+            })
+
+            hitStandSoft17MinusButton.on('pointerout', function(){
+                hitStandSoft17MinusButton.setTexture('minusButtonNormal');
+            })
+
+            hitStandSoft17MinusButton.on('pointerup', function(){
+                hitStandSoft17MinusButton.setTexture('minusButtonHovered');
+            })
+        }
+        else
+        {
+            hitStandSoft17MinusButton.disableInteractive();
+            hitStandSoft17MinusButton.setTexture('minusButtonLocked');
+
+            hitStandSoft17MinusButton.on('pointerover', function(){
+                hitStandSoft17MinusButton.setTexture('minusButtonLocked');
+            })
+
+            hitStandSoft17MinusButton.on('pointerout', function(){
+                hitStandSoft17MinusButton.setTexture('minusButtonLocked');
+            })
+
+            hitStandSoft17MinusButton.on('pointerup', function(){
+                hitStandSoft17MinusButton.setTexture('minusButtonLocked');
+            })
+        }
+
+        if (settingsHitStandSoft17 < 1)
+        {
+            hitStandSoft17PlusButton.setInteractive({ useHandCursor: true });
+            hitStandSoft17PlusButton.setTexture('plusButtonNormal');
+
+            hitStandSoft17PlusButton.on('pointerover', function(){
+                hitStandSoft17PlusButton.setTexture('plusButtonHovered');
+            })
+
+            hitStandSoft17PlusButton.on('pointerout', function(){
+                hitStandSoft17PlusButton.setTexture('plusButtonNormal');
+            })
+
+            hitStandSoft17PlusButton.on('pointerup', function(){
+                hitStandSoft17PlusButton.setTexture('plusButtonHovered');
+            })
+        }
+        else
+        {
+            hitStandSoft17PlusButton.disableInteractive();
+            hitStandSoft17PlusButton.setTexture('plusButtonLocked');
+
+            hitStandSoft17PlusButton.on('pointerover', function(){
+                hitStandSoft17PlusButton.setTexture('plusButtonLocked');
+            })
+
+            hitStandSoft17PlusButton.on('pointerout', function(){
+                hitStandSoft17PlusButton.setTexture('plusButtonLocked');
+            })
+
+            hitStandSoft17PlusButton.on('pointerup', function(){
+                hitStandSoft17PlusButton.setTexture('plusButtonLocked');
+            })
+        }
+
+        // blackjackPayout
+        if (settingsBlackjackPayout > 1)
+        {
+            blackjackPayoutMinusButton.setInteractive({ useHandCursor: true });
+            blackjackPayoutMinusButton.setTexture('minusButtonNormal');
+
+            blackjackPayoutMinusButton.on('pointerover', function(){
+                blackjackPayoutMinusButton.setTexture('minusButtonHovered');
+            })
+
+            blackjackPayoutMinusButton.on('pointerout', function(){
+                blackjackPayoutMinusButton.setTexture('minusButtonNormal');
+            })
+
+            blackjackPayoutMinusButton.on('pointerup', function(){
+                blackjackPayoutMinusButton.setTexture('minusButtonHovered');
+            })
+        }
+        else
+        {
+            blackjackPayoutMinusButton.disableInteractive();
+            blackjackPayoutMinusButton.setTexture('minusButtonLocked');
+
+            blackjackPayoutMinusButton.on('pointerover', function(){
+                blackjackPayoutMinusButton.setTexture('minusButtonLocked');
+            })
+
+            blackjackPayoutMinusButton.on('pointerout', function(){
+                blackjackPayoutMinusButton.setTexture('minusButtonLocked');
+            })
+
+            blackjackPayoutMinusButton.on('pointerup', function(){
+                blackjackPayoutMinusButton.setTexture('minusButtonLocked');
+            })
+        }
+
+        if (settingsBlackjackPayout < 1.5)
+        {
+            blackjackPayoutPlusButton.setInteractive({ useHandCursor: true });
+            blackjackPayoutPlusButton.setTexture('plusButtonNormal');
+
+            blackjackPayoutPlusButton.on('pointerover', function(){
+                blackjackPayoutPlusButton.setTexture('plusButtonHovered');
+            })
+
+            blackjackPayoutPlusButton.on('pointerout', function(){
+                blackjackPayoutPlusButton.setTexture('plusButtonNormal');
+            })
+
+            blackjackPayoutPlusButton.on('pointerup', function(){
+                blackjackPayoutPlusButton.setTexture('plusButtonHovered');
+            })
+        }
+        else
+        {
+            blackjackPayoutPlusButton.disableInteractive();
+            blackjackPayoutPlusButton.setTexture('plusButtonLocked');
+
+            blackjackPayoutPlusButton.on('pointerover', function(){
+                blackjackPayoutPlusButton.setTexture('plusButtonLocked');
+            })
+
+            blackjackPayoutPlusButton.on('pointerout', function(){
+                blackjackPayoutPlusButton.setTexture('plusButtonLocked');
+            })
+
+            blackjackPayoutPlusButton.on('pointerup', function(){
+                blackjackPayoutPlusButton.setTexture('plusButtonLocked');
+            })
+        }
 
         // apply button
         applySettingsButton.setInteractive({ useHandCursor: true });
@@ -3905,11 +5096,14 @@ class GameScene extends Phaser.Scene {
             runningCountSpoiler.visible = true;
             trueCountSpoiler.visible = true;
 
-            runningCountSpoiler.on("pointerover", () => { runningCountSpoiler.visible = false; });
-            runningCountSpoiler.on("pointerout", () => { runningCountSpoiler.visible = true; });
+            runningCountSpoiler.on("pointerover", () => { runningCountSpoiler.setAlpha(0); });
+            runningCountSpoiler.on("pointerout", () => { runningCountSpoiler.setAlpha(1);});
     
-            trueCountSpoiler.on("pointerover", () => { trueCountSpoiler.visible = false; });
-            trueCountSpoiler.on("pointerout", () => { trueCountSpoiler.visible = true; });
+            trueCountSpoiler.on("pointerover", () => { trueCountSpoiler.setAlpha(0); });
+            trueCountSpoiler.on("pointerout", () => { trueCountSpoiler.setAlpha(1); });
+
+            runningCountSpoiler.input.alwaysEnabled = true;
+            trueCountSpoiler.input.alwaysEnabled = true;
         }
         else if (confirmedSettingsCountSpoiler == 0)
         {
@@ -4442,8 +5636,20 @@ class GameScene extends Phaser.Scene {
                             this.enableSplitButton();
                         else
                             this.disableSplitButton();
+
+                        if (peekingOption == 2)
+                            this.scene.disableSurrenderButton();
+
+                        if (doubleOption == 1 && (this.getHandValue(playerCards[currentPlayer]) < 9 || this.getHandValue(playerCards[currentPlayer]) > 11))
+                            this.disableDoubleButton();
+                        else if (doubleOption == 2 && (this.getHandValue(playerCards[currentPlayer]) < 9 || this.getHandValue(playerCards[currentPlayer]) > 10))
+                            this.disableDoubleButton();
+                        else if (doubleOption == 1 && (this.getHandValue(playerCards[currentPlayer]) >= 9 && this.getHandValue(playerCards[currentPlayer]) <= 11) && playerCurrency >= player1Bet)
+                            this.enableDoubleButton();
+                        else if (doubleOption == 2 && (this.getHandValue(playerCards[currentPlayer]) >= 9 && this.getHandValue(playerCards[currentPlayer]) <= 10) && playerCurrency >= player1Bet)
+                            this.enableDoubleButton();
                 }
-                else if ((dealerCards[1] === "10" || dealerCards[1] === "J" || dealerCards[1] === "Q" || dealerCards[1] === "K") && peekingOption == 1)
+                else if ((dealerCards[1] === "10" || dealerCards[1] === "J" || dealerCards[1] === "Q" || dealerCards[1] === "K") && (peekingOption == 1 || peekingOption == 2))
                 {
                     if (this.isBlackjack(dealerCards))
                     {
@@ -4470,7 +5676,43 @@ class GameScene extends Phaser.Scene {
                             this.enableSplitButton();
                         else
                             this.disableSplitButton();
+
+                        if (peekingOption == 2)
+                            this.scene.disableSurrenderButton();
+
+                        if (doubleOption == 1 && (this.getHandValue(playerCards[currentPlayer]) < 9 || this.getHandValue(playerCards[currentPlayer]) > 11))
+                            this.disableDoubleButton();
+                        else if (doubleOption == 2 && (this.getHandValue(playerCards[currentPlayer]) < 9 || this.getHandValue(playerCards[currentPlayer]) > 10))
+                            this.disableDoubleButton();
+                        else if (doubleOption == 1 && (this.getHandValue(playerCards[currentPlayer]) >= 9 && this.getHandValue(playerCards[currentPlayer]) <= 11) && playerCurrency >= player1Bet)
+                            this.enableDoubleButton();
+                        else if (doubleOption == 2 && (this.getHandValue(playerCards[currentPlayer]) >= 9 && this.getHandValue(playerCards[currentPlayer]) <= 10) && playerCurrency >= player1Bet)
+                            this.enableDoubleButton();
                     }
+                }
+                else
+                {
+                    if (playerCurrency >= player1Bet)
+                        this.enableDoubleButton();
+                    else
+                        this.disableDoubleButton();
+
+                    if (playerCards[0][0] === playerCards[0][1] && playerCurrency >= player1Bet)
+                        this.enableSplitButton();
+                    else
+                        this.disableSplitButton();
+
+                    if (peekingOption == 2)
+                        this.scene.disableSurrenderButton();
+
+                    if (doubleOption == 1 && (this.getHandValue(playerCards[currentPlayer]) < 9 || this.getHandValue(playerCards[currentPlayer]) > 11))
+                        this.disableDoubleButton();
+                    else if (doubleOption == 2 && (this.getHandValue(playerCards[currentPlayer]) < 9 || this.getHandValue(playerCards[currentPlayer]) > 10))
+                        this.disableDoubleButton();
+                    else if (doubleOption == 1 && (this.getHandValue(playerCards[currentPlayer]) >= 9 && this.getHandValue(playerCards[currentPlayer]) <= 11) && playerCurrency >= player1Bet)
+                        this.enableDoubleButton();
+                    else if (doubleOption == 2 && (this.getHandValue(playerCards[currentPlayer]) >= 9 && this.getHandValue(playerCards[currentPlayer]) <= 10) && playerCurrency >= player1Bet)
+                        this.enableDoubleButton();
                 }
             }
             else if (insuranceOption == 1)
@@ -4492,7 +5734,7 @@ class GameScene extends Phaser.Scene {
 
                     insuranceRound = 1;
                 }
-                else if ((dealerCards[1] === "10" || dealerCards[1] === "J" || dealerCards[1] === "Q" || dealerCards[1] === "K") && peekingOption == 1)
+                else if ((dealerCards[1] === "10" || dealerCards[1] === "J" || dealerCards[1] === "Q" || dealerCards[1] === "K") && (peekingOption == 1 || peekingOption == 2))
                 {
                     if (this.isBlackjack(dealerCards))
                     {
@@ -4508,6 +5750,54 @@ class GameScene extends Phaser.Scene {
                         this.disableInsuranceButton();
                         this.disableSplitButton();
                     }
+                    else
+                    {
+                        if (playerCurrency >= player1Bet)
+                            this.enableDoubleButton();
+                        else
+                            this.disableDoubleButton();
+
+                        if (playerCards[0][0] === playerCards[0][1] && playerCurrency >= player1Bet)
+                            this.enableSplitButton();
+                        else
+                            this.disableSplitButton();
+
+                        if (peekingOption == 2)
+                            this.disableSurrenderButton();
+
+                        if (doubleOption == 1 && (this.getHandValue(playerCards[currentPlayer]) < 9 || this.getHandValue(playerCards[currentPlayer]) > 11))
+                            this.disableDoubleButton();
+                        else if (doubleOption == 2 && (this.getHandValue(playerCards[currentPlayer]) < 9 || this.getHandValue(playerCards[currentPlayer]) > 10))
+                            this.disableDoubleButton();
+                        else if (doubleOption == 1 && (this.getHandValue(playerCards[currentPlayer]) >= 9 && this.getHandValue(playerCards[currentPlayer]) <= 11) && playerCurrency >= player1Bet)
+                            this.enableDoubleButton();
+                        else if (doubleOption == 2 && (this.getHandValue(playerCards[currentPlayer]) >= 9 && this.getHandValue(playerCards[currentPlayer]) <= 10) && playerCurrency >= player1Bet)
+                            this.enableDoubleButton();
+                    }
+                }
+                else
+                {
+                    if (playerCurrency >= player1Bet)
+                        this.enableDoubleButton();
+                    else
+                        this.disableDoubleButton();
+
+                    if (playerCards[0][0] === playerCards[0][1] && playerCurrency >= player1Bet)
+                        this.enableSplitButton();
+                    else
+                        this.disableSplitButton();
+
+                    if (peekingOption == 2)
+                        this.disableSurrenderButton();
+
+                    if (doubleOption == 1 && (this.getHandValue(playerCards[currentPlayer]) < 9 || this.getHandValue(playerCards[currentPlayer]) > 11))
+                        this.disableDoubleButton();
+                    else if (doubleOption == 2 && (this.getHandValue(playerCards[currentPlayer]) < 9 || this.getHandValue(playerCards[currentPlayer]) > 10))
+                        this.disableDoubleButton();
+                    else if (doubleOption == 1 && (this.getHandValue(playerCards[currentPlayer]) >= 9 && this.getHandValue(playerCards[currentPlayer]) <= 11) && playerCurrency >= player1Bet)
+                        this.enableDoubleButton();
+                    else if (doubleOption == 2 && (this.getHandValue(playerCards[currentPlayer]) >= 9 && this.getHandValue(playerCards[currentPlayer]) <= 10) && playerCurrency >= player1Bet)
+                        this.enableDoubleButton();
                 }
 
             }
@@ -4895,6 +6185,9 @@ class GameScene extends Phaser.Scene {
 
             runningCountSpoiler.visible = true;
             trueCountSpoiler.visible = true;
+
+            runningCountSpoiler.input.alwaysEnabled = true;
+            trueCountSpoiler.input.alwaysEnabled = true;
         }
 
         // countSpoiler buttons + display
@@ -4941,7 +6234,19 @@ class GameScene extends Phaser.Scene {
         peekingOptionPlusButton = this.add.sprite(1000, 250, 'plusButtonNormal');
         peekingOptionPlusButton.scale = 1;
         peekingOptionDisplay = this.add.rectangle(925, 250, 100, 40, 0x000000);
-        peekingOptionText = this.add.text(916, 240, peekingOption, {fontSize: '28px', fill: '#fff'});
+
+        if (peekingOption == 0)
+        {
+            peekingOptionText = this.add.text(884, 240, "Early.", {fontSize: '28px', fill: '#fff'});
+        }
+        else if (peekingOption == 1)
+        {
+            peekingOptionText = this.add.text(892, 240, "Late", {fontSize: '28px', fill: '#fff'});
+        }
+        else if (peekingOption == 2)
+        {
+            peekingOptionText = this.add.text(892, 240, "None", {fontSize: '28px', fill: '#fff'});
+        }
 
         peekingOptionHeader.setDepth(2000000000000);
         peekingOptionMinusButton.setDepth(2000000000000);
@@ -4962,7 +6267,19 @@ class GameScene extends Phaser.Scene {
         doubleOptionPlusButton = this.add.sprite(1000, 350, 'plusButtonNormal');
         doubleOptionPlusButton.scale = 1;
         doubleOptionDisplay = this.add.rectangle(925, 350, 100, 40, 0x000000);
-        doubleOptionText = this.add.text(918, 340, doubleOption, {fontSize: '28px', fill: '#fff'});
+
+        if (doubleOption == 0)
+        {
+            doubleOptionText = this.add.text(902, 340, "All", {fontSize: '28px', fill: '#fff'});
+        }
+        else if (doubleOption == 1)
+        {
+            doubleOptionText = this.add.text(893, 340, "9-11", {fontSize: '28px', fill: '#fff'});
+        }
+        else if (doubleOption == 2)
+        {
+            doubleOptionText = this.add.text(893, 340, "9-10", {fontSize: '28px', fill: '#fff'});
+        }
 
         doubleOptionHeader.setDepth(2000000000000);
         doubleOptionMinusButton.setDepth(2000000000000);
@@ -4983,7 +6300,15 @@ class GameScene extends Phaser.Scene {
         hitSplitAcesPlusButton = this.add.sprite(1000, 450, 'plusButtonNormal');
         hitSplitAcesPlusButton.scale = 1;
         hitSplitAcesDisplay = this.add.rectangle(925, 450, 100, 40, 0x000000);
-        hitSplitAcesText = this.add.text(918, 440, hitSplitAces, {fontSize: '28px', fill: '#fff'});
+
+        if (hitSplitAces == 0)
+        {
+            hitSplitAcesText = this.add.text(910, 440, "No", {fontSize: '28px', fill: '#fff'});
+        }
+        else if (hitSplitAces == 1)
+        {
+            hitSplitAcesText = this.add.text(900, 440, "Yes", {fontSize: '28px', fill: '#fff'});
+        }
 
         hitSplitAcesHeader.setDepth(2000000000000);
         hitSplitAcesMinusButton.setDepth(2000000000000);
@@ -5004,7 +6329,15 @@ class GameScene extends Phaser.Scene {
         doubleAfterSplitPlusButton = this.add.sprite(1000, 550, 'plusButtonNormal');
         doubleAfterSplitPlusButton.scale = 1;
         doubleAfterSplitDisplay = this.add.rectangle(925, 550, 100, 40, 0x000000);
-        doubleAfterSplitText = this.add.text(918, 540, doubleAfterSplit, {fontSize: '28px', fill: '#fff'});
+
+        if (doubleAfterSplit == 0)
+        {
+            doubleAfterSplitText = this.add.text(910, 540, "No", {fontSize: '28px', fill: '#fff'});
+        }
+        else if (doubleAfterSplit == 1)
+        {
+            doubleAfterSplitText = this.add.text(900, 540, "Yes", {fontSize: '28px', fill: '#fff'});
+        }
 
         doubleAfterSplitHeader.setDepth(2000000000000);
         doubleAfterSplitMinusButton.setDepth(2000000000000);
@@ -5025,7 +6358,15 @@ class GameScene extends Phaser.Scene {
         hitStandSoft17PlusButton = this.add.sprite(1000, 650, 'plusButtonNormal');
         hitStandSoft17PlusButton.scale = 1;
         hitStandSoft17Display = this.add.rectangle(925, 650, 100, 40, 0x000000);
-        hitStandSoft17Text = this.add.text(918, 640, hitStandSoft17, {fontSize: '28px', fill: '#fff'});
+
+        if (hitStandSoft17 == 0)
+        {
+            hitStandSoft17Text = this.add.text(884, 640, "Stand", {fontSize: '28px', fill: '#fff'});
+        }
+        else if (hitStandSoft17 == 1)
+        {
+            hitStandSoft17Text = this.add.text(903, 640, "Hit", {fontSize: '28px', fill: '#fff'});
+        }
 
         hitStandSoft17Header.setDepth(2000000000000);
         hitStandSoft17MinusButton.setDepth(2000000000000);
@@ -5046,7 +6387,19 @@ class GameScene extends Phaser.Scene {
         blackjackPayoutPlusButton = this.add.sprite(1000, 750, 'plusButtonNormal');
         blackjackPayoutPlusButton.scale = 1;
         blackjackPayoutDisplay = this.add.rectangle(925, 750, 100, 40, 0x000000);
-        blackjackPayoutText = this.add.text(902, 740, blackjackPayout, {fontSize: '28px', fill: '#fff'});
+
+        if (blackjackPayout == 1)
+        {
+            blackjackPayoutText = this.add.text(902, 740, "1:1", {fontSize: '28px', fill: '#fff'});
+        }
+        else if (blackjackPayout == 1.2)
+        {
+            blackjackPayoutText = this.add.text(902, 740, "6:5", {fontSize: '28px', fill: '#fff'});
+        }
+        else if (blackjackPayout == 1.5)
+        {
+            blackjackPayoutText = this.add.text(902, 740, "3:2", {fontSize: '28px', fill: '#fff'});
+        }
 
         blackjackPayoutHeader.setDepth(2000000000000);
         blackjackPayoutMinusButton.setDepth(2000000000000);
@@ -5059,9 +6412,6 @@ class GameScene extends Phaser.Scene {
         blackjackPayoutPlusButton.visible = false;
         blackjackPayoutDisplay.visible = false;
         blackjackPayoutText.visible = false;
-
-
-        // BUTTON BUG IS MOST DEFINETELY RELATED TO THE Y COORD. THE LOWER THE Y, THE MORE ACCURATE THE BUTTON
 
         // apply settings button
         applySettingsButton = this.add.sprite(700, 900, 'normalButton');
@@ -5160,6 +6510,19 @@ class GameScene extends Phaser.Scene {
 
         this.enableBettingButtons();
         this.enableNextBettorButton();
+
+        if (peekingOption == 2)
+            this.disableSurrenderButton();
+
+        if (doubleOption == 1 && (this.getHandValue(playerCards[currentPlayer]) < 9 || this.getHandValue(playerCards[currentPlayer]) > 11))
+            this.disableDoubleButton();
+        else if (doubleOption == 2 && (this.getHandValue(playerCards[currentPlayer]) < 9 || this.getHandValue(playerCards[currentPlayer]) > 10))
+            this.disableDoubleButton();
+        else if (doubleOption == 1 && (this.getHandValue(playerCards[currentPlayer]) >= 9 && this.getHandValue(playerCards[currentPlayer]) <= 11) && playerCurrency >= player1Bet)
+            this.enableDoubleButton();
+        else if (doubleOption == 2 && (this.getHandValue(playerCards[currentPlayer]) >= 9 && this.getHandValue(playerCards[currentPlayer]) <= 10) && playerCurrency >= player1Bet)
+            this.enableDoubleButton();
+        
 
         // check if player has enough currency to go another round
         if (playerCurrency < minBet * numPlayers)
@@ -7033,7 +8396,9 @@ class GameScene extends Phaser.Scene {
                                 player2TurnIndicator.fillColor = 0x8E1600;
                                 currentPlayer = currentPlayer + 1;
                                 currentHand = 0;
-                                this.scene.enableSurrenderButton();
+
+                                if (peekingOption != 2)
+                                    this.scene.enableSurrenderButton();
 
                                 if (playerCurrency >= player2Bet)
                                     this.scene.enableDoubleButton();
@@ -7050,10 +8415,22 @@ class GameScene extends Phaser.Scene {
                                 else
                                     this.scene.disableSplitButton();
 
-                                if (numSplits[currentPlayer] == 0)
+                                if (numSplits[currentPlayer] == 0 && peekingOption != 2)
                                     this.scene.enableSurrenderButton();
                                 else
                                     this.scene.disableSurrenderButton();
+
+                                if (peekingOption == 2)
+                                    this.scene.disableSurrenderButton();
+
+                                if (doubleOption == 1 && (this.scene.getHandValue(playerCards[currentPlayer]) < 9 || this.scene.getHandValue(playerCards[currentPlayer]) > 11))
+                                    this.scene.disableDoubleButton();
+                                else if (doubleOption == 2 && (this.scene.getHandValue(playerCards[currentPlayer]) < 9 || this.scene.getHandValue(playerCards[currentPlayer]) > 10))
+                                    this.scene.disableDoubleButton();
+                                else if (doubleOption == 1 && (this.scene.getHandValue(playerCards[currentPlayer]) >= 9 && this.scene.getHandValue(playerCards[currentPlayer]) <= 11) && playerCurrency >= player2Bet)
+                                    this.scene.enableDoubleButton();
+                                else if (doubleOption == 2 && (this.scene.getHandValue(playerCards[currentPlayer]) >= 9 && this.scene.getHandValue(playerCards[currentPlayer]) <= 10) && playerCurrency >= player2Bet)
+                                    this.scene.enableDoubleButton();
                             }
                             else
                             {
@@ -7079,7 +8456,9 @@ class GameScene extends Phaser.Scene {
                                 player3TurnIndicator.fillColor = 0x8E1600;
                                 currentPlayer = currentPlayer + 1;
                                 currentHand = 0;
-                                this.scene.enableSurrenderButton();
+
+                                if (peekingOption != 2)
+                                    this.scene.enableSurrenderButton();
 
                                 if (playerCurrency >= player3Bet)
                                     this.scene.enableDoubleButton();
@@ -7096,10 +8475,22 @@ class GameScene extends Phaser.Scene {
                                 else
                                     this.scene.disableSplitButton();
 
-                                if (numSplits[currentPlayer] == 0)
+                                if (numSplits[currentPlayer] == 0 && peekingOption != 2)
                                     this.scene.enableSurrenderButton();
                                 else
                                     this.scene.disableSurrenderButton();
+
+                                if (peekingOption == 2)
+                                    this.scene.disableSurrenderButton();
+
+                                if (doubleOption == 1 && (this.scene.getHandValue(playerCards[currentPlayer]) < 9 || this.scene.getHandValue(playerCards[currentPlayer]) > 11))
+                                    this.scene.disableDoubleButton();
+                                else if (doubleOption == 2 && (this.scene.getHandValue(playerCards[currentPlayer]) < 9 || this.scene.getHandValue(playerCards[currentPlayer]) > 10))
+                                    this.scene.disableDoubleButton();
+                                else if (doubleOption == 1 && (this.scene.getHandValue(playerCards[currentPlayer]) >= 9 && this.scene.getHandValue(playerCards[currentPlayer]) <= 11) && playerCurrency >= player3Bet)
+                                    this.scene.enableDoubleButton();
+                                else if (doubleOption == 2 && (this.scene.getHandValue(playerCards[currentPlayer]) >= 9 && this.scene.getHandValue(playerCards[currentPlayer]) <= 10) && playerCurrency >= player3Bet)
+                                    this.scene.enableDoubleButton();
                             }
                             else
                             {
@@ -7266,6 +8657,21 @@ class GameScene extends Phaser.Scene {
                                     this.scene.enableDoubleButton();
                                 else
                                     this.scene.disableDoubleButton();
+
+                                if (peekingOption == 2)
+                                    this.scene.disableSurrenderButton();
+
+                                if (doubleOption == 1 && (this.scene.splitGetHandValue(player1Hands[currentHand]) < 9 || this.scene.splitGetHandValue(player1Hands[currentHand]) > 11))
+                                    this.scene.disableDoubleButton();
+                                else if (doubleOption == 2 && (this.scene.splitGetHandValue(player1Hands[currentHand]) < 9 || this.scene.splitGetHandValue(player1Hands[currentHand]) > 10))
+                                    this.scene.disableDoubleButton();
+                                else if (doubleOption == 1 && (this.scene.splitGetHandValue(player1Hands[currentHand]) >= 9 && this.scene.splitGetHandValue(player1Hands[currentHand]) <= 11) && playerCurrency >= player1Bet)
+                                    this.scene.enableDoubleButton();
+                                else if (doubleOption == 2 && (this.scene.splitGetHandValue(player1Hands[currentHand]) >= 9 && this.scene.splitGetHandValue(player1Hands[currentHand]) <= 10) && playerCurrency >= player1Bet)
+                                    this.scene.enableDoubleButton();
+
+                                if (doubleAfterSplit == 0)
+                                    this.scene.disableDoubleButton();
                             }
                             else
                             {
@@ -7277,7 +8683,9 @@ class GameScene extends Phaser.Scene {
                                     player1TurnIndicator.fillColor = 0xFFFFFF;
                                     player2TurnIndicator.fillColor = 0x8E1600;
                                     currentPlayer = currentPlayer + 1;
-                                    this.scene.enableSurrenderButton();
+
+                                    if (peekingOption != 2)
+                                        this.scene.enableSurrenderButton();
 
                                     if (playerCurrency >= player2Bet)
                                         this.scene.enableDoubleButton();
@@ -7294,10 +8702,22 @@ class GameScene extends Phaser.Scene {
                                     else
                                         this.scene.disableSplitButton();
 
-                                    if (numSplits[currentPlayer] == 0)
+                                    if (numSplits[currentPlayer] == 0 && peekingOption != 2)
                                         this.scene.enableSurrenderButton();
                                     else
                                         this.scene.disableSurrenderButton();
+
+                                    if (peekingOption == 2)
+                                        this.scene.disableSurrenderButton();
+
+                                    if (doubleOption == 1 && (this.scene.getHandValue(playerCards[currentPlayer]) < 9 || this.scene.getHandValue(playerCards[currentPlayer]) > 11))
+                                        this.scene.disableDoubleButton();
+                                    else if (doubleOption == 2 && (this.scene.getHandValue(playerCards[currentPlayer]) < 9 || this.scene.getHandValue(playerCards[currentPlayer]) > 10))
+                                        this.scene.disableDoubleButton();
+                                    else if (doubleOption == 1 && (this.scene.getHandValue(playerCards[currentPlayer]) >= 9 && this.scene.getHandValue(playerCards[currentPlayer]) <= 11) && playerCurrency >= player2Bet)
+                                        this.scene.enableDoubleButton();
+                                    else if (doubleOption == 2 && (this.scene.getHandValue(playerCards[currentPlayer]) >= 9 && this.scene.getHandValue(playerCards[currentPlayer]) <= 10) && playerCurrency >= player2Bet)
+                                        this.scene.enableDoubleButton();
                                 }
                                 else
                                 {
@@ -7328,6 +8748,21 @@ class GameScene extends Phaser.Scene {
                                     this.scene.enableDoubleButton();
                                 else
                                     this.scene.disableDoubleButton();
+                                
+                                if (peekingOption == 2)
+                                    this.scene.isableSurrenderButton();
+
+                                if (doubleOption == 1 && (this.scene.splitGetHandValue(player2Hands[currentHand]) < 9 || this.scene.splitGetHandValue(player2Hands[currentHand]) > 11))
+                                    this.scene.disableDoubleButton();
+                                else if (doubleOption == 2 && (this.scene.splitGetHandValue(player2Hands[currentHand]) < 9 || this.scene.splitGetHandValue(player2Hands[currentHand]) > 10))
+                                    this.scene.disableDoubleButton();
+                                else if (doubleOption == 1 && (this.scene.splitGetHandValue(player2Hands[currentHand]) >= 9 && this.scene.splitGetHandValue(player2Hands[currentHand]) <= 11) && playerCurrency >= player2Bet)
+                                    this.scene.enableDoubleButton();
+                                else if (doubleOption == 2 && (this.scene.splitGetHandValue(player2Hands[currentHand]) >= 9 && this.scene.splitGetHandValue(player2Hands[currentHand]) <= 10) && playerCurrency >= player2Bet)
+                                    this.scene.enableDoubleButton();
+
+                                if (doubleAfterSplit == 0)
+                                    this.scene.disableDoubleButton();
                             }
                             else
                             {
@@ -7339,7 +8774,9 @@ class GameScene extends Phaser.Scene {
                                     player2TurnIndicator.fillColor = 0xFFFFFF;
                                     player3TurnIndicator.fillColor = 0x8E1600;
                                     currentPlayer = currentPlayer + 1;
-                                    this.scene.enableSurrenderButton();
+
+                                    if (peekingOption != 2)
+                                        this.scene.enableSurrenderButton();
 
                                     if (playerCurrency >= player3Bet)
                                         this.scene.enableDoubleButton();
@@ -7356,10 +8793,22 @@ class GameScene extends Phaser.Scene {
                                     else
                                         this.scene.disableSplitButton();
 
-                                    if (numSplits[currentPlayer] == 0)
+                                    if (numSplits[currentPlayer] == 0 && peekingOption != 2)
                                         this.scene.enableSurrenderButton();
                                     else
                                         this.scene.disableSurrenderButton();
+
+                                    if (peekingOption == 2)
+                                        this.scene.disableSurrenderButton();
+
+                                    if (doubleOption == 1 && (this.scene.getHandValue(playerCards[currentPlayer]) < 9 || this.scene.getHandValue(playerCards[currentPlayer]) > 11))
+                                        this.scene.disableDoubleButton();
+                                    else if (doubleOption == 2 && (this.scene.getHandValue(playerCards[currentPlayer]) < 9 || this.scene.getHandValue(playerCards[currentPlayer]) > 10))
+                                        this.scene.disableDoubleButton();
+                                    else if (doubleOption == 1 && (this.scene.getHandValue(playerCards[currentPlayer]) >= 9 && this.scene.getHandValue(playerCards[currentPlayer]) <= 11) && playerCurrency >= player3Bet)
+                                        this.scene.enableDoubleButton();
+                                    else if (doubleOption == 2 && (this.scene.getHandValue(playerCards[currentPlayer]) >= 9 && this.scene.getHandValue(playerCards[currentPlayer]) <= 10) && playerCurrency >= player3Bet)
+                                        this.scene.enableDoubleButton();
                                 }
                                 else
                                 {
@@ -7389,6 +8838,21 @@ class GameScene extends Phaser.Scene {
                                 if (playerCurrency >= player3Bet)
                                     this.scene.enableDoubleButton();
                                 else
+                                    this.scene.disableDoubleButton();
+
+                                if (peekingOption == 2)
+                                    this.scene.disableSurrenderButton();
+
+                                if (doubleOption == 1 && (this.scene.splitGetHandValue(player3Hands[currentHand]) < 9 || this.scene.splitGetHandValue(player3Hands[currentHand]) > 11))
+                                    this.scene.disableDoubleButton();
+                                else if (doubleOption == 2 && (this.scene.splitGetHandValue(player3Hands[currentHand]) < 9 || this.scene.splitGetHandValue(player3Hands[currentHand]) > 10))
+                                    this.scene.disableDoubleButton();
+                                else if (doubleOption == 1 && (this.scene.splitGetHandValue(player3Hands[currentHand]) >= 9 && this.scene.splitGetHandValue(player3Hands[currentHand]) <= 11) && playerCurrency >= player3Bet)
+                                    this.scene.enableDoubleButton();
+                                else if (doubleOption == 2 && (this.scene.splitGetHandValue(player3Hands[currentHand]) >= 9 && this.scene.splitGetHandValue(player3Hands[currentHand]) <= 10) && playerCurrency >= player3Bet)
+                                    this.scene.enableDoubleButton();
+
+                                if (doubleAfterSplit == 0)
                                     this.scene.disableDoubleButton();
                             }
                             else
@@ -7432,7 +8896,7 @@ class GameScene extends Phaser.Scene {
                     this.scene.baseGameBasicStrategy(currentPlayer, "Double");
                     playerCards[currentPlayer][playerCards[currentPlayer].length] = (this.scene.getValue(cardInts, cardIndex, this));
                     spriteIndex[currentPlayer][playerCards[currentPlayer].length] = shuffledDeck[cardInts[cardIndex]];
-                    this.scene.hitCard(cardInts[cardIndex], shuffledDeck, playerCards[currentPlayer].length-1, currentPlayer, this);
+                    this.scene.hitDoubleCard(cardInts[cardIndex], shuffledDeck, playerCards[currentPlayer].length-1, currentPlayer, this);
                     cardIndex++;
 
                     // playerCards[currentPlayer][playerCards[currentPlayer].length + 1]
@@ -7577,7 +9041,9 @@ class GameScene extends Phaser.Scene {
                             player1TurnIndicator.fillColor = 0xFFFFFF;
                             player2TurnIndicator.fillColor = 0x8E1600;
                             currentPlayer = currentPlayer + 1;
-                            this.scene.enableSurrenderButton();
+
+                            if (peekingOption != 2)
+                                this.scene.enableSurrenderButton();
 
                             if (playerCurrency >= player2Bet)
                                 this.scene.enableDoubleButton();
@@ -7594,10 +9060,22 @@ class GameScene extends Phaser.Scene {
                             else
                                 this.scene.disableSplitButton();
 
-                            if (numSplits[currentPlayer] == 0)
+                            if (numSplits[currentPlayer] == 0 && peekingOption != 2)
                                 this.scene.enableSurrenderButton();
                             else
                                 this.scene.disableSurrenderButton();
+
+                            if (peekingOption == 2)
+                                this.scene.disableSurrenderButton();
+
+                            if (doubleOption == 1 && (this.scene.getHandValue(playerCards[currentPlayer]) < 9 || this.scene.getHandValue(playerCards[currentPlayer]) > 11))
+                                this.scene.disableDoubleButton();
+                            else if (doubleOption == 2 && (this.scene.getHandValue(playerCards[currentPlayer]) < 9 || this.scene.getHandValue(playerCards[currentPlayer]) > 10))
+                                this.scene.disableDoubleButton();
+                            else if (doubleOption == 1 && (this.scene.getHandValue(playerCards[currentPlayer]) >= 9 && this.scene.getHandValue(playerCards[currentPlayer]) <= 11) && playerCurrency >= player2Bet)
+                                this.scene.enableDoubleButton();
+                            else if (doubleOption == 2 && (this.scene.getHandValue(playerCards[currentPlayer]) >= 9 && this.scene.getHandValue(playerCards[currentPlayer]) <= 10) && playerCurrency >= player2Bet)
+                                this.scene.enableDoubleButton();
                         }
                         else
                         {
@@ -7711,7 +9189,9 @@ class GameScene extends Phaser.Scene {
                             player2TurnIndicator.fillColor = 0xFFFFFF;
                             player3TurnIndicator.fillColor = 0x8E1600;
                             currentPlayer = currentPlayer + 1;
-                            this.scene.enableSurrenderButton();
+
+                            if (peekingOption != 2)
+                                this.scene.enableSurrenderButton();
 
                             if (playerCurrency >= player3Bet)
                                 this.scene.enableDoubleButton();
@@ -7728,10 +9208,22 @@ class GameScene extends Phaser.Scene {
                             else
                                 this.scene.disableSplitButton();
 
-                            if (numSplits[currentPlayer] == 0)
+                            if (numSplits[currentPlayer] == 0 && peekingOption != 2)
                                 this.scene.enableSurrenderButton();
                             else
                                 this.scene.disableSurrenderButton();
+                            
+                            if (peekingOption == 2)
+                                this.scene.disableSurrenderButton();
+
+                            if (doubleOption == 1 && (this.scene.getHandValue(playerCards[currentPlayer]) < 9 || this.scene.getHandValue(playerCards[currentPlayer]) > 11))
+                                this.scene.disableDoubleButton();
+                            else if (doubleOption == 2 && (this.scene.getHandValue(playerCards[currentPlayer]) < 9 || this.scene.getHandValue(playerCards[currentPlayer]) > 10))
+                                this.scene.disableDoubleButton();
+                            else if (doubleOption == 1 && (this.scene.getHandValue(playerCards[currentPlayer]) >= 9 && this.scene.getHandValue(playerCards[currentPlayer]) <= 11) && playerCurrency >= player3Bet)
+                                this.scene.enableDoubleButton();
+                            else if (doubleOption == 2 && (this.scene.getHandValue(playerCards[currentPlayer]) >= 9 && this.scene.getHandValue(playerCards[currentPlayer]) <= 10) && playerCurrency >= player3Bet)
+                                this.scene.enableDoubleButton();
                         }
                         else
                         {
@@ -7865,6 +9357,7 @@ class GameScene extends Phaser.Scene {
             }
             if (numSplits[currentPlayer] == 1)
             {
+
                 if ((currentPlayer == 0 && numPlayers >= 1 && !this.scene.splitIsBust(player1Hands[currentHand - 1])) || (currentPlayer == 1 && numPlayers >= 2 && !this.scene.splitIsBust(player2Hands[currentHand - 1])) || (currentPlayer == 2 && numPlayers >= 3 && !this.scene.splitIsBust(player3Hands[currentHand - 1])))
                 {
                     playerDouble.setTexture('clickedButton');
@@ -7875,19 +9368,19 @@ class GameScene extends Phaser.Scene {
                     {
                         player1Hands[currentHand - 1][player1Hands[currentHand - 1].length] = (this.scene.getValue(cardInts, cardIndex, this));
                         player1Sprites[currentHand - 1][player1Hands[currentHand - 1].length] = shuffledDeck[cardInts[cardIndex]];
-                        this.scene.hitSplitCard(cardInts[cardIndex], shuffledDeck, player1Hands[currentHand - 1].length-1, currentPlayer, currentHand, this);
+                        this.scene.hitDoubleSplitCard(cardInts[cardIndex], shuffledDeck, player1Hands[currentHand - 1].length-1, currentPlayer, currentHand, this);
                     }
                     else if (currentPlayer == 1)
                     {
                         player2Hands[currentHand - 1][player2Hands[currentHand - 1].length] = (this.scene.getValue(cardInts, cardIndex, this));
                         player2Sprites[currentHand - 1][player2Hands[currentHand - 1].length] = shuffledDeck[cardInts[cardIndex]];
-                        this.scene.hitSplitCard(cardInts[cardIndex], shuffledDeck, player2Hands[currentHand - 1].length-1, currentPlayer, currentHand, this);
+                        this.scene.hitDoubleSplitCard(cardInts[cardIndex], shuffledDeck, player2Hands[currentHand - 1].length-1, currentPlayer, currentHand, this);
                     }
                     else if (currentPlayer == 2)
                     {
                         player3Hands[currentHand - 1][player3Hands[currentHand - 1].length] = (this.scene.getValue(cardInts, cardIndex, this));
                         player3Sprites[currentHand - 1][player3Hands[currentHand - 1].length] = shuffledDeck[cardInts[cardIndex]];
-                        this.scene.hitSplitCard(cardInts[cardIndex], shuffledDeck, player3Hands[currentHand - 1].length-1, currentPlayer, currentHand, this);
+                        this.scene.hitDoubleSplitCard(cardInts[cardIndex], shuffledDeck, player3Hands[currentHand - 1].length-1, currentPlayer, currentHand, this);
                     }
 
                     cardIndex++;
@@ -8063,8 +9556,23 @@ class GameScene extends Phaser.Scene {
                             else
                                 this.scene.disableDoubleButton();
 
+                            if (peekingOption == 2)
+                                this.scene.disableSurrenderButton();
+
                             handIndicator.setPosition(cardX[0][0] - splitSpacing, cardY[0][0] + handIndicatorSpacing);
                             currentHand = currentHand + 1;
+
+                            if (doubleOption == 1 && (this.scene.splitGetHandValue(player1Hands[currentHand]) < 9 || this.scene.splitGetHandValue(player1Hands[currentHand]) > 11))
+                                this.scene.disableDoubleButton();
+                            else if (doubleOption == 2 && (this.scene.splitGetHandValue(player1Hands[currentHand]) < 9 || this.scene.splitGetHandValue(player1Hands[currentHand]) > 10))
+                                this.scene.disableDoubleButton();
+                            else if (doubleOption == 1 && (this.scene.splitGetHandValue(player1Hands[currentHand]) >= 9 && this.scene.splitGetHandValue(player1Hands[currentHand]) <= 11) && playerCurrency >= player1Bet)
+                                this.scene.enableDoubleButton();
+                            else if (doubleOption == 2 && (this.scene.splitGetHandValue(player1Hands[currentHand]) >= 9 && this.scene.splitGetHandValue(player1Hands[currentHand]) <= 10) && playerCurrency >= player1Bet)
+                                this.scene.enableDoubleButton();
+
+                            if (doubleAfterSplit == 0)
+                                this.scene.disableDoubleButton();
                         }
                         else
                         {
@@ -8165,7 +9673,9 @@ class GameScene extends Phaser.Scene {
                                 player1TurnIndicator.fillColor = 0xFFFFFF;
                                 player2TurnIndicator.fillColor = 0x8E1600;
                                 currentPlayer = currentPlayer + 1;
-                                this.scene.enableSurrenderButton();
+
+                                if (peekingOption != 2)
+                                    this.scene.enableSurrenderButton();
 
                                 if (playerCurrency >= player2Bet)
                                     this.scene.enableDoubleButton();
@@ -8182,10 +9692,22 @@ class GameScene extends Phaser.Scene {
                                 else
                                     this.scene.disableSplitButton();
 
-                                if (numSplits[currentPlayer] == 0)
+                                if (numSplits[currentPlayer] == 0 && peekingOption != 2)
                                     this.scene.enableSurrenderButton();
                                 else
                                     this.scene.disableSurrenderButton();
+
+                                if (peekingOption == 2)
+                                    this.scene.disableSurrenderButton();
+
+                                if (doubleOption == 1 && (this.scene.getHandValue(playerCards[currentPlayer]) < 9 || this.scene.getHandValue(playerCards[currentPlayer]) > 11))
+                                    this.scene.disableDoubleButton();
+                                else if (doubleOption == 2 && (this.scene.getHandValue(playerCards[currentPlayer]) < 9 || this.scene.getHandValue(playerCards[currentPlayer]) > 10))
+                                    this.scene.disableDoubleButton();
+                                else if (doubleOption == 1 && (this.scene.getHandValue(playerCards[currentPlayer]) >= 9 && this.scene.getHandValue(playerCards[currentPlayer]) <= 11) && playerCurrency >= player2Bet)
+                                    this.scene.enableDoubleButton();
+                                else if (doubleOption == 2 && (this.scene.getHandValue(playerCards[currentPlayer]) >= 9 && this.scene.getHandValue(playerCards[currentPlayer]) <= 10) && playerCurrency >= player2Bet)
+                                    this.scene.enableDoubleButton();
                             }
                             else
                             {
@@ -8302,13 +9824,28 @@ class GameScene extends Phaser.Scene {
                             else
                                 this.scene.disableDoubleButton();
 
+                            if (peekingOption == 2)
+                                this.scene.disableSurrenderButton();
+
                             handIndicator.setPosition(cardX[0][1] - splitSpacing, cardY[0][1] + handIndicatorSpacing);
                             currentHand = currentHand + 1;
+
+                            if (doubleOption == 1 && (this.scene.splitGetHandValue(player2Hands[currentHand]) < 9 || this.scene.splitGetHandValue(player2Hands[currentHand]) > 11))
+                                this.scene.disableDoubleButton();
+                            else if (doubleOption == 2 && (this.scene.splitGetHandValue(player2Hands[currentHand]) < 9 || this.scene.splitGetHandValue(player2Hands[currentHand]) > 10))
+                                this.scene.disableDoubleButton();
+                            else if (doubleOption == 1 && (this.scene.splitGetHandValue(player2Hands[currentHand]) >= 9 && this.scene.splitGetHandValue(player2Hands[currentHand]) <= 11) && playerCurrency >= player2Bet)
+                                this.scene.enableDoubleButton();
+                            else if (doubleOption == 2 && (this.scene.splitGetHandValue(player2Hands[currentHand]) >= 9 && this.scene.splitGetHandValue(player2Hands[currentHand]) <= 10) && playerCurrency >= player2Bet)
+                                this.scene.enableDoubleButton();
+
+                            if (doubleAfterSplit == 0)
+                                this.scene.disableDoubleButton();
                         }
                         else
                         {
                             // second hand
-                            placeholderBet = player1Bet;
+                            placeholderBet = player2Bet;
                             playerCurrency = playerCurrency - player2Bet;
                             var k = 0;
                 
@@ -8404,7 +9941,9 @@ class GameScene extends Phaser.Scene {
                                 player2TurnIndicator.fillColor = 0xFFFFFF;
                                 player3TurnIndicator.fillColor = 0x8E1600;
                                 currentPlayer = currentPlayer + 1;
-                                this.scene.enableSurrenderButton();
+
+                                if (peekingOption != 2)
+                                    this.scene.enableSurrenderButton();
 
                                 if (playerCurrency >= player3Bet)
                                     this.scene.enableDoubleButton();
@@ -8421,10 +9960,22 @@ class GameScene extends Phaser.Scene {
                                 else
                                     this.scene.disableSplitButton();
 
-                                if (numSplits[currentPlayer] == 0)
+                                if (numSplits[currentPlayer] == 0 && peekingOption != 2)
                                     this.scene.enableSurrenderButton();
                                 else
                                     this.scene.disableSurrenderButton();
+
+                                if (peekingOption == 2)
+                                    this.scene.disableSurrenderButton();
+
+                                if (doubleOption == 1 && (this.scene.getHandValue(playerCards[currentPlayer]) < 9 || this.scene.getHandValue(playerCards[currentPlayer]) > 11))
+                                    this.scene.disableDoubleButton();
+                                else if (doubleOption == 2 && (this.scene.getHandValue(playerCards[currentPlayer]) < 9 || this.scene.getHandValue(playerCards[currentPlayer]) > 10))
+                                    this.scene.disableDoubleButton();
+                                else if (doubleOption == 1 && (this.scene.getHandValue(playerCards[currentPlayer]) >= 9 && this.scene.getHandValue(playerCards[currentPlayer]) <= 11) && playerCurrency >= player3Bet)
+                                    this.scene.enableDoubleButton();
+                                else if (doubleOption == 2 && (this.scene.getHandValue(playerCards[currentPlayer]) >= 9 && this.scene.getHandValue(playerCards[currentPlayer]) <= 10) && playerCurrency >= player3Bet)
+                                    this.scene.enableDoubleButton();
                             }
                             else
                             {
@@ -8541,8 +10092,23 @@ class GameScene extends Phaser.Scene {
                             else
                                 this.scene.disableDoubleButton();
 
+                            if (peekingOption == 2)
+                                this.scene.disableSurrenderButton();
+
                             handIndicator.setPosition(cardX[0][2] - splitSpacing, cardY[0][2] + handIndicatorSpacing);
                             currentHand = currentHand + 1;
+
+                            if (doubleOption == 1 && (this.scene.splitGetHandValue(player3Hands[currentHand]) < 9 || this.scene.splitGetHandValue(player3Hands[currentHand]) > 11))
+                                this.scene.disableDoubleButton();
+                            else if (doubleOption == 2 && (this.scene.splitGetHandValue(player3Hands[currentHand]) < 9 || this.scene.splitGetHandValue(player3Hands[currentHand]) > 10))
+                                this.scene.disableDoubleButton();
+                            else if (doubleOption == 1 && (this.scene.splitGetHandValue(player3Hands[currentHand]) >= 9 && this.scene.splitGetHandValue(player3Hands[currentHand]) <= 11) && playerCurrency >= player3Bet)
+                                this.scene.enableDoubleButton();
+                            else if (doubleOption == 2 && (this.scene.splitGetHandValue(player3Hands[currentHand]) >= 9 && this.scene.splitGetHandValue(player3Hands[currentHand]) <= 10) && playerCurrency >= player3Bet)
+                                this.scene.enableDoubleButton();
+
+                            if (doubleAfterSplit == 0)
+                                this.scene.disableDoubleButton();
                         }
                         else
                         {
@@ -8670,6 +10236,9 @@ class GameScene extends Phaser.Scene {
                         player1TurnIndicator.fillColor = 0xFFFFFF;
                         player2TurnIndicator.fillColor = 0x8E1600;
                         currentPlayer = currentPlayer + 1;
+
+                        if (peekingOption == 2)
+                            this.scene.disableSurrenderButton();
                     }
                     else
                     {
@@ -8709,6 +10278,18 @@ class GameScene extends Phaser.Scene {
                                 this.scene.disableSplitButton();
 
                             this.scene.disableInsuranceButton();
+
+                            if (peekingOption == 2)
+                                this.scene.disableSurrenderButton();
+
+                            if (doubleOption == 1 && (this.scene.getHandValue(playerCards[currentPlayer]) < 9 || this.scene.getHandValue(playerCards[currentPlayer]) > 11))
+                                this.scene.disableDoubleButton();
+                            else if (doubleOption == 2 && (this.scene.getHandValue(playerCards[currentPlayer]) < 9 || this.scene.getHandValue(playerCards[currentPlayer]) > 10))
+                                this.scene.disableDoubleButton();
+                            else if (doubleOption == 1 && (this.scene.getHandValue(playerCards[currentPlayer]) >= 9 && this.scene.getHandValue(playerCards[currentPlayer]) <= 11) && playerCurrency >= player1Bet)
+                                this.scene.enableDoubleButton();
+                            else if (doubleOption == 2 && (this.scene.getHandValue(playerCards[currentPlayer]) >= 9 && this.scene.getHandValue(playerCards[currentPlayer]) <= 10) && playerCurrency >= player1Bet)
+                                this.scene.enableDoubleButton();
                         }
                     }
                 }
@@ -8720,6 +10301,8 @@ class GameScene extends Phaser.Scene {
                         player3TurnIndicator.fillColor = 0x8E1600;
                         currentPlayer = currentPlayer + 1;
                         
+                        if (peekingOption == 2)
+                            this.scene.disableSurrenderButton();
                     }
                     else
                     {
@@ -8748,17 +10331,29 @@ class GameScene extends Phaser.Scene {
 
                             this.scene.enableActionButtons();
 
-                            if (playerCurrency >= player1Bet)
+                            if (playerCurrency >= player2Bet)
                                 this.scene.enableDoubleButton();
                             else
                                 this.scene.disableDoubleButton();
 
-                            if (playerCards[0][0] === playerCards[0][1] && playerCurrency >= player1Bet)
+                            if (playerCards[1][0] === playerCards[1][1] && playerCurrency >= player2Bet)
                                 this.scene.enableSplitButton();
                             else
                                 this.scene.disableSplitButton();
 
                             this.scene.disableInsuranceButton();
+
+                            if (peekingOption == 2)
+                                this.scene.disableSurrenderButton();
+
+                            if (doubleOption == 1 && (this.scene.getHandValue(playerCards[currentPlayer]) < 9 || this.scene.getHandValue(playerCards[currentPlayer]) > 11))
+                                this.scene.disableDoubleButton();
+                            else if (doubleOption == 2 && (this.scene.getHandValue(playerCards[currentPlayer]) < 9 || this.scene.getHandValue(playerCards[currentPlayer]) > 10))
+                                this.scene.disableDoubleButton();
+                            else if (doubleOption == 1 && (this.scene.getHandValue(playerCards[currentPlayer]) >= 9 && this.scene.getHandValue(playerCards[currentPlayer]) <= 11) && playerCurrency >= player2Bet)
+                                this.scene.enableDoubleButton();
+                            else if (doubleOption == 2 && (this.scene.getHandValue(playerCards[currentPlayer]) >= 9 && this.scene.getHandValue(playerCards[currentPlayer]) <= 10) && playerCurrency >= player2Bet)
+                                this.scene.enableDoubleButton();
                         }
                     }
                 }
@@ -8789,17 +10384,29 @@ class GameScene extends Phaser.Scene {
 
                         this.scene.enableActionButtons();
 
-                        if (playerCurrency >= player1Bet)
+                        if (playerCurrency >= player3Bet)
                             this.scene.enableDoubleButton();
                         else
                             this.scene.disableDoubleButton();
 
-                        if (playerCards[0][0] === playerCards[0][1] && playerCurrency >= player1Bet)
+                        if (playerCards[2][0] === playerCards[2][1] && playerCurrency >= player3Bet)
                             this.scene.enableSplitButton();
                         else
                             this.scene.disableSplitButton();
 
                         this.scene.disableInsuranceButton();
+
+                        if (peekingOption == 2)
+                            this.scene.disableSurrenderButton();
+
+                        if (doubleOption == 1 && (this.scene.getHandValue(playerCards[currentPlayer]) < 9 || this.scene.getHandValue(playerCards[currentPlayer]) > 11))
+                            this.scene.disableDoubleButton();
+                        else if (doubleOption == 2 && (this.scene.getHandValue(playerCards[currentPlayer]) < 9 || this.scene.getHandValue(playerCards[currentPlayer]) > 10))
+                            this.scene.disableDoubleButton();
+                        else if (doubleOption == 1 && (this.scene.getHandValue(playerCards[currentPlayer]) >= 9 && this.scene.getHandValue(playerCards[currentPlayer]) <= 11) && playerCurrency >= player3Bet)
+                            this.scene.enableDoubleButton();
+                        else if (doubleOption == 2 && (this.scene.getHandValue(playerCards[currentPlayer]) >= 9 && this.scene.getHandValue(playerCards[currentPlayer]) <= 10) && playerCurrency >= player3Bet)
+                            this.scene.enableDoubleButton();
                     }
                 }
             }
@@ -8817,6 +10424,8 @@ class GameScene extends Phaser.Scene {
                             player1TurnIndicator.fillColor = 0xFFFFFF;
                             player2TurnIndicator.fillColor = 0x8E1600;
                             currentPlayer = currentPlayer + 1;
+
+                            if (peekingOption != 2)
                             this.scene.enableSurrenderButton();
 
                             if (playerCurrency >= player2Bet)
@@ -8834,10 +10443,22 @@ class GameScene extends Phaser.Scene {
                             else
                                 this.scene.disableSplitButton();
 
-                            if (numSplits[currentPlayer] == 0)
+                            if (numSplits[currentPlayer] == 0 && peekingOption != 2)
                                 this.scene.enableSurrenderButton();
                             else
                                 this.scene.disableSurrenderButton();
+
+                            if (peekingOption == 2)
+                                this.scene.disableSurrenderButton();
+
+                            if (doubleOption == 1 && (this.scene.getHandValue(playerCards[currentPlayer]) < 9 || this.scene.getHandValue(playerCards[currentPlayer]) > 11))
+                                this.scene.disableDoubleButton();
+                            else if (doubleOption == 2 && (this.scene.getHandValue(playerCards[currentPlayer]) < 9 || this.scene.getHandValue(playerCards[currentPlayer]) > 10))
+                                this.scene.disableDoubleButton();
+                            else if (doubleOption == 1 && (this.scene.getHandValue(playerCards[currentPlayer]) >= 9 && this.scene.getHandValue(playerCards[currentPlayer]) <= 11) && playerCurrency >= player2Bet)
+                                this.scene.enableDoubleButton();
+                            else if (doubleOption == 2 && (this.scene.getHandValue(playerCards[currentPlayer]) >= 9 && this.scene.getHandValue(playerCards[currentPlayer]) <= 10) && playerCurrency >= player2Bet)
+                                this.scene.enableDoubleButton();
                         }
                         else
                         {
@@ -8861,7 +10482,9 @@ class GameScene extends Phaser.Scene {
                             player2TurnIndicator.fillColor = 0xFFFFFF;
                             player3TurnIndicator.fillColor = 0x8E1600;
                             currentPlayer = currentPlayer + 1;
-                            this.scene.enableSurrenderButton();
+
+                            if (peekingOption != 2)
+                                this.scene.enableSurrenderButton();
 
                             if (playerCurrency >= player3Bet)
                                 this.scene.enableDoubleButton();
@@ -8878,10 +10501,22 @@ class GameScene extends Phaser.Scene {
                             else
                                 this.scene.disableSplitButton();
 
-                            if (numSplits[currentPlayer] == 0)
+                            if (numSplits[currentPlayer] == 0 && peekingOption != 2)
                                 this.scene.enableSurrenderButton();
                             else
                                 this.scene.disableSurrenderButton();
+
+                            if (peekingOption == 2)
+                                this.scene.disableSurrenderButton();
+
+                            if (doubleOption == 1 && (this.scene.getHandValue(playerCards[currentPlayer]) < 9 || this.scene.getHandValue(playerCards[currentPlayer]) > 11))
+                                this.scene.disableDoubleButton();
+                            else if (doubleOption == 2 && (this.scene.getHandValue(playerCards[currentPlayer]) < 9 || this.scene.getHandValue(playerCards[currentPlayer]) > 10))
+                                this.scene.disableDoubleButton();
+                            else if (doubleOption == 1 && (this.scene.getHandValue(playerCards[currentPlayer]) >= 9 && this.scene.getHandValue(playerCards[currentPlayer]) <= 11) && playerCurrency >= player3Bet)
+                                this.scene.enableDoubleButton();
+                            else if (doubleOption == 2 && (this.scene.getHandValue(playerCards[currentPlayer]) >= 9 && this.scene.getHandValue(playerCards[currentPlayer]) <= 10) && playerCurrency >= player3Bet)
+                                this.scene.enableDoubleButton();
                         }
                         else
                         {
@@ -8935,6 +10570,21 @@ class GameScene extends Phaser.Scene {
                                 this.scene.enableDoubleButton();
                             else
                                 this.scene.disableDoubleButton();
+
+                            if (peekingOption == 2)
+                                this.scene.disableSurrenderButton();
+
+                            if (doubleOption == 1 && (this.scene.splitGetHandValue(player1Hands[currentHand]) < 9 || this.scene.splitGetHandValue(player1Hands[currentHand]) > 11))
+                                this.scene.disableDoubleButton();
+                            else if (doubleOption == 2 && (this.scene.splitGetHandValue(player1Hands[currentHand]) < 9 || this.scene.splitGetHandValue(player1Hands[currentHand]) > 10))
+                                this.scene.disableDoubleButton();
+                            else if (doubleOption == 1 && (this.scene.splitGetHandValue(player1Hands[currentHand]) >= 9 && this.scene.splitGetHandValue(player1Hands[currentHand]) <= 11) && playerCurrency >= player1Bet)
+                                this.scene.enableDoubleButton();
+                            else if (doubleOption == 2 && (this.scene.splitGetHandValue(player1Hands[currentHand]) >= 9 && this.scene.splitGetHandValue(player1Hands[currentHand]) <= 10) && playerCurrency >= player1Bet)
+                                this.scene.enableDoubleButton();
+
+                            if (doubleAfterSplit == 0)
+                                this.scene.disableDoubleButton();
                         }
                         else
                         {
@@ -8946,7 +10596,9 @@ class GameScene extends Phaser.Scene {
                                 player1TurnIndicator.fillColor = 0xFFFFFF;
                                 player2TurnIndicator.fillColor = 0x8E1600;
                                 currentPlayer = currentPlayer + 1;
-                                this.scene.enableSurrenderButton();
+
+                                if (peekingOption != 2)
+                                    this.scene.enableSurrenderButton();
 
                                 if (playerCurrency >= player2Bet)
                                     this.scene.enableDoubleButton();
@@ -8963,10 +10615,22 @@ class GameScene extends Phaser.Scene {
                                 else
                                     this.scene.disableSplitButton();
 
-                                if (numSplits[currentPlayer] == 0)
+                                if (numSplits[currentPlayer] == 0 && peekingOption != 2)
                                     this.scene.enableSurrenderButton();
                                 else
                                     this.scene.disableSurrenderButton();
+
+                                if (peekingOption == 2)
+                                    this.scene.disableSurrenderButton();
+
+                                if (doubleOption == 1 && (this.scene.getHandValue(playerCards[currentPlayer]) < 9 || this.scene.getHandValue(playerCards[currentPlayer]) > 11))
+                                    this.scene.disableDoubleButton();
+                                else if (doubleOption == 2 && (this.scene.getHandValue(playerCards[currentPlayer]) < 9 || this.scene.getHandValue(playerCards[currentPlayer]) > 10))
+                                    this.scene.disableDoubleButton();
+                                else if (doubleOption == 1 && (this.scene.getHandValue(playerCards[currentPlayer]) >= 9 && this.scene.getHandValue(playerCards[currentPlayer]) <= 11) && playerCurrency >= player2Bet)
+                                    this.scene.enableDoubleButton();
+                                else if (doubleOption == 2 && (this.scene.getHandValue(playerCards[currentPlayer]) >= 9 && this.scene.getHandValue(playerCards[currentPlayer]) <= 10) && playerCurrency >= player2Bet)
+                                    this.scene.enableDoubleButton();
                             }
                             else
                             {
@@ -8997,6 +10661,21 @@ class GameScene extends Phaser.Scene {
                                 this.scene.enableDoubleButton();
                             else
                                 this.scene.disableDoubleButton();
+
+                            if (peekingOption == 2)
+                                this.scene.disableSurrenderButton();
+
+                            if (doubleOption == 1 && (this.scene.splitGetHandValue(player2Hands[currentHand]) < 9 || this.scene.splitGetHandValue(player2Hands[currentHand]) > 11))
+                                this.scene.disableDoubleButton();
+                            else if (doubleOption == 2 && (this.scene.splitGetHandValue(player2Hands[currentHand]) < 9 || this.scene.splitGetHandValue(player2Hands[currentHand]) > 10))
+                                this.scene.disableDoubleButton();
+                            else if (doubleOption == 1 && (this.scene.splitGetHandValue(player2Hands[currentHand]) >= 9 && this.scene.splitGetHandValue(player2Hands[currentHand]) <= 11) && playerCurrency >= player2Bet)
+                                this.scene.enableDoubleButton();
+                            else if (doubleOption == 2 && (this.scene.splitGetHandValue(player2Hands[currentHand]) >= 9 && this.scene.splitGetHandValue(player2Hands[currentHand]) <= 10) && playerCurrency >= player2Bet)
+                                this.scene.enableDoubleButton();
+
+                            if (doubleAfterSplit == 0)
+                                this.scene.disableDoubleButton();
                         }
                         else
                         {
@@ -9008,7 +10687,9 @@ class GameScene extends Phaser.Scene {
                                 player2TurnIndicator.fillColor = 0xFFFFFF;
                                 player3TurnIndicator.fillColor = 0x8E1600;
                                 currentPlayer = currentPlayer + 1;
-                                this.scene.enableSurrenderButton();
+                                
+                                if (peekingOption != 2)
+                                    this.scene.enableSurrenderButton();
 
                                 if (playerCurrency >= player3Bet)
                                     this.scene.enableDoubleButton();
@@ -9025,10 +10706,22 @@ class GameScene extends Phaser.Scene {
                                 else
                                     this.scene.disableSplitButton();
 
-                                if (numSplits[currentPlayer] == 0)
+                                if (numSplits[currentPlayer] == 0 && peekingOption != 2)
                                     this.scene.enableSurrenderButton();
                                 else
                                     this.scene.disableSurrenderButton();
+
+                                if (peekingOption == 2)
+                                    this.scene.disableSurrenderButton();
+
+                                if (doubleOption == 1 && (this.scene.getHandValue(playerCards[currentPlayer]) < 9 || this.scene.getHandValue(playerCards[currentPlayer]) > 11))
+                                    this.scene.disableDoubleButton();
+                                else if (doubleOption == 2 && (this.scene.getHandValue(playerCards[currentPlayer]) < 9 || this.scene.getHandValue(playerCards[currentPlayer]) > 10))
+                                    this.scene.disableDoubleButton();
+                                else if (doubleOption == 1 && (this.scene.getHandValue(playerCards[currentPlayer]) >= 9 && this.scene.getHandValue(playerCards[currentPlayer]) <= 11) && playerCurrency >= player3Bet)
+                                    this.scene.enableDoubleButton();
+                                else if (doubleOption == 2 && (this.scene.getHandValue(playerCards[currentPlayer]) >= 9 && this.scene.getHandValue(playerCards[currentPlayer]) <= 10) && playerCurrency >= player3Bet)
+                                    this.scene.enableDoubleButton();
                             }
                             else
                             {
@@ -9058,6 +10751,21 @@ class GameScene extends Phaser.Scene {
                             if (playerCurrency >= player3Bet)
                                 this.scene.enableDoubleButton();
                             else
+                                this.scene.disableDoubleButton();
+
+                            if (peekingOption == 2)
+                                this.scene.disableSurrenderButton();
+
+                            if (doubleOption == 1 && (this.scene.splitGetHandValue(player3Hands[currentHand]) < 9 || this.scene.splitGetHandValue(player3Hands[currentHand]) > 11))
+                                this.scene.disableDoubleButton();
+                            else if (doubleOption == 2 && (this.scene.splitGetHandValue(player3Hands[currentHand]) < 9 || this.scene.splitGetHandValue(player3Hands[currentHand]) > 10))
+                                this.scene.disableDoubleButton();
+                            else if (doubleOption == 1 && (this.scene.splitGetHandValue(player3Hands[currentHand]) >= 9 && this.scene.splitGetHandValue(player3Hands[currentHand]) <= 11) && playerCurrency >= player3Bet)
+                                this.scene.enableDoubleButton();
+                            else if (doubleOption == 2 && (this.scene.splitGetHandValue(player3Hands[currentHand]) >= 9 && this.scene.splitGetHandValue(player3Hands[currentHand]) <= 10) && playerCurrency >= player3Bet)
+                                this.scene.enableDoubleButton();
+
+                            if (doubleAfterSplit == 0)
                                 this.scene.disableDoubleButton();
                         }
                         else
@@ -9121,10 +10829,19 @@ class GameScene extends Phaser.Scene {
                     else
                         this.scene.disableSplitButton();
 
-                    if (numSplits[currentPlayer] == 0)
+                    if (numSplits[currentPlayer] == 0 && peekingOption != 2)
                         this.scene.enableSurrenderButton();
                     else
                         this.scene.disableSurrenderButton();
+
+                    if (doubleOption == 1 && (this.scene.getHandValue(playerCards[currentPlayer]) < 9 || this.scene.getHandValue(playerCards[currentPlayer]) > 11))
+                        this.scene.disableDoubleButton();
+                    else if (doubleOption == 2 && (this.scene.getHandValue(playerCards[currentPlayer]) < 9 || this.scene.getHandValue(playerCards[currentPlayer]) > 10))
+                        this.scene.disableDoubleButton();
+                    else if (doubleOption == 1 && (this.scene.getHandValue(playerCards[currentPlayer]) >= 9 && this.scene.getHandValue(playerCards[currentPlayer]) <= 11) && playerCurrency >= player2Bet)
+                        this.scene.enableDoubleButton();
+                    else if (doubleOption == 2 && (this.scene.getHandValue(playerCards[currentPlayer]) >= 9 && this.scene.getHandValue(playerCards[currentPlayer]) <= 10) && playerCurrency >= player2Bet)
+                        this.scene.enableDoubleButton();
                 }
                 else
                 {
@@ -9172,10 +10889,19 @@ class GameScene extends Phaser.Scene {
                     else
                         this.scene.disableSplitButton();
 
-                    if (numSplits[currentPlayer] == 0)
+                    if (numSplits[currentPlayer] == 0 && peekingOption != 2)
                         this.scene.enableSurrenderButton();
                     else
                         this.scene.disableSurrenderButton();
+
+                    if (doubleOption == 1 && (this.scene.getHandValue(playerCards[currentPlayer]) < 9 || this.scene.getHandValue(playerCards[currentPlayer]) > 11))
+                        this.scene.disableDoubleButton();
+                    else if (doubleOption == 2 && (this.scene.getHandValue(playerCards[currentPlayer]) < 9 || this.scene.getHandValue(playerCards[currentPlayer]) > 10))
+                        this.scene.disableDoubleButton();
+                    else if (doubleOption == 1 && (this.scene.getHandValue(playerCards[currentPlayer]) >= 9 && this.scene.getHandValue(playerCards[currentPlayer]) <= 11) && playerCurrency >= player3Bet)
+                        this.scene.enableDoubleButton();
+                    else if (doubleOption == 2 && (this.scene.getHandValue(playerCards[currentPlayer]) >= 9 && this.scene.getHandValue(playerCards[currentPlayer]) <= 10) && playerCurrency >= player3Bet)
+                        this.scene.enableDoubleButton();
                 }
                 else
                 {
@@ -9345,6 +11071,18 @@ class GameScene extends Phaser.Scene {
                         this.scene.enableSplitButton();
                     else
                         this.scene.disableSplitButton();
+
+                    if (peekingOption == 2)
+                        this.scene.disableSurrenderButton();
+
+                    if (doubleOption == 1 && (this.scene.getHandValue(playerCards[currentPlayer]) < 9 || this.scene.getHandValue(playerCards[currentPlayer]) > 11))
+                        this.scene.disableDoubleButton();
+                    else if (doubleOption == 2 && (this.scene.getHandValue(playerCards[currentPlayer]) < 9 || this.scene.getHandValue(playerCards[currentPlayer]) > 10))
+                        this.scene.disableDoubleButton();
+                    else if (doubleOption == 1 && (this.scene.getHandValue(playerCards[currentPlayer]) >= 9 && this.scene.getHandValue(playerCards[currentPlayer]) <= 11) && playerCurrency >= player1Bet)
+                        this.scene.enableDoubleButton();
+                    else if (doubleOption == 2 && (this.scene.getHandValue(playerCards[currentPlayer]) >= 9 && this.scene.getHandValue(playerCards[currentPlayer]) <= 10) && playerCurrency >= player1Bet)
+                        this.scene.enableDoubleButton();
                 }
             }
             else if (currentPlayer == 1)
@@ -9462,6 +11200,18 @@ class GameScene extends Phaser.Scene {
                         this.scene.enableSplitButton();
                     else
                         this.scene.disableSplitButton();
+
+                    if (peekingOption == 2)
+                        this.scene.disableSurrenderButton();
+
+                    if (doubleOption == 1 && (this.scene.getHandValue(playerCards[currentPlayer]) < 9 || this.scene.getHandValue(playerCards[currentPlayer]) > 11))
+                        this.scene.disableDoubleButton();
+                    else if (doubleOption == 2 && (this.scene.getHandValue(playerCards[currentPlayer]) < 9 || this.scene.getHandValue(playerCards[currentPlayer]) > 10))
+                        this.scene.disableDoubleButton();
+                    else if (doubleOption == 1 && (this.scene.getHandValue(playerCards[currentPlayer]) >= 9 && this.scene.getHandValue(playerCards[currentPlayer]) <= 11) && playerCurrency >= player2Bet)
+                        this.scene.enableDoubleButton();
+                    else if (doubleOption == 2 && (this.scene.getHandValue(playerCards[currentPlayer]) >= 9 && this.scene.getHandValue(playerCards[currentPlayer]) <= 10) && playerCurrency >= player2Bet)
+                        this.scene.enableDoubleButton();
                 }
             }
             else if (currentPlayer == 2)
@@ -9579,6 +11329,18 @@ class GameScene extends Phaser.Scene {
                         this.scene.enableSplitButton();
                     else
                         this.scene.disableSplitButton();
+
+                    if (peekingOption == 2)
+                        this.scene.disableSurrenderButton();
+
+                    if (doubleOption == 1 && (this.scene.getHandValue(playerCards[currentPlayer]) < 9 || this.scene.getHandValue(playerCards[currentPlayer]) > 11))
+                        this.scene.disableDoubleButton();
+                    else if (doubleOption == 2 && (this.scene.getHandValue(playerCards[currentPlayer]) < 9 || this.scene.getHandValue(playerCards[currentPlayer]) > 10))
+                        this.scene.disableDoubleButton();
+                    else if (doubleOption == 1 && (this.scene.getHandValue(playerCards[currentPlayer]) >= 9 && this.scene.getHandValue(playerCards[currentPlayer]) <= 11) && playerCurrency >= player3Bet)
+                        this.scene.enableDoubleButton();
+                    else if (doubleOption == 2 && (this.scene.getHandValue(playerCards[currentPlayer]) >= 9 && this.scene.getHandValue(playerCards[currentPlayer]) <= 10) && playerCurrency >= player3Bet)
+                        this.scene.enableDoubleButton();
                 }
             }
 
@@ -9630,6 +11392,18 @@ class GameScene extends Phaser.Scene {
                                 this.scene.disableSplitButton();
 
                             this.scene.disableInsuranceButton();
+
+                            if (peekingOption == 2)
+                                this.scene.disableSurrenderButton();
+
+                            if (doubleOption == 1 && (this.scene.getHandValue(playerCards[currentPlayer]) < 9 || this.scene.getHandValue(playerCards[currentPlayer]) > 11))
+                                this.scene.disableDoubleButton();
+                            else if (doubleOption == 2 && (this.scene.getHandValue(playerCards[currentPlayer]) < 9 || this.scene.getHandValue(playerCards[currentPlayer]) > 10))
+                                this.scene.disableDoubleButton();
+                            else if (doubleOption == 1 && (this.scene.getHandValue(playerCards[currentPlayer]) >= 9 && this.scene.getHandValue(playerCards[currentPlayer]) <= 11) && playerCurrency >= player1Bet)
+                                this.scene.enableDoubleButton();
+                            else if (doubleOption == 2 && (this.scene.getHandValue(playerCards[currentPlayer]) >= 9 && this.scene.getHandValue(playerCards[currentPlayer]) <= 10) && playerCurrency >= player1Bet)
+                                this.scene.enableDoubleButton();
                         }
                     }
                 }
@@ -9679,6 +11453,18 @@ class GameScene extends Phaser.Scene {
                                 this.scene.disableSplitButton();
 
                             this.scene.disableInsuranceButton();
+
+                            if (peekingOption == 2)
+                                this.scene.disableSurrenderButton();
+
+                            if (doubleOption == 1 && (this.scene.getHandValue(playerCards[currentPlayer]) < 9 || this.scene.getHandValue(playerCards[currentPlayer]) > 11))
+                                this.scene.disableDoubleButton();
+                            else if (doubleOption == 2 && (this.scene.getHandValue(playerCards[currentPlayer]) < 9 || this.scene.getHandValue(playerCards[currentPlayer]) > 10))
+                                this.scene.disableDoubleButton();
+                            else if (doubleOption == 1 && (this.scene.getHandValue(playerCards[currentPlayer]) >= 9 && this.scene.getHandValue(playerCards[currentPlayer]) <= 11) && playerCurrency >= player2Bet)
+                                this.scene.enableDoubleButton();
+                            else if (doubleOption == 2 && (this.scene.getHandValue(playerCards[currentPlayer]) >= 9 && this.scene.getHandValue(playerCards[currentPlayer]) <= 10) && playerCurrency >= player2Bet)
+                                this.scene.enableDoubleButton();
                         }
                     }
                 }
@@ -9720,6 +11506,18 @@ class GameScene extends Phaser.Scene {
                             this.scene.disableSplitButton();
 
                         this.scene.disableInsuranceButton();
+
+                        if (peekingOption == 2)
+                            this.scene.disableSurrenderButton();
+
+                        if (doubleOption == 1 && (this.scene.getHandValue(playerCards[currentPlayer]) < 9 || this.scene.getHandValue(playerCards[currentPlayer]) > 11))
+                            this.scene.disableDoubleButton();
+                        else if (doubleOption == 2 && (this.scene.getHandValue(playerCards[currentPlayer]) < 9 || this.scene.getHandValue(playerCards[currentPlayer]) > 10))
+                            this.scene.disableDoubleButton();
+                        else if (doubleOption == 1 && (this.scene.getHandValue(playerCards[currentPlayer]) >= 9 && this.scene.getHandValue(playerCards[currentPlayer]) <= 11) && playerCurrency >= player3Bet)
+                            this.scene.enableDoubleButton();
+                        else if (doubleOption == 2 && (this.scene.getHandValue(playerCards[currentPlayer]) >= 9 && this.scene.getHandValue(playerCards[currentPlayer]) <= 10) && playerCurrency >= player3Bet)
+                            this.scene.enableDoubleButton();
                     }
                 }
             }
@@ -9887,32 +11685,94 @@ class GameScene extends Phaser.Scene {
                         }
                     }
 
-                    // deal cards to new hands
-                    currentHand = 1;
-                    player1Hands[0][1] = (this.scene.getValue(cardInts, cardIndex, this));
-                    player1Sprites[0][1] = shuffledDeck[cardInts[cardIndex]];
-                    this.scene.hitSplitCard(cardInts[cardIndex], shuffledDeck, player1Hands[0].length-1, currentPlayer, 1, this);
-
-                    cardIndex = cardIndex + 1;
-                    updateInfo(1, 0);
-                    currentHand = 2;
-
-                    player1Hands[1][1] = (this.scene.getValue(cardInts, cardIndex, this));
-                    player1Sprites[1][1] = shuffledDeck[cardInts[cardIndex]];
-                    this.scene.hitSplitCard(cardInts[cardIndex], shuffledDeck, player1Hands[1].length-1, currentPlayer, 2, this);
-                    
-                    cardIndex = cardIndex + 1;
-                    updateInfo(1, 1);
-
                     // place hand indicator on first hand
-                    handIndicator.setPosition(cardX[0][0] + splitSpacing, cardY[0][0] + handIndicatorSpacing);
-                    handIndicator.setVisible(true);
-                    currentHand = 1;
+                    if (player1Hands[0][0] != "A" || hitSplitAces != 0)
+                    {
+                        // deal cards to new hands
+                        currentHand = 1;
+                        player1Hands[0][1] = (this.scene.getValue(cardInts, cardIndex, this));
+                        player1Sprites[0][1] = shuffledDeck[cardInts[cardIndex]];
+                        this.scene.hitSplitCard(cardInts[cardIndex], shuffledDeck, player1Hands[0].length-1, currentPlayer, 1, this);
+
+                        cardIndex = cardIndex + 1;
+                        updateInfo(1, 0);
+                        currentHand = 2;
+
+                        player1Hands[1][1] = (this.scene.getValue(cardInts, cardIndex, this));
+                        player1Sprites[1][1] = shuffledDeck[cardInts[cardIndex]];
+                        this.scene.hitSplitCard(cardInts[cardIndex], shuffledDeck, player1Hands[1].length-1, currentPlayer, 2, this);
+                        
+                        cardIndex = cardIndex + 1;
+                        updateInfo(1, 1);
+
+                        handIndicator.setPosition(cardX[0][0] + splitSpacing, cardY[0][0] + handIndicatorSpacing);
+                        handIndicator.setVisible(true);
+                        currentHand = 1;
+                    }
+                    else
+                    {
+                        // deal cards to new hands
+                        currentHand = 1;
+                        player1Hands[0][1] = (this.scene.getValue(cardInts, cardIndex, this));
+                        player1Sprites[0][1] = shuffledDeck[cardInts[cardIndex]];
+                        this.scene.hitDoubleSplitCard(cardInts[cardIndex], shuffledDeck, player1Hands[0].length-1, currentPlayer, 1, this);
+
+                        cardIndex = cardIndex + 1;
+                        updateInfo(1, 0);
+                        currentHand = 2;
+
+                        player1Hands[1][1] = (this.scene.getValue(cardInts, cardIndex, this));
+                        player1Sprites[1][1] = shuffledDeck[cardInts[cardIndex]];
+                        this.scene.hitDoubleSplitCard(cardInts[cardIndex], shuffledDeck, player1Hands[1].length-1, currentPlayer, 2, this);
+                        
+                        cardIndex = cardIndex + 1;
+                        updateInfo(1, 1);
+                    }
 
                     if (playerCurrency >= player1Bet)
                         this.scene.enableDoubleButton();
                     else
                         this.scene.disableDoubleButton();
+
+                    if (peekingOption == 2)
+                        this.scene.disableSurrenderButton();
+
+                    if (doubleOption == 1 && (this.scene.splitGetHandValue(player1Hands[currentHand-1]) < 9 || this.scene.splitGetHandValue(player1Hands[currentHand-1]) > 11))
+                        this.scene.disableDoubleButton();
+                    else if (doubleOption == 2 && (this.scene.splitGetHandValue(player1Hands[currentHand-1]) < 9 || this.scene.splitGetHandValue(player1Hands[currentHand-1]) > 10))
+                        this.scene.disableDoubleButton();
+                    else if (doubleOption == 1 && (this.scene.splitGetHandValue(player1Hands[currentHand-1]) >= 9 && this.scene.splitGetHandValue(player1Hands[currentHand-1]) <= 11) && playerCurrency >= player1Bet)
+                        this.scene.enableDoubleButton();
+                    else if (doubleOption == 2 && (this.scene.splitGetHandValue(player1Hands[currentHand-1]) >= 9 && this.scene.splitGetHandValue(player1Hands[currentHand-1]) <= 10) && playerCurrency >= player1Bet)
+                        this.scene.enableDoubleButton();
+
+                    if (doubleAfterSplit == 0)
+                        this.scene.disableDoubleButton();
+
+                
+                    if (player1Hands[0][0] === "A" && hitSplitAces == 0 && numPlayers != 1)
+                    {
+                        player1TurnIndicator.fillColor = 0xFFFFFF;
+                        player2TurnIndicator.fillColor = 0x8E1600;
+                        currentPlayer = currentPlayer + 1;
+                    }
+                    else if (player1Hands[0][0] === "A" && hitSplitAces == 0 && numPlayers == 1)
+                    {
+                        // plus more stuff since if its the last player
+                        currentHand = 0;
+                        dealerCard.visible = false;
+                        shuffledDeck[cardInts[dealerIndex]].setDepth(1);
+                        this.scene.revealDealerInfo(dealerCards);
+                        // dealer needs to draw to 16, and stand on 17
+                        this.scene.drawDealerCards(dealerCards, cardIndex, cardInts, dealerCards.length);
+                        cardIndex = cardIndex + dealerCards.length - 2;
+                        this.scene.isWinOrLoss();
+                        this.scene.disableActionButtons();
+                        this.scene.disableInsuranceButton();
+                        this.scene.disableSplitButton();
+                    }
+            
+                    
                 }
             }
             else if (currentPlayer == 1)
@@ -10054,32 +11914,91 @@ class GameScene extends Phaser.Scene {
                         }
                     }
 
-                    // deal cards to new hands
-                    currentHand = 1;
-                    player2Hands[0][1] = (this.scene.getValue(cardInts, cardIndex, this));
-                    player2Sprites[0][1] = shuffledDeck[cardInts[cardIndex]];
-                    this.scene.hitSplitCard(cardInts[cardIndex], shuffledDeck, player2Hands[0].length-1, currentPlayer, 1, this);
-
-                    cardIndex = cardIndex + 1;
-                    updateInfo(1, 0);
-                    currentHand = 2;
-
-                    player2Hands[1][1] = (this.scene.getValue(cardInts, cardIndex, this));
-                    player2Sprites[1][1] = shuffledDeck[cardInts[cardIndex]];
-                    this.scene.hitSplitCard(cardInts[cardIndex], shuffledDeck, player2Hands[1].length-1, currentPlayer, 2, this);
-                    
-                    cardIndex = cardIndex + 1;
-                    updateInfo(1, 1);
-
                     // place hand indicator on first hand
-                    handIndicator.setPosition(cardX[0][1] + splitSpacing, cardY[0][1] + handIndicatorSpacing);
-                    handIndicator.setVisible(true);
-                    currentHand = 1;
+                    if (player2Hands[0][0] != "A" || hitSplitAces != 0)
+                    {
+                        // deal cards to new hands
+                        currentHand = 1;
+                        player2Hands[0][1] = (this.scene.getValue(cardInts, cardIndex, this));
+                        player2Sprites[0][1] = shuffledDeck[cardInts[cardIndex]];
+                        this.scene.hitSplitCard(cardInts[cardIndex], shuffledDeck, player2Hands[0].length-1, currentPlayer, 1, this);
+
+                        cardIndex = cardIndex + 1;
+                        updateInfo(1, 0);
+                        currentHand = 2;
+
+                        player2Hands[1][1] = (this.scene.getValue(cardInts, cardIndex, this));
+                        player2Sprites[1][1] = shuffledDeck[cardInts[cardIndex]];
+                        this.scene.hitSplitCard(cardInts[cardIndex], shuffledDeck, player2Hands[1].length-1, currentPlayer, 2, this);
+                        
+                        cardIndex = cardIndex + 1;
+                        updateInfo(1, 1);
+
+                        handIndicator.setPosition(cardX[0][1] + splitSpacing, cardY[0][1] + handIndicatorSpacing);
+                        handIndicator.setVisible(true);
+                        currentHand = 1;
+                    }
+                    else
+                    {
+                        // deal cards to new hands
+                        currentHand = 1;
+                        player2Hands[0][1] = (this.scene.getValue(cardInts, cardIndex, this));
+                        player2Sprites[0][1] = shuffledDeck[cardInts[cardIndex]];
+                        this.scene.hitDoubleSplitCard(cardInts[cardIndex], shuffledDeck, player2Hands[0].length-1, currentPlayer, 1, this);
+
+                        cardIndex = cardIndex + 1;
+                        updateInfo(1, 0);
+                        currentHand = 2;
+
+                        player2Hands[1][1] = (this.scene.getValue(cardInts, cardIndex, this));
+                        player2Sprites[1][1] = shuffledDeck[cardInts[cardIndex]];
+                        this.scene.hitDoubleSplitCard(cardInts[cardIndex], shuffledDeck, player2Hands[1].length-1, currentPlayer, 2, this);
+                        
+                        cardIndex = cardIndex + 1;
+                        updateInfo(1, 1);
+                    }
 
                     if (playerCurrency >= player2Bet)
                         this.scene.enableDoubleButton();
                     else
                         this.scene.disableDoubleButton();
+
+                    if (peekingOption == 2)
+                        this.scene.disableSurrenderButton();
+
+                    if (doubleOption == 1 && (this.scene.splitGetHandValue(player2Hands[currentHand-1]) < 9 || this.scene.splitGetHandValue(player2Hands[currentHand-1]) > 11))
+                        this.scene.disableDoubleButton();
+                    else if (doubleOption == 2 && (this.scene.splitGetHandValue(player2Hands[currentHand-1]) < 9 || this.scene.splitGetHandValue(player2Hands[currentHand-1]) > 10))
+                        this.scene.disableDoubleButton();
+                    else if (doubleOption == 1 && (this.scene.splitGetHandValue(player2Hands[currentHand-1]) >= 9 && this.scene.splitGetHandValue(player2Hands[currentHand-1]) <= 11) && playerCurrency >= player2Bet)
+                        this.scene.enableDoubleButton();
+                    else if (doubleOption == 2 && (this.scene.splitGetHandValue(player2Hands[currentHand-1]) >= 9 && this.scene.splitGetHandValue(player2Hands[currentHand-1]) <= 10) && playerCurrency >= player2Bet)
+                        this.scene.enableDoubleButton();
+
+                    if (doubleAfterSplit == 0)
+                        this.scene.disableDoubleButton();
+
+                    if (player2Hands[0][0] === "A" && hitSplitAces == 0 && numPlayers != 2)
+                    {
+                        player2TurnIndicator.fillColor = 0xFFFFFF;
+                        player3TurnIndicator.fillColor = 0x8E1600;
+                        currentPlayer = currentPlayer + 1;
+                    }
+                    else if (player2Hands[0][0] === "A" && hitSplitAces == 0 && numPlayers == 2)
+                    {
+                        // plus more stuff since if its the last player
+                        currentHand = 0;
+                        dealerCard.visible = false;
+                        shuffledDeck[cardInts[dealerIndex]].setDepth(1);
+                        this.scene.revealDealerInfo(dealerCards);
+                        // dealer needs to draw to 16, and stand on 17
+                        this.scene.drawDealerCards(dealerCards, cardIndex, cardInts, dealerCards.length);
+                        cardIndex = cardIndex + dealerCards.length - 2;
+                        this.scene.isWinOrLoss();
+                        this.scene.disableActionButtons();
+                        this.scene.disableInsuranceButton();
+                        this.scene.disableSplitButton();
+                    }
                 }
             }
             else if (currentPlayer == 2)
@@ -10221,32 +12140,85 @@ class GameScene extends Phaser.Scene {
                         }
                     }
 
-                    // deal cards to new hands
-                    currentHand = 1;
-                    player3Hands[0][1] = (this.scene.getValue(cardInts, cardIndex, this));
-                    player3Sprites[0][1] = shuffledDeck[cardInts[cardIndex]];
-                    this.scene.hitSplitCard(cardInts[cardIndex], shuffledDeck, player3Hands[0].length-1, currentPlayer, 1, this);
-
-                    cardIndex = cardIndex + 1;
-                    updateInfo(1, 0);
-                    currentHand = 2;
-
-                    player3Hands[1][1] = (this.scene.getValue(cardInts, cardIndex, this));
-                    player3Sprites[1][1] = shuffledDeck[cardInts[cardIndex]];
-                    this.scene.hitSplitCard(cardInts[cardIndex], shuffledDeck, player3Hands[1].length-1, currentPlayer, 2, this);
-                    
-                    cardIndex = cardIndex + 1;
-                    updateInfo(1, 1);
-
                     // place hand indicator on first hand
-                    handIndicator.setPosition(cardX[0][2] + splitSpacing, cardY[0][2] + handIndicatorSpacing);
-                    handIndicator.setVisible(true);
-                    currentHand = 1;
+                    if (player3Hands[0][0] != "A" || hitSplitAces != 0)
+                    {
+                        // deal cards to new hands
+                        currentHand = 1;
+                        player3Hands[0][1] = (this.scene.getValue(cardInts, cardIndex, this));
+                        player3Sprites[0][1] = shuffledDeck[cardInts[cardIndex]];
+                        this.scene.hitSplitCard(cardInts[cardIndex], shuffledDeck, player3Hands[0].length-1, currentPlayer, 1, this);
+
+                        cardIndex = cardIndex + 1;
+                        updateInfo(1, 0);
+                        currentHand = 2;
+
+                        player3Hands[1][1] = (this.scene.getValue(cardInts, cardIndex, this));
+                        player3Sprites[1][1] = shuffledDeck[cardInts[cardIndex]];
+                        this.scene.hitSplitCard(cardInts[cardIndex], shuffledDeck, player3Hands[1].length-1, currentPlayer, 2, this);
+                        
+                        cardIndex = cardIndex + 1;
+                        updateInfo(1, 1);
+
+                        handIndicator.setPosition(cardX[0][2] + splitSpacing, cardY[0][2] + handIndicatorSpacing);
+                        handIndicator.setVisible(true);
+                        currentHand = 1;
+                    }
+                    else
+                    {
+                        // deal cards to new hands
+                        currentHand = 1;
+                        player3Hands[0][1] = (this.scene.getValue(cardInts, cardIndex, this));
+                        player3Sprites[0][1] = shuffledDeck[cardInts[cardIndex]];
+                        this.scene.hitDoubleSplitCard(cardInts[cardIndex], shuffledDeck, player3Hands[0].length-1, currentPlayer, 1, this);
+
+                        cardIndex = cardIndex + 1;
+                        updateInfo(1, 0);
+                        currentHand = 2;
+
+                        player3Hands[1][1] = (this.scene.getValue(cardInts, cardIndex, this));
+                        player3Sprites[1][1] = shuffledDeck[cardInts[cardIndex]];
+                        this.scene.hitDoubleSplitCard(cardInts[cardIndex], shuffledDeck, player3Hands[1].length-1, currentPlayer, 2, this);
+                        
+                        cardIndex = cardIndex + 1;
+                        updateInfo(1, 1);
+                    }
 
                     if (playerCurrency >= player3Bet)
                         this.scene.enableDoubleButton();
                     else
                         this.scene.disableDoubleButton();
+
+                    if (peekingOption == 2)
+                        this.scene.disableSurrenderButton();
+
+                    if (doubleOption == 1 && (this.scene.splitGetHandValue(player3Hands[currentHand-1]) < 9 || this.scene.splitGetHandValue(player3Hands[currentHand-1]) > 11))
+                        this.scene.disableDoubleButton();
+                    else if (doubleOption == 2 && (this.scene.splitGetHandValue(player3Hands[currentHand-1]) < 9 || this.scene.splitGetHandValue(player3Hands[currentHand-1]) > 10))
+                        this.scene.disableDoubleButton();
+                    else if (doubleOption == 1 && (this.scene.splitGetHandValue(player3Hands[currentHand-1]) >= 9 && this.scene.splitGetHandValue(player3Hands[currentHand-1]) <= 11) && playerCurrency >= player3Bet)
+                        this.scene.enableDoubleButton();
+                    else if (doubleOption == 2 && (this.scene.splitGetHandValue(player3Hands[currentHand-1]) >= 9 && this.scene.splitGetHandValue(player3Hands[currentHand-1]) <= 10) && playerCurrency >= player3Bet)
+                        this.scene.enableDoubleButton();
+
+                    if (doubleAfterSplit == 0)
+                        this.scene.disableDoubleButton();
+
+                    if (player3Hands[0][0] === "A" && hitSplitAces == 0)
+                    {
+                        // plus more stuff since if its the last player
+                        currentHand = 0;
+                        dealerCard.visible = false;
+                        shuffledDeck[cardInts[dealerIndex]].setDepth(1);
+                        this.scene.revealDealerInfo(dealerCards);
+                        // dealer needs to draw to 16, and stand on 17
+                        this.scene.drawDealerCards(dealerCards, cardIndex, cardInts, dealerCards.length);
+                        cardIndex = cardIndex + dealerCards.length - 2;
+                        this.scene.isWinOrLoss();
+                        this.scene.disableActionButtons();
+                        this.scene.disableInsuranceButton();
+                        this.scene.disableSplitButton();
+                    }
                 }
 
             }
@@ -11552,15 +13524,1141 @@ class GameScene extends Phaser.Scene {
 
         if (countSpoiler == 1)
         {
-            runningCountSpoiler.on("pointerover", () => { runningCountSpoiler.visible = false; });
-            runningCountSpoiler.on("pointerout", () => { runningCountSpoiler.visible = true; });
+            runningCountSpoiler.on("pointerover", () => { runningCountSpoiler.setAlpha(0); });
+            runningCountSpoiler.on("pointerout", () => { runningCountSpoiler.setAlpha(1);});
     
-            trueCountSpoiler.on("pointerover", () => { trueCountSpoiler.visible = false; });
-            trueCountSpoiler.on("pointerout", () => { trueCountSpoiler.visible = true; });
+            trueCountSpoiler.on("pointerover", () => { trueCountSpoiler.setAlpha(0); });
+            trueCountSpoiler.on("pointerout", () => { trueCountSpoiler.setAlpha(1); });
         }
 
+        peekingOptionMinusButton.on('pointerdown', function(){
+            
+            if (settingsPeekingOption > 0)
+            {
+                peekingOptionMinusButton.setTexture('minusButtonClicked');
+                settingsPeekingOption = settingsPeekingOption - 1;
 
+                if (settingsPeekingOption == 0)
+                {
+                    peekingOptionText.setPosition(884, 240);
+                    peekingOptionText.setText("Early");
+                }
+                else if (settingsPeekingOption == 1)
+                {
+                    peekingOptionText.setPosition(892, 240);
+                    peekingOptionText.setText("Late");
+                }
+                else if (settingsPeekingOption == 2)
+                {
+                    peekingOptionText.setPosition(892, 240);
+                    peekingOptionText.setText("None");
+                }
+            }
+            
+            // peekingOption
+            if (settingsPeekingOption > 0)
+            {
+                peekingOptionMinusButton.setInteractive({ useHandCursor: true });
+                peekingOptionMinusButton.setTexture('minusButtonNormal');
 
+                peekingOptionMinusButton.on('pointerover', function(){
+                    peekingOptionMinusButton.setTexture('minusButtonHovered');
+                })
+
+                peekingOptionMinusButton.on('pointerout', function(){
+                    peekingOptionMinusButton.setTexture('minusButtonNormal');
+                })
+
+                peekingOptionMinusButton.on('pointerup', function(){
+                    peekingOptionMinusButton.setTexture('minusButtonHovered');
+                })
+            }
+            else
+            {
+                peekingOptionMinusButton.disableInteractive();
+                peekingOptionMinusButton.setTexture('minusButtonLocked');
+
+                peekingOptionMinusButton.on('pointerover', function(){
+                    peekingOptionMinusButton.setTexture('minusButtonLocked');
+                })
+
+                peekingOptionMinusButton.on('pointerout', function(){
+                    peekingOptionMinusButton.setTexture('minusButtonLocked');
+                })
+
+                peekingOptionMinusButton.on('pointerup', function(){
+                    peekingOptionMinusButton.setTexture('minusButtonLocked');
+                })
+            }
+
+            if (settingsPeekingOption < 2)
+            {
+                peekingOptionPlusButton.setInteractive({ useHandCursor: true });
+                peekingOptionPlusButton.setTexture('plusButtonNormal');
+
+                peekingOptionPlusButton.on('pointerover', function(){
+                    peekingOptionPlusButton.setTexture('plusButtonHovered');
+                })
+
+                peekingOptionPlusButton.on('pointerout', function(){
+                    peekingOptionPlusButton.setTexture('plusButtonNormal');
+                })
+
+                peekingOptionPlusButton.on('pointerup', function(){
+                    peekingOptionPlusButton.setTexture('plusButtonHovered');
+                })
+            }
+            else
+            {
+                peekingOptionPlusButton.disableInteractive();
+                peekingOptionPlusButton.setTexture('plusButtonLocked');
+
+                peekingOptionPlusButton.on('pointerover', function(){
+                    peekingOptionPlusButton.setTexture('plusButtonLocked');
+                })
+
+                peekingOptionPlusButton.on('pointerout', function(){
+                    peekingOptionPlusButton.setTexture('plusButtonLocked');
+                })
+
+                peekingOptionPlusButton.on('pointerup', function(){
+                    peekingOptionPlusButton.setTexture('plusButtonLocked');
+                })
+            }
+
+        });
+
+        peekingOptionPlusButton.on('pointerdown', function(){
+            
+            if (settingsPeekingOption < 2)
+            {
+                peekingOptionPlusButton.setTexture('plusButtonClicked');
+                settingsPeekingOption = settingsPeekingOption + 1;
+
+                if (settingsPeekingOption == 0)
+                {
+                    peekingOptionText.setPosition(884, 240);
+                    peekingOptionText.setText("Early");
+                }
+                else if (settingsPeekingOption == 1)
+                {
+                    peekingOptionText.setPosition(892, 240);
+                    peekingOptionText.setText("Late");
+                }
+                else if (settingsPeekingOption == 2)
+                {
+                    peekingOptionText.setPosition(892, 240);
+                    peekingOptionText.setText("None");
+                }
+            }
+
+            // peekingOption
+            if (settingsPeekingOption > 0)
+            {
+                peekingOptionMinusButton.setInteractive({ useHandCursor: true });
+                peekingOptionMinusButton.setTexture('minusButtonNormal');
+
+                peekingOptionMinusButton.on('pointerover', function(){
+                    peekingOptionMinusButton.setTexture('minusButtonHovered');
+                })
+
+                peekingOptionMinusButton.on('pointerout', function(){
+                    peekingOptionMinusButton.setTexture('minusButtonNormal');
+                })
+
+                peekingOptionMinusButton.on('pointerup', function(){
+                    peekingOptionMinusButton.setTexture('minusButtonHovered');
+                })
+            }
+            else
+            {
+                peekingOptionMinusButton.disableInteractive();
+                peekingOptionMinusButton.setTexture('minusButtonLocked');
+
+                peekingOptionMinusButton.on('pointerover', function(){
+                    peekingOptionMinusButton.setTexture('minusButtonLocked');
+                })
+
+                peekingOptionMinusButton.on('pointerout', function(){
+                    peekingOptionMinusButton.setTexture('minusButtonLocked');
+                })
+
+                peekingOptionMinusButton.on('pointerup', function(){
+                    peekingOptionMinusButton.setTexture('minusButtonLocked');
+                })
+            }
+
+            if (settingsPeekingOption < 2)
+            {
+                peekingOptionPlusButton.setInteractive({ useHandCursor: true });
+                peekingOptionPlusButton.setTexture('plusButtonNormal');
+
+                peekingOptionPlusButton.on('pointerover', function(){
+                    peekingOptionPlusButton.setTexture('plusButtonHovered');
+                })
+
+                peekingOptionPlusButton.on('pointerout', function(){
+                    peekingOptionPlusButton.setTexture('plusButtonNormal');
+                })
+
+                peekingOptionPlusButton.on('pointerup', function(){
+                    peekingOptionPlusButton.setTexture('plusButtonHovered');
+                })
+            }
+            else
+            {
+                peekingOptionPlusButton.disableInteractive();
+                peekingOptionPlusButton.setTexture('plusButtonLocked');
+
+                peekingOptionPlusButton.on('pointerover', function(){
+                    peekingOptionPlusButton.setTexture('plusButtonLocked');
+                })
+
+                peekingOptionPlusButton.on('pointerout', function(){
+                    peekingOptionPlusButton.setTexture('plusButtonLocked');
+                })
+
+                peekingOptionPlusButton.on('pointerup', function(){
+                    peekingOptionPlusButton.setTexture('plusButtonLocked');
+                })
+            }
+
+        });
+
+        doubleOptionMinusButton.on('pointerdown', function(){
+            
+            if (settingsDoubleOption > 0)
+            {
+                doubleOptionMinusButton.setTexture('minusButtonClicked');
+                settingsDoubleOption = settingsDoubleOption - 1;
+
+                if (settingsDoubleOption == 0)
+                {
+                    doubleOptionText.setPosition(902, 340);
+                    doubleOptionText.setText("All");
+                }
+                else if (settingsDoubleOption == 1)
+                {
+                    doubleOptionText.setPosition(893, 340);
+                    doubleOptionText.setText("9-11");
+                }
+                else if (settingsDoubleOption == 2)
+                {
+                    doubleOptionText.setPosition(893, 340);
+                    doubleOptionText.setText("9-10");
+                }
+            }
+
+            // doubleOption
+            if (settingsDoubleOption > 0)
+            {
+                doubleOptionMinusButton.setInteractive({ useHandCursor: true });
+                doubleOptionMinusButton.setTexture('minusButtonNormal');
+
+                doubleOptionMinusButton.on('pointerover', function(){
+                    doubleOptionMinusButton.setTexture('minusButtonHovered');
+                })
+
+                doubleOptionMinusButton.on('pointerout', function(){
+                    doubleOptionMinusButton.setTexture('minusButtonNormal');
+                })
+
+                doubleOptionMinusButton.on('pointerup', function(){
+                    doubleOptionMinusButton.setTexture('minusButtonHovered');
+                })
+            }
+            else
+            {
+                doubleOptionMinusButton.disableInteractive();
+                doubleOptionMinusButton.setTexture('minusButtonLocked');
+
+                doubleOptionMinusButton.on('pointerover', function(){
+                    doubleOptionMinusButton.setTexture('minusButtonLocked');
+                })
+
+                doubleOptionMinusButton.on('pointerout', function(){
+                    doubleOptionMinusButton.setTexture('minusButtonLocked');
+                })
+
+                doubleOptionMinusButton.on('pointerup', function(){
+                    doubleOptionMinusButton.setTexture('minusButtonLocked');
+                })
+            }
+
+            if (settingsDoubleOption < 2)
+            {
+                doubleOptionPlusButton.setInteractive({ useHandCursor: true });
+                doubleOptionPlusButton.setTexture('plusButtonNormal');
+
+                doubleOptionPlusButton.on('pointerover', function(){
+                    doubleOptionPlusButton.setTexture('plusButtonHovered');
+                })
+
+                doubleOptionPlusButton.on('pointerout', function(){
+                    doubleOptionPlusButton.setTexture('plusButtonNormal');
+                })
+
+                doubleOptionPlusButton.on('pointerup', function(){
+                    doubleOptionPlusButton.setTexture('plusButtonHovered');
+                })
+            }
+            else
+            {
+                doubleOptionPlusButton.disableInteractive();
+                doubleOptionPlusButton.setTexture('plusButtonLocked');
+
+                doubleOptionPlusButton.on('pointerover', function(){
+                    doubleOptionPlusButton.setTexture('plusButtonLocked');
+                })
+
+                doubleOptionPlusButton.on('pointerout', function(){
+                    doubleOptionPlusButton.setTexture('plusButtonLocked');
+                })
+
+                doubleOptionPlusButton.on('pointerup', function(){
+                    doubleOptionPlusButton.setTexture('plusButtonLocked');
+                })
+            }
+            
+
+        });
+
+        doubleOptionPlusButton.on('pointerdown', function(){
+            
+            if (settingsDoubleOption < 2)
+            {
+                doubleOptionPlusButton.setTexture('plusButtonClicked');
+                settingsDoubleOption = settingsDoubleOption + 1;
+
+                if (settingsDoubleOption == 0)
+                {
+                    doubleOptionText.setPosition(902, 340);
+                    doubleOptionText.setText("All");
+                }
+                else if (settingsDoubleOption == 1)
+                {
+                    doubleOptionText.setPosition(893, 340);
+                    doubleOptionText.setText("9-11");
+                }
+                else if (settingsDoubleOption == 2)
+                {
+                    doubleOptionText.setPosition(893, 340);
+                    doubleOptionText.setText("9-10");
+                }
+            }
+
+            // doubleOption
+            if (settingsDoubleOption > 0)
+            {
+                doubleOptionMinusButton.setInteractive({ useHandCursor: true });
+                doubleOptionMinusButton.setTexture('minusButtonNormal');
+
+                doubleOptionMinusButton.on('pointerover', function(){
+                    doubleOptionMinusButton.setTexture('minusButtonHovered');
+                })
+
+                doubleOptionMinusButton.on('pointerout', function(){
+                    doubleOptionMinusButton.setTexture('minusButtonNormal');
+                })
+
+                doubleOptionMinusButton.on('pointerup', function(){
+                    doubleOptionMinusButton.setTexture('minusButtonHovered');
+                })
+            }
+            else
+            {
+                doubleOptionMinusButton.disableInteractive();
+                doubleOptionMinusButton.setTexture('minusButtonLocked');
+
+                doubleOptionMinusButton.on('pointerover', function(){
+                    doubleOptionMinusButton.setTexture('minusButtonLocked');
+                })
+
+                doubleOptionMinusButton.on('pointerout', function(){
+                    doubleOptionMinusButton.setTexture('minusButtonLocked');
+                })
+
+                doubleOptionMinusButton.on('pointerup', function(){
+                    doubleOptionMinusButton.setTexture('minusButtonLocked');
+                })
+            }
+
+            if (settingsDoubleOption < 2)
+            {
+                doubleOptionPlusButton.setInteractive({ useHandCursor: true });
+                doubleOptionPlusButton.setTexture('plusButtonNormal');
+
+                doubleOptionPlusButton.on('pointerover', function(){
+                    doubleOptionPlusButton.setTexture('plusButtonHovered');
+                })
+
+                doubleOptionPlusButton.on('pointerout', function(){
+                    doubleOptionPlusButton.setTexture('plusButtonNormal');
+                })
+
+                doubleOptionPlusButton.on('pointerup', function(){
+                    doubleOptionPlusButton.setTexture('plusButtonHovered');
+                })
+            }
+            else
+            {
+                doubleOptionPlusButton.disableInteractive();
+                doubleOptionPlusButton.setTexture('plusButtonLocked');
+
+                doubleOptionPlusButton.on('pointerover', function(){
+                    doubleOptionPlusButton.setTexture('plusButtonLocked');
+                })
+
+                doubleOptionPlusButton.on('pointerout', function(){
+                    doubleOptionPlusButton.setTexture('plusButtonLocked');
+                })
+
+                doubleOptionPlusButton.on('pointerup', function(){
+                    doubleOptionPlusButton.setTexture('plusButtonLocked');
+                })
+            }
+
+        });
+
+        hitSplitAcesMinusButton.on('pointerdown', function(){
+            
+            if (settingsHitSplitAces > 0)
+            {
+                hitSplitAcesMinusButton.setTexture('minusButtonClicked');
+                settingsHitSplitAces = settingsHitSplitAces - 1;
+
+                if (settingsHitSplitAces == 0)
+                {
+                    hitSplitAcesText.setPosition(910, 440);
+                    hitSplitAcesText.setText("No");
+                }
+                else if (settingsHitSplitAces == 1)
+                {
+                    hitSplitAcesText.setPosition(900, 440);
+                    hitSplitAcesText.setText("Yes");
+                }
+            }
+
+            // hitSplitAces
+            if (settingsHitSplitAces > 0)
+            {
+                hitSplitAcesMinusButton.setInteractive({ useHandCursor: true });
+                hitSplitAcesMinusButton.setTexture('minusButtonNormal');
+
+                hitSplitAcesMinusButton.on('pointerover', function(){
+                    hitSplitAcesMinusButton.setTexture('minusButtonHovered');
+                })
+
+                hitSplitAcesMinusButton.on('pointerout', function(){
+                    hitSplitAcesMinusButton.setTexture('minusButtonNormal');
+                })
+
+                hitSplitAcesMinusButton.on('pointerup', function(){
+                    hitSplitAcesMinusButton.setTexture('minusButtonHovered');
+                })
+            }
+            else
+            {
+                hitSplitAcesMinusButton.disableInteractive();
+                hitSplitAcesMinusButton.setTexture('minusButtonLocked');
+
+                hitSplitAcesMinusButton.on('pointerover', function(){
+                    hitSplitAcesMinusButton.setTexture('minusButtonLocked');
+                })
+
+                hitSplitAcesMinusButton.on('pointerout', function(){
+                    hitSplitAcesMinusButton.setTexture('minusButtonLocked');
+                })
+
+                hitSplitAcesMinusButton.on('pointerup', function(){
+                    hitSplitAcesMinusButton.setTexture('minusButtonLocked');
+                })
+            }
+
+            if (settingsHitSplitAces < 1)
+            {
+                hitSplitAcesPlusButton.setInteractive({ useHandCursor: true });
+                hitSplitAcesPlusButton.setTexture('plusButtonNormal');
+
+                hitSplitAcesPlusButton.on('pointerover', function(){
+                    hitSplitAcesPlusButton.setTexture('plusButtonHovered');
+                })
+
+                hitSplitAcesPlusButton.on('pointerout', function(){
+                    hitSplitAcesPlusButton.setTexture('plusButtonNormal');
+                })
+
+                hitSplitAcesPlusButton.on('pointerup', function(){
+                    hitSplitAcesPlusButton.setTexture('plusButtonHovered');
+                })
+            }
+            else
+            {
+                hitSplitAcesPlusButton.disableInteractive();
+                hitSplitAcesPlusButton.setTexture('plusButtonLocked');
+
+                hitSplitAcesPlusButton.on('pointerover', function(){
+                    hitSplitAcesPlusButton.setTexture('plusButtonLocked');
+                })
+
+                hitSplitAcesPlusButton.on('pointerout', function(){
+                    hitSplitAcesPlusButton.setTexture('plusButtonLocked');
+                })
+
+                hitSplitAcesPlusButton.on('pointerup', function(){
+                    hitSplitAcesPlusButton.setTexture('plusButtonLocked');
+                })
+            }
+            
+
+        });
+
+        hitSplitAcesPlusButton.on('pointerdown', function(){
+            
+            if (settingsHitSplitAces < 1)
+            {
+                hitSplitAcesPlusButton.setTexture('plusButtonClicked');
+                settingsHitSplitAces = settingsHitSplitAces + 1;
+
+                if (settingsHitSplitAces == 0)
+                {
+                    hitSplitAcesText.setPosition(910, 440);
+                    hitSplitAcesText.setText("No");
+                }
+                else if (settingsHitSplitAces == 1)
+                {
+                    hitSplitAcesText.setPosition(900, 440);
+                    hitSplitAcesText.setText("Yes");
+                }
+            }
+
+            // hitSplitAces
+            if (settingsHitSplitAces > 0)
+            {
+                hitSplitAcesMinusButton.setInteractive({ useHandCursor: true });
+                hitSplitAcesMinusButton.setTexture('minusButtonNormal');
+
+                hitSplitAcesMinusButton.on('pointerover', function(){
+                    hitSplitAcesMinusButton.setTexture('minusButtonHovered');
+                })
+
+                hitSplitAcesMinusButton.on('pointerout', function(){
+                    hitSplitAcesMinusButton.setTexture('minusButtonNormal');
+                })
+
+                hitSplitAcesMinusButton.on('pointerup', function(){
+                    hitSplitAcesMinusButton.setTexture('minusButtonHovered');
+                })
+            }
+            else
+            {
+                hitSplitAcesMinusButton.disableInteractive();
+                hitSplitAcesMinusButton.setTexture('minusButtonLocked');
+
+                hitSplitAcesMinusButton.on('pointerover', function(){
+                    hitSplitAcesMinusButton.setTexture('minusButtonLocked');
+                })
+
+                hitSplitAcesMinusButton.on('pointerout', function(){
+                    hitSplitAcesMinusButton.setTexture('minusButtonLocked');
+                })
+
+                hitSplitAcesMinusButton.on('pointerup', function(){
+                    hitSplitAcesMinusButton.setTexture('minusButtonLocked');
+                })
+            }
+
+            if (settingsHitSplitAces < 1)
+            {
+                hitSplitAcesPlusButton.setInteractive({ useHandCursor: true });
+                hitSplitAcesPlusButton.setTexture('plusButtonNormal');
+
+                hitSplitAcesPlusButton.on('pointerover', function(){
+                    hitSplitAcesPlusButton.setTexture('plusButtonHovered');
+                })
+
+                hitSplitAcesPlusButton.on('pointerout', function(){
+                    hitSplitAcesPlusButton.setTexture('plusButtonNormal');
+                })
+
+                hitSplitAcesPlusButton.on('pointerup', function(){
+                    hitSplitAcesPlusButton.setTexture('plusButtonHovered');
+                })
+            }
+            else
+            {
+                hitSplitAcesPlusButton.disableInteractive();
+                hitSplitAcesPlusButton.setTexture('plusButtonLocked');
+
+                hitSplitAcesPlusButton.on('pointerover', function(){
+                    hitSplitAcesPlusButton.setTexture('plusButtonLocked');
+                })
+
+                hitSplitAcesPlusButton.on('pointerout', function(){
+                    hitSplitAcesPlusButton.setTexture('plusButtonLocked');
+                })
+
+                hitSplitAcesPlusButton.on('pointerup', function(){
+                    hitSplitAcesPlusButton.setTexture('plusButtonLocked');
+                })
+            }
+
+        });
+
+        doubleAfterSplitMinusButton.on('pointerdown', function(){
+            
+            if (settingsDoubleAfterSplit > 0)
+            {
+                doubleAfterSplitMinusButton.setTexture('minusButtonClicked');
+                settingsDoubleAfterSplit = settingsDoubleAfterSplit - 1;
+
+                if (settingsDoubleAfterSplit == 0)
+                {
+                    doubleAfterSplitText.setPosition(910, 540);
+                    doubleAfterSplitText.setText("No");
+                }
+                else if (settingsDoubleAfterSplit == 1)
+                {
+                    doubleAfterSplitText.setPosition(900, 540);
+                    doubleAfterSplitText.setText("Yes");
+                }
+            }
+
+            // doubleAfterSplit
+            if (settingsDoubleAfterSplit > 0)
+            {
+                doubleAfterSplitMinusButton.setInteractive({ useHandCursor: true });
+                doubleAfterSplitMinusButton.setTexture('minusButtonNormal');
+
+                doubleAfterSplitMinusButton.on('pointerover', function(){
+                    doubleAfterSplitMinusButton.setTexture('minusButtonHovered');
+                })
+
+                doubleAfterSplitMinusButton.on('pointerout', function(){
+                    doubleAfterSplitMinusButton.setTexture('minusButtonNormal');
+                })
+
+                doubleAfterSplitMinusButton.on('pointerup', function(){
+                    doubleAfterSplitMinusButton.setTexture('minusButtonHovered');
+                })
+            }
+            else
+            {
+                doubleAfterSplitMinusButton.disableInteractive();
+                doubleAfterSplitMinusButton.setTexture('minusButtonLocked');
+
+                doubleAfterSplitMinusButton.on('pointerover', function(){
+                    doubleAfterSplitMinusButton.setTexture('minusButtonLocked');
+                })
+
+                doubleAfterSplitMinusButton.on('pointerout', function(){
+                    doubleAfterSplitMinusButton.setTexture('minusButtonLocked');
+                })
+
+                doubleAfterSplitMinusButton.on('pointerup', function(){
+                    doubleAfterSplitMinusButton.setTexture('minusButtonLocked');
+                })
+            }
+
+            if (settingsDoubleAfterSplit < 1)
+            {
+                doubleAfterSplitPlusButton.setInteractive({ useHandCursor: true });
+                doubleAfterSplitPlusButton.setTexture('plusButtonNormal');
+
+                doubleAfterSplitPlusButton.on('pointerover', function(){
+                    doubleAfterSplitPlusButton.setTexture('plusButtonHovered');
+                })
+
+                doubleAfterSplitPlusButton.on('pointerout', function(){
+                    doubleAfterSplitPlusButton.setTexture('plusButtonNormal');
+                })
+
+                doubleAfterSplitPlusButton.on('pointerup', function(){
+                    doubleAfterSplitPlusButton.setTexture('plusButtonHovered');
+                })
+            }
+            else
+            {
+                doubleAfterSplitPlusButton.disableInteractive();
+                doubleAfterSplitPlusButton.setTexture('plusButtonLocked');
+
+                doubleAfterSplitPlusButton.on('pointerover', function(){
+                    doubleAfterSplitPlusButton.setTexture('plusButtonLocked');
+                })
+
+                doubleAfterSplitPlusButton.on('pointerout', function(){
+                    doubleAfterSplitPlusButton.setTexture('plusButtonLocked');
+                })
+
+                doubleAfterSplitPlusButton.on('pointerup', function(){
+                    doubleAfterSplitPlusButton.setTexture('plusButtonLocked');
+                })
+            }
+            
+
+        });
+
+        doubleAfterSplitPlusButton.on('pointerdown', function(){
+            
+            if (settingsDoubleAfterSplit < 1)
+            {
+                doubleAfterSplitPlusButton.setTexture('plusButtonClicked');
+                settingsDoubleAfterSplit = settingsDoubleAfterSplit + 1;
+
+                if (settingsDoubleAfterSplit == 0)
+                {
+                    doubleAfterSplitText.setPosition(910, 540);
+                    doubleAfterSplitText.setText("No");
+                }
+                else if (settingsDoubleAfterSplit == 1)
+                {
+                    doubleAfterSplitText.setPosition(900, 540);
+                    doubleAfterSplitText.setText("Yes");
+                }
+            }
+
+            // doubleAfterSplit
+            if (settingsDoubleAfterSplit > 0)
+            {
+                doubleAfterSplitMinusButton.setInteractive({ useHandCursor: true });
+                doubleAfterSplitMinusButton.setTexture('minusButtonNormal');
+
+                doubleAfterSplitMinusButton.on('pointerover', function(){
+                    doubleAfterSplitMinusButton.setTexture('minusButtonHovered');
+                })
+
+                doubleAfterSplitMinusButton.on('pointerout', function(){
+                    doubleAfterSplitMinusButton.setTexture('minusButtonNormal');
+                })
+
+                doubleAfterSplitMinusButton.on('pointerup', function(){
+                    doubleAfterSplitMinusButton.setTexture('minusButtonHovered');
+                })
+            }
+            else
+            {
+                doubleAfterSplitMinusButton.disableInteractive();
+                doubleAfterSplitMinusButton.setTexture('minusButtonLocked');
+
+                doubleAfterSplitMinusButton.on('pointerover', function(){
+                    doubleAfterSplitMinusButton.setTexture('minusButtonLocked');
+                })
+
+                doubleAfterSplitMinusButton.on('pointerout', function(){
+                    doubleAfterSplitMinusButton.setTexture('minusButtonLocked');
+                })
+
+                doubleAfterSplitMinusButton.on('pointerup', function(){
+                    doubleAfterSplitMinusButton.setTexture('minusButtonLocked');
+                })
+            }
+
+            if (settingsDoubleAfterSplit < 1)
+            {
+                doubleAfterSplitPlusButton.setInteractive({ useHandCursor: true });
+                doubleAfterSplitPlusButton.setTexture('plusButtonNormal');
+
+                doubleAfterSplitPlusButton.on('pointerover', function(){
+                    doubleAfterSplitPlusButton.setTexture('plusButtonHovered');
+                })
+
+                doubleAfterSplitPlusButton.on('pointerout', function(){
+                    doubleAfterSplitPlusButton.setTexture('plusButtonNormal');
+                })
+
+                doubleAfterSplitPlusButton.on('pointerup', function(){
+                    doubleAfterSplitPlusButton.setTexture('plusButtonHovered');
+                })
+            }
+            else
+            {
+                doubleAfterSplitPlusButton.disableInteractive();
+                doubleAfterSplitPlusButton.setTexture('plusButtonLocked');
+
+                doubleAfterSplitPlusButton.on('pointerover', function(){
+                    doubleAfterSplitPlusButton.setTexture('plusButtonLocked');
+                })
+
+                doubleAfterSplitPlusButton.on('pointerout', function(){
+                    doubleAfterSplitPlusButton.setTexture('plusButtonLocked');
+                })
+
+                doubleAfterSplitPlusButton.on('pointerup', function(){
+                    doubleAfterSplitPlusButton.setTexture('plusButtonLocked');
+                })
+            }
+
+        });
+
+        hitStandSoft17MinusButton.on('pointerdown', function(){
+            
+            if (settingsHitStandSoft17 > 0)
+            {
+                hitStandSoft17MinusButton.setTexture('minusButtonClicked');
+                settingsHitStandSoft17 = settingsHitStandSoft17 - 1;
+
+                if (settingsHitStandSoft17 == 0)
+                {
+                    hitStandSoft17Text.setPosition(884, 640);
+                    hitStandSoft17Text.setText("Stand");
+                }
+                else if (settingsHitStandSoft17 == 1)
+                {
+                    hitStandSoft17Text.setPosition(903, 640);
+                    hitStandSoft17Text.setText("Hit");
+                }
+            }
+            
+            // hitStandSoft17
+            if (settingsHitStandSoft17 > 0)
+            {
+                hitStandSoft17MinusButton.setInteractive({ useHandCursor: true });
+                hitStandSoft17MinusButton.setTexture('minusButtonNormal');
+
+                hitStandSoft17MinusButton.on('pointerover', function(){
+                    hitStandSoft17MinusButton.setTexture('minusButtonHovered');
+                })
+
+                hitStandSoft17MinusButton.on('pointerout', function(){
+                    hitStandSoft17MinusButton.setTexture('minusButtonNormal');
+                })
+
+                hitStandSoft17MinusButton.on('pointerup', function(){
+                    hitStandSoft17MinusButton.setTexture('minusButtonHovered');
+                })
+            }
+            else
+            {
+                hitStandSoft17MinusButton.disableInteractive();
+                hitStandSoft17MinusButton.setTexture('minusButtonLocked');
+
+                hitStandSoft17MinusButton.on('pointerover', function(){
+                    hitStandSoft17MinusButton.setTexture('minusButtonLocked');
+                })
+
+                hitStandSoft17MinusButton.on('pointerout', function(){
+                    hitStandSoft17MinusButton.setTexture('minusButtonLocked');
+                })
+
+                hitStandSoft17MinusButton.on('pointerup', function(){
+                    hitStandSoft17MinusButton.setTexture('minusButtonLocked');
+                })
+            }
+
+            if (settingsHitStandSoft17 < 1)
+            {
+                hitStandSoft17PlusButton.setInteractive({ useHandCursor: true });
+                hitStandSoft17PlusButton.setTexture('plusButtonNormal');
+
+                hitStandSoft17PlusButton.on('pointerover', function(){
+                    hitStandSoft17PlusButton.setTexture('plusButtonHovered');
+                })
+
+                hitStandSoft17PlusButton.on('pointerout', function(){
+                    hitStandSoft17PlusButton.setTexture('plusButtonNormal');
+                })
+
+                hitStandSoft17PlusButton.on('pointerup', function(){
+                    hitStandSoft17PlusButton.setTexture('plusButtonHovered');
+                })
+            }
+            else
+            {
+                hitStandSoft17PlusButton.disableInteractive();
+                hitStandSoft17PlusButton.setTexture('plusButtonLocked');
+
+                hitStandSoft17PlusButton.on('pointerover', function(){
+                    hitStandSoft17PlusButton.setTexture('plusButtonLocked');
+                })
+
+                hitStandSoft17PlusButton.on('pointerout', function(){
+                    hitStandSoft17PlusButton.setTexture('plusButtonLocked');
+                })
+
+                hitStandSoft17PlusButton.on('pointerup', function(){
+                    hitStandSoft17PlusButton.setTexture('plusButtonLocked');
+                })
+            }
+
+        });
+
+        hitStandSoft17PlusButton.on('pointerdown', function(){
+            
+            if (settingsHitStandSoft17 < 1)
+            {
+                hitStandSoft17PlusButton.setTexture('plusButtonClicked');
+                settingsHitStandSoft17 = settingsHitStandSoft17 + 1;
+
+                if (settingsHitStandSoft17 == 0)
+                {
+                    hitStandSoft17Text.setPosition(884, 640);
+                    hitStandSoft17Text.setText("Stand");
+                }
+                else if (settingsHitStandSoft17 == 1)
+                {
+                    hitStandSoft17Text.setPosition(903, 640);
+                    hitStandSoft17Text.setText("Hit");
+                }
+            }
+
+            // hitStandSoft17
+            if (settingsHitStandSoft17 > 0)
+            {
+                hitStandSoft17MinusButton.setInteractive({ useHandCursor: true });
+                hitStandSoft17MinusButton.setTexture('minusButtonNormal');
+
+                hitStandSoft17MinusButton.on('pointerover', function(){
+                    hitStandSoft17MinusButton.setTexture('minusButtonHovered');
+                })
+
+                hitStandSoft17MinusButton.on('pointerout', function(){
+                    hitStandSoft17MinusButton.setTexture('minusButtonNormal');
+                })
+
+                hitStandSoft17MinusButton.on('pointerup', function(){
+                    hitStandSoft17MinusButton.setTexture('minusButtonHovered');
+                })
+            }
+            else
+            {
+                hitStandSoft17MinusButton.disableInteractive();
+                hitStandSoft17MinusButton.setTexture('minusButtonLocked');
+
+                hitStandSoft17MinusButton.on('pointerover', function(){
+                    hitStandSoft17MinusButton.setTexture('minusButtonLocked');
+                })
+
+                hitStandSoft17MinusButton.on('pointerout', function(){
+                    hitStandSoft17MinusButton.setTexture('minusButtonLocked');
+                })
+
+                hitStandSoft17MinusButton.on('pointerup', function(){
+                    hitStandSoft17MinusButton.setTexture('minusButtonLocked');
+                })
+            }
+
+            if (settingsHitStandSoft17 < 1)
+            {
+                hitStandSoft17PlusButton.setInteractive({ useHandCursor: true });
+                hitStandSoft17PlusButton.setTexture('plusButtonNormal');
+
+                hitStandSoft17PlusButton.on('pointerover', function(){
+                    hitStandSoft17PlusButton.setTexture('plusButtonHovered');
+                })
+
+                hitStandSoft17PlusButton.on('pointerout', function(){
+                    hitStandSoft17PlusButton.setTexture('plusButtonNormal');
+                })
+
+                hitStandSoft17PlusButton.on('pointerup', function(){
+                    hitStandSoft17PlusButton.setTexture('plusButtonHovered');
+                })
+            }
+            else
+            {
+                hitStandSoft17PlusButton.disableInteractive();
+                hitStandSoft17PlusButton.setTexture('plusButtonLocked');
+
+                hitStandSoft17PlusButton.on('pointerover', function(){
+                    hitStandSoft17PlusButton.setTexture('plusButtonLocked');
+                })
+
+                hitStandSoft17PlusButton.on('pointerout', function(){
+                    hitStandSoft17PlusButton.setTexture('plusButtonLocked');
+                })
+
+                hitStandSoft17PlusButton.on('pointerup', function(){
+                    hitStandSoft17PlusButton.setTexture('plusButtonLocked');
+                })
+            }
+
+        });
+
+        blackjackPayoutMinusButton.on('pointerdown', function(){
+            
+            if (settingsBlackjackPayout > 1)
+            {
+                blackjackPayoutMinusButton.setTexture('minusButtonClicked');
+
+                if (settingsBlackjackPayout == 1.2)
+                {
+                    settingsBlackjackPayout = 1;
+                    blackjackPayoutText.setPosition(902, 740);
+                    blackjackPayoutText.setText("1:1");
+                }
+                else if (settingsBlackjackPayout == 1.5)
+                {
+                    settingsBlackjackPayout = 1.2;
+                    blackjackPayoutText.setPosition(902, 740);
+                    blackjackPayoutText.setText("6:5");
+                }
+            }
+            
+            // blackjackPayout
+            if (settingsBlackjackPayout > 1)
+            {
+                blackjackPayoutMinusButton.setInteractive({ useHandCursor: true });
+                blackjackPayoutMinusButton.setTexture('minusButtonNormal');
+
+                blackjackPayoutMinusButton.on('pointerover', function(){
+                    blackjackPayoutMinusButton.setTexture('minusButtonHovered');
+                })
+
+                blackjackPayoutMinusButton.on('pointerout', function(){
+                    blackjackPayoutMinusButton.setTexture('minusButtonNormal');
+                })
+
+                blackjackPayoutMinusButton.on('pointerup', function(){
+                    blackjackPayoutMinusButton.setTexture('minusButtonHovered');
+                })
+            }
+            else
+            {
+                blackjackPayoutMinusButton.disableInteractive();
+                blackjackPayoutMinusButton.setTexture('minusButtonLocked');
+
+                blackjackPayoutMinusButton.on('pointerover', function(){
+                    blackjackPayoutMinusButton.setTexture('minusButtonLocked');
+                })
+
+                blackjackPayoutMinusButton.on('pointerout', function(){
+                    blackjackPayoutMinusButton.setTexture('minusButtonLocked');
+                })
+
+                blackjackPayoutMinusButton.on('pointerup', function(){
+                    blackjackPayoutMinusButton.setTexture('minusButtonLocked');
+                })
+            }
+
+            if (settingsBlackjackPayout < 1.5)
+            {
+                blackjackPayoutPlusButton.setInteractive({ useHandCursor: true });
+                blackjackPayoutPlusButton.setTexture('plusButtonNormal');
+
+                blackjackPayoutPlusButton.on('pointerover', function(){
+                    blackjackPayoutPlusButton.setTexture('plusButtonHovered');
+                })
+
+                blackjackPayoutPlusButton.on('pointerout', function(){
+                    blackjackPayoutPlusButton.setTexture('plusButtonNormal');
+                })
+
+                blackjackPayoutPlusButton.on('pointerup', function(){
+                    blackjackPayoutPlusButton.setTexture('plusButtonHovered');
+                })
+            }
+            else
+            {
+                blackjackPayoutPlusButton.disableInteractive();
+                blackjackPayoutPlusButton.setTexture('plusButtonLocked');
+
+                blackjackPayoutPlusButton.on('pointerover', function(){
+                    blackjackPayoutPlusButton.setTexture('plusButtonLocked');
+                })
+
+                blackjackPayoutPlusButton.on('pointerout', function(){
+                    blackjackPayoutPlusButton.setTexture('plusButtonLocked');
+                })
+
+                blackjackPayoutPlusButton.on('pointerup', function(){
+                    blackjackPayoutPlusButton.setTexture('plusButtonLocked');
+                })
+            }
+
+        });
+
+        blackjackPayoutPlusButton.on('pointerdown', function(){
+            
+            if (settingsBlackjackPayout < 1.5)
+            {
+                blackjackPayoutPlusButton.setTexture('plusButtonClicked');
+
+                if (settingsBlackjackPayout == 1.2)
+                {
+                    settingsBlackjackPayout = 1.5;
+                    blackjackPayoutText.setPosition(902, 740);
+                    blackjackPayoutText.setText("3:2");
+                }
+                else if (settingsBlackjackPayout == 1)
+                {
+                    settingsBlackjackPayout = 1.2;
+                    blackjackPayoutText.setPosition(902, 740);
+                    blackjackPayoutText.setText("6:5");
+                }
+            }
+
+            // blackjackPayout
+            if (settingsBlackjackPayout > 1)
+            {
+                blackjackPayoutMinusButton.setInteractive({ useHandCursor: true });
+                blackjackPayoutMinusButton.setTexture('minusButtonNormal');
+
+                blackjackPayoutMinusButton.on('pointerover', function(){
+                    blackjackPayoutMinusButton.setTexture('minusButtonHovered');
+                })
+
+                blackjackPayoutMinusButton.on('pointerout', function(){
+                    blackjackPayoutMinusButton.setTexture('minusButtonNormal');
+                })
+
+                blackjackPayoutMinusButton.on('pointerup', function(){
+                    blackjackPayoutMinusButton.setTexture('minusButtonHovered');
+                })
+            }
+            else
+            {
+                blackjackPayoutMinusButton.disableInteractive();
+                blackjackPayoutMinusButton.setTexture('minusButtonLocked');
+
+                blackjackPayoutMinusButton.on('pointerover', function(){
+                    blackjackPayoutMinusButton.setTexture('minusButtonLocked');
+                })
+
+                blackjackPayoutMinusButton.on('pointerout', function(){
+                    blackjackPayoutMinusButton.setTexture('minusButtonLocked');
+                })
+
+                blackjackPayoutMinusButton.on('pointerup', function(){
+                    blackjackPayoutMinusButton.setTexture('minusButtonLocked');
+                })
+            }
+
+            if (settingsBlackjackPayout < 1.5)
+            {
+                blackjackPayoutPlusButton.setInteractive({ useHandCursor: true });
+                blackjackPayoutPlusButton.setTexture('plusButtonNormal');
+
+                blackjackPayoutPlusButton.on('pointerover', function(){
+                    blackjackPayoutPlusButton.setTexture('plusButtonHovered');
+                })
+
+                blackjackPayoutPlusButton.on('pointerout', function(){
+                    blackjackPayoutPlusButton.setTexture('plusButtonNormal');
+                })
+
+                blackjackPayoutPlusButton.on('pointerup', function(){
+                    blackjackPayoutPlusButton.setTexture('plusButtonHovered');
+                })
+            }
+            else
+            {
+                blackjackPayoutPlusButton.disableInteractive();
+                blackjackPayoutPlusButton.setTexture('plusButtonLocked');
+
+                blackjackPayoutPlusButton.on('pointerover', function(){
+                    blackjackPayoutPlusButton.setTexture('plusButtonLocked');
+                })
+
+                blackjackPayoutPlusButton.on('pointerout', function(){
+                    blackjackPayoutPlusButton.setTexture('plusButtonLocked');
+                })
+
+                blackjackPayoutPlusButton.on('pointerup', function(){
+                    blackjackPayoutPlusButton.setTexture('plusButtonLocked');
+                })
+            }
+
+        });
 
         applySettingsButton.on('pointerdown', function(){
             applySettingsButton.setTexture('clickedButton');
