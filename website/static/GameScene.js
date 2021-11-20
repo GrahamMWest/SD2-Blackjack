@@ -305,6 +305,12 @@ let splitSpacing = 60;
 let splitChipSpacing = 45;
 let handIndicatorSpacing = -15;
 
+// adds some variation to deck cutoff (-5 to +4)
+let deckVariation = Math.floor(Math.random()*10) - 5;
+
+// no BJ indicator
+let noBjIndicator;
+let noBjText;
 
 //TODO:
 // test how settings work with diff number of players
@@ -316,10 +322,6 @@ let handIndicatorSpacing = -15;
 
 // POLISH:
 // bug test (a lot)
-// maybe have settings text boxes reset if u dont apply anything in the settings menu
-// add variation to shoe cutoff (professor suggestion)
-// maybe make indicator that there was no BJ when peekingOption == 1 or 2
-
 
 // BUGS/TESTING:
 
@@ -5237,6 +5239,9 @@ class GameScene extends Phaser.Scene {
         player3DoubleChipArrays = [[], [], [], []];
         currentPlayer = 0;
 
+        noBjIndicator.visible = false;
+        noBjText.visible = false;
+
         // check if player has enough currency to go another round
         if (playerCurrency < minBet * numPlayers)
         {
@@ -5515,6 +5520,8 @@ class GameScene extends Phaser.Scene {
             runningCountScoreBoard.setText('Running Count: 0');
             trueCountScoreBoard.setText('True Count: 0');
 
+            deckVariation = Math.floor(Math.random()*10) - 5;
+
             this.anims.create({
                 key: "shuffle",
                 frameRate: 3,
@@ -5667,6 +5674,9 @@ class GameScene extends Phaser.Scene {
                     }
                     else
                     {
+                        noBjIndicator.visible = true;
+                        noBjText.visible = true;
+
                         if (playerCurrency >= player1Bet)
                             this.enableDoubleButton();
                         else
@@ -5752,6 +5762,9 @@ class GameScene extends Phaser.Scene {
                     }
                     else
                     {
+                        noBjIndicator.visible = true;
+                        noBjText.visible = true;
+
                         if (playerCurrency >= player1Bet)
                             this.enableDoubleButton();
                         else
@@ -5856,6 +5869,9 @@ class GameScene extends Phaser.Scene {
         this.load.image('logoURL', '/static/assets/url_overlay.png');
         this.load.image('logo', '/static/assets/SDBlackjack_logo.png');
 
+        // no BJ indicator
+        this.load.image('noBjIndicator', '/static/assets/noBJredX.png');
+
         // chips
         this.load.image('half_chip', '/static/assets/half_chip.png');
         this.load.image('chip_1', '/static/assets/1Chip.png');
@@ -5956,6 +5972,12 @@ class GameScene extends Phaser.Scene {
         deck = this.add.image(deckCoords[0], deckCoords[1], 'face_down_card');
         deck.scale = .135;
         deck.setDepth(1000000);
+
+        noBjIndicator = this.add.image(615, 75, 'noBjIndicator');
+        noBjIndicator.scale = .075;
+        noBjText = this.add.text(385, 60, "No Blackjack", {fontSize: '28px', fill: '#fff'});
+        noBjIndicator.visible = false;
+        noBjText.visible = false;
 
         // places betting buttons
         whiteChip_1_Button = this.add.image(500, 915, 'chip_1');
@@ -12232,7 +12254,7 @@ class GameScene extends Phaser.Scene {
             // .75 pen = 3/4 of the decks are dealt
             // 1 * 52 * .75 = 39 cards get played
             // shuffling
-            if (cardIndex > Math.floor(numDecks * 52 * deckPen))
+            if (cardIndex > Math.floor((numDecks * 52 * deckPen) + deckVariation))
             {
                 cardIndex = 0;
                 // shuffledDeck = this.scene.initializeDeck(numDecks);
@@ -12244,6 +12266,7 @@ class GameScene extends Phaser.Scene {
                 runningCountScoreBoard.setText('Running Count: 0');
                 trueCountScoreBoard.setText('True Count: 0');
 
+                deckVariation = Math.floor(Math.random()*10) - 5;
                 
                 this.scene.anims.create({
                     key: "shuffle",
@@ -12352,6 +12375,174 @@ class GameScene extends Phaser.Scene {
                 blackjackPayoutPlusButton.visible = false;
                 blackjackPayoutDisplay.visible = false;
                 blackjackPayoutText.visible = false;
+
+                // numPlayers
+                numPlayersText.setText(confirmedSettingsNumPlayers);
+            
+                // numDecks
+                numDecksText.setText(confirmedSettingsNumDecks);
+
+                // deckPen
+                if (confirmedSettingsDeckPen == 1)
+                {
+                    deckPenText.setText(confirmedSettingsDeckPen);
+                    deckPenText.setPosition(470, 440);
+                }
+                else if (confirmedSettingsDeckPen == .75)
+                {
+                    deckPenText.setText(confirmedSettingsDeckPen);
+                    deckPenText.setPosition(440, 440);
+                }
+                else if (confirmedSettingsDeckPen == .66)
+                {
+                    deckPenText.setText(confirmedSettingsDeckPen);
+                    deckPenText.setPosition(440, 440);
+                }
+                else if (confirmedSettingsDeckPen == .5)
+                {
+                    deckPenText.setText(confirmedSettingsDeckPen);
+                    deckPenText.setPosition(450, 440);
+                }
+                else if (confirmedSettingsDeckPen == .33)
+                {
+                    deckPenText.setText(confirmedSettingsDeckPen);
+                    deckPenText.setPosition(440, 440);
+                }
+                else if (confirmedSettingsDeckPen == .25)
+                {
+                    deckPenText.setText(confirmedSettingsDeckPen);
+                    deckPenText.setPosition(440, 440);
+                }
+
+                // minBet
+                if (confirmedSettingsMinBet > 9 && confirmedSettingsMinBet < 100)
+                {
+                    minBetText.setText(confirmedSettingsMinBet);
+                    minBetText.setPosition(460, 540);
+                }
+                else if (settingsMinBet == 100)
+                {
+                    minBetText.setText(confirmedSettingsMinBet);
+                    minBetText.setPosition(450, 540);
+                }
+                else if (confirmedSettingsMinBet < 10 && confirmedSettingsMinBet > 0)
+                {
+                    minBetText.setText(confirmedSettingsMinBet);
+                    minBetText.setPosition(466, 540);
+                }
+
+                // maxBet
+                if (confirmedSettingsMaxBet >= 1000)
+                {
+                    maxBetText.setText(confirmedSettingsMaxBet);
+                    maxBetText.setPosition(441, 640);
+                }
+                else if (confirmedSettingsMaxBet >= 250 && confirmedSettingsMaxBet < 1000)
+                {
+                    maxBetText.setText(confirmedSettingsMaxBet);
+                    maxBetText.setPosition(450, 640);
+                }
+
+                // countSpoiler
+                if (confirmedSettingsCountSpoiler == 0)
+                {
+                    countSpoilerText.setPosition(451, 740);
+                    countSpoilerText.setText("Off");
+                }
+                else if (confirmedSettingsCountSpoiler == 1)
+                {
+                    countSpoilerText.setPosition(459, 740);
+                    countSpoilerText.setText("On");
+                }
+
+                // peekingOption
+                if (confirmedSettingsPeekingOption == 0)
+                {
+                    peekingOptionText.setPosition(884, 240);
+                    peekingOptionText.setText("Early");
+                }
+                else if (confirmedSettingsPeekingOption == 1)
+                {
+                    peekingOptionText.setPosition(892, 240);
+                    peekingOptionText.setText("Late");
+                }
+                else if (confirmedSettingsPeekingOption == 2)
+                {
+                    peekingOptionText.setPosition(892, 240);
+                    peekingOptionText.setText("None");
+                }
+
+                // doubleOption
+                if (confirmedSettingsDoubleOption == 0)
+                {
+                    doubleOptionText.setPosition(902, 340);
+                    doubleOptionText.setText("All");
+                }
+                else if (confirmedSettingsDoubleOption == 1)
+                {
+                    doubleOptionText.setPosition(893, 340);
+                    doubleOptionText.setText("9-11");
+                }
+                else if (confirmedSettingsDoubleOption == 2)
+                {
+                    doubleOptionText.setPosition(893, 340);
+                    doubleOptionText.setText("9-10");
+                }
+
+                // hitSplitAces
+                if (confirmedSettingsHitSplitAces == 0)
+                {
+                    hitSplitAcesText.setPosition(910, 440);
+                    hitSplitAcesText.setText("No");
+                }
+                else if (confirmedSettingsHitSplitAces == 1)
+                {
+                    hitSplitAcesText.setPosition(900, 440);
+                    hitSplitAcesText.setText("Yes");
+                }
+
+                // doubleAfterSplit
+                if (confirmedSettingsDoubleAfterSplit == 0)
+                {
+                    doubleAfterSplitText.setPosition(910, 540);
+                    doubleAfterSplitText.setText("No");
+                }
+                else if (confirmedSettingsDoubleAfterSplit == 1)
+                {
+                    doubleAfterSplitText.setPosition(900, 540);
+                    doubleAfterSplitText.setText("Yes");
+                }
+
+                // hitStandSoft17
+                if (confirmedSettingsHitStandSoft17 == 0)
+                {
+                    hitStandSoft17Text.setPosition(884, 640);
+                    hitStandSoft17Text.setText("Stand");
+                }
+                else if (confirmedSettingsHitStandSoft17 == 1)
+                {
+                    hitStandSoft17Text.setPosition(903, 640);
+                    hitStandSoft17Text.setText("Hit");
+                }
+
+                // blackjackPayout
+                if (confirmedSettingsBlackjackPayout == 1.0)
+                {
+                    blackjackPayoutText.setPosition(902, 740);
+                    blackjackPayoutText.setText("1:1");
+                }
+                if (settingsBlackjackPayout == 1.2)
+                {
+                    blackjackPayoutText.setPosition(902, 740);
+                    blackjackPayoutText.setText("6:5");
+                }
+                else if (settingsBlackjackPayout == 1.5)
+                {
+                    blackjackPayoutText.setPosition(902, 740);
+                    blackjackPayoutText.setText("3:2");
+                }
+                
+
             }
             else if (menuScreen.visible == false)
             {
@@ -12441,24 +12632,6 @@ class GameScene extends Phaser.Scene {
                 blackjackPayoutDisplay.visible = true;
                 blackjackPayoutText.visible = true;
             }
-
-            // do this when changing numDecks or deck pen
-            // cardIndex = 0;
-            // // shuffledDeck = this.scene.initializeDeck(numDecks);
-            // // cardInts = this.scene.shuffleInts(numDecks);
-            // this.scene.initializeDeck(numDecks);
-            // this.scene.shuffleInts(numDecks);
-            // runningCount = 0;
-            // trueCount = 0;
-            // runningCountScoreBoard.setText('Running Count: 0');
-            // trueCountScoreBoard.setText('True Count: 0');
-
-
-
-
-
-
-
         });
 
         numPlayersMinusButton.on('pointerdown', function(){
