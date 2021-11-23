@@ -1,24 +1,11 @@
 "use strict";
 
 // cards x & y positions 1-6 for players 1-3 + dealer 
-// flattened
-// const cardX = [[965, 705, 425, 705], [952, 692, 412, 718], [939, 679, 399, 731], [926, 666, 386, 744], [913, 653, 373, 757], [900, 640, 360, 770]];
-// const cardY = [[425, 425, 425, 65], [420, 420, 420, 70], [415, 415, 415, 75], [410, 410, 410, 80], [405, 405, 405, 85], [400, 400, 400, 90]];
-// const cardA = [0, 0, 0, 0];
-
-// const cardX = [[965, 705, 425, 705], [952, 692, 412, 718], [939, 679, 399, 731], [926, 666, 386, 744], [913, 653, 373, 757], [900, 640, 360, 770], [887, 627, 347, 787]];
 const cardX = [[965, 705, 425, 705], [978, 718, 438, 718], [991, 731, 451, 731], [1004, 744, 464, 744], [1017, 757, 477, 757], [1030, 770, 490, 770], [1043, 783, 503, 787]];
 const cardY = [[425, 425, 425, 65], [405, 405, 405, 85], [385, 385, 385, 105], [365, 365, 365, 125], [345, 345, 345, 145], [325, 325, 325, 165], [305, 305, 305, 185]];
 const cardA = [0, 0, 0, 0];
 
-
-
 const deckCoords = [1075, 75];
-// deckCoords[0], deckCoords[1]
-
-// const cardX = [[965, 705, 428, 705], [950, 685, 405, 725], [925, 660, 385, 745], [910, 640, 365, 765], [895, 620, 345, 785]];
-// const cardY = [[361, 445, 355, 75], [350, 420, 335, 95], [325, 400, 310, 115], [300, 380, 295, 135], [275, 360, 270, 155]];
-// const cardA = [-33, 0, 32, 0];
 
 const spriteNames = ['AS', '2S', '3S', '4S', '5S', '6S', '7S', '8S', '9S', '10S', 'JS', 'QS', 'KS', 
                     'AC', '2C', '3C', '4C', '5C', '6C', '7C', '8C', '9C', '10C', 'JC', 'QC', 'KC',
@@ -41,7 +28,6 @@ let player3CardDisplay;
 let dealerCards = [];
 let dealerCardDisplay;
 
-
 // displays info on right side
 let currencyScoreBoard;
 let pointScoreBoard;
@@ -52,7 +38,9 @@ let trueCount = 0;
 let cardIndex = 0;
 
 // unchangeable settings
-let user;
+let userCurrency;
+let userPoints;
+let userSettings;
 let playerCurrency;
 let playerPoints;
 let maxSplits = 1; // cant go higher due to graphics constraints
@@ -72,6 +60,41 @@ let hitSplitAces = 1; // 1 = yes, 0 = no
 let doubleAfterSplit = 1; // 1 = yes, 0 = no
 let hitStandSoft17 = 0; // 1 = hit, 0 = stand
 let doubleOption = 0; // 0 = double on any first 2 cards, 1 = 9-11 only, 2 = 9-10
+
+function httpGetAsyncUser(URL) {
+    var xmlHttp = new XMLHttpRequest();
+    var sentUser, data;
+
+    // If there was a correct response then update the currency and points from the user information stored in the database
+    xmlHttp.onreadystatechange = function() {
+        if (xmlHttp.readyState == 4 && xmlHttp.status == 200)
+        {
+            data = xmlHttp.responseText;
+            sentUser = JSON.parse(data);
+            playerCurrency = sentUser["currency"];
+            playerPoints = sentUser["points"];
+            numDecks = sentUser["decks"];
+            numPlayers = sentUser["players"];
+            deckPen = sentUser["deckPenetration"];
+            minBet = sentUser["min"];
+            maxBet = sentUser["max"];
+            countSpoiler = sentUser["spoiler"];
+            peekingOption = sentUser["peeking"];
+            blackjackPayout = sentUser["payout"];
+            hitSplitAces = sentUser["split"];
+            doubleAfterSplit = sentUser["doubleSplit"];
+            hitStandSoft17 = sentUser["hitStandSoftSeventeen"];
+            doubleOption = sentUser["doubleOpt"];
+  
+        }
+    }
+
+    xmlHttp.open('GET', URL, true);
+    xmlHttp.send(null);
+}
+
+// Receives the user information at the beginning of the game from SendUser Route/API
+httpGetAsyncUser('/SendUser');
 
 let settingsNumDecks = numDecks;
 let settingsNumPlayers = numPlayers;
@@ -330,17 +353,6 @@ let surrenderDisabled = 0;
 let insuranceDisabled = 0;
 let splitDisabled = 0;
 
-//TODO:
-
-// fix point system (insurance/surrender/can Split or Not/True Count)
-// CHECK WHETHER I NEED TO LOOK FOR WHETHER USER CAN DOUBLE OR NOT (MAYBE A VARIABLE CALLED 'firstAction' OR SOMETHING)
-// make suggestion displays on the right side (same y-level as corresponding player displays), also
-// show "Correct" or "Incorrect" for the users actions, as well as how much each hand profited/lost that round
-
-// NOTES:
-// should only take insurance at a TRUE 3 or above
-
-
 let gameOptions = {
  
     // card width, in pixels
@@ -363,7 +375,7 @@ let textStyle = {
     boundsAlignV: "middle" // bounds center align vertically
 };
 
-
+/*
 function httpGetAsyncUser(URL) {
     var xmlHttp = new XMLHttpRequest();
     var sentUser, data;
@@ -385,7 +397,7 @@ function httpGetAsyncUser(URL) {
 
 // Receives the user information at the beginning of the game from sendUser Route/API
 httpGetAsyncUser('/sendUser');
-
+*/
 
 function updateInfo(i, j) {
 
@@ -2722,34 +2734,7308 @@ class GameScene extends Phaser.Scene {
 
         currencyScoreBoard.setText("Currency: $" + playerCurrency);
 
-        user = {
+        userCurrency = {
             currency: playerCurrency,
-            points: playerPoints
         };
 
-        function httpSendAsyncUser(URL) {
+        function httpUpdateCurrencyAsync(URL) {
             var xmlHttp = new XMLHttpRequest();
 
             xmlHttp.open('POST', URL, true);
             xmlHttp.setRequestHeader('Content-type', 'application/json');
-            xmlHttp.send(JSON.stringify(user));
+            xmlHttp.send(JSON.stringify(userCurrency));
         }
 
-        // Send user information after a player has played a round to sendUser Route/API to update the database
-        httpSendAsyncUser('/sendUser');
+        // Send user currency after a player has played a round to UpdateCurrency Route/API to update the database
+        httpUpdateCurrencyAsync('/UpdateCurrency');
 
     };
 
-    // pass true count, can split or not, can double or not, can surrender or not, insurance round or not
     baseGameBasicStrategy(currentPlayer, action) {
 
-        console.log(doubleDisabled);
-        console.log(standDisabled);
-        console.log(surrenderDisabled);
-        console.log(insuranceDisabled);
-        console.log(splitDisabled);
-        console.log("------------------")
+        // soft = has ace
+        var isSoft = 0;
 
+        var isPair = 0;
+
+        var optimalAction;
+
+        var bestAvailableAction;
+
+        // action should be: Hit, Double, Stand, Surrender, Insurance, or Split
+
+        if (numSplits[currentPlayer] == 0)
+        {
+            for (let i = 0; i < playerCards[currentPlayer].length; i++)
+                if (playerCards[currentPlayer][i] === "A")
+                    isSoft = 1;
+
+            if (playerCards[currentPlayer][0] === playerCards[currentPlayer][1] && playerCards[currentPlayer].length == 2)
+                isPair = 1;
+        }
+        else if (numSplits[currentPlayer] == 1)
+        {
+            if (currentPlayer == 0)
+            {
+                for (let i = 0; i < player1Hands[currentHand].length; i++)
+                    if (player1Hands[currentHand][i] === "A")
+                        isSoft = 1;
+
+                // splits shouldnt be counted as pairs cause they cant be split
+            }
+            else if (currentPlayer == 1)
+            {
+                for (let i = 0; i < player2Hands[currentHand].length; i++)
+                    if (player2Hands[currentHand][i] === "A")
+                        isSoft = 1;
+
+                // splits shouldnt be counted as pairs cause they cant be split
+            }
+            else if (currentPlayer == 2)
+            {
+                for (let i = 0; i < player3Hands[currentHand].length; i++)
+                    if (player3Hands[currentHand][i] === "A")
+                        isSoft = 1;
+
+                // splits shouldnt be counted as pairs cause they cant be split
+            }
+        }
+
+        if (insuranceRound == 1)
+        {
+            if (trueCount >= 3)
+            {
+                optimalAction = ["Insurance"];
+            }
+            else
+            {
+                optimalAction = ["Stand"];
+            }
+        }
+        else if (hitStandSoft17 == 0) // stands soft 17, 4-8 decks
+        {
+            if (numSplits[currentPlayer] == 0)
+            {
+                if (isPair == 1)
+                {
+                    // covers pairs of 2's
+                    if (playerCards[currentPlayer][0] === "2" && dealerCards[1] === "2")
+                        optimalAction = ["Split_DAS", "Hit"];
+                    else if (playerCards[currentPlayer][0] === "2" && dealerCards[1] === "3")
+                        optimalAction = ["Split_DAS", "Hit"];
+                    else if (playerCards[currentPlayer][0] === "2" && dealerCards[1] === "4")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "2" && dealerCards[1] === "5")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "2" && dealerCards[1] === "6")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "2" && dealerCards[1] === "7")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "2" && dealerCards[1] === "8")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "2" && dealerCards[1] === "9")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "2" && dealerCards[1] === "10")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "2" && dealerCards[1] === "J")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "2" && dealerCards[1] === "Q")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "2" && dealerCards[1] === "K")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "2" && dealerCards[1] === "A")
+                        optimalAction = ["Hit"];
+
+
+                    // covers pairs of 3's
+                    else if (playerCards[currentPlayer][0] === "3" && dealerCards[1] === "2")
+                        optimalAction = ["Split_DAS", "Hit"];
+                    else if (playerCards[currentPlayer][0] === "3" && dealerCards[1] === "3")
+                        optimalAction = ["Split_DAS", "Hit"];
+                    else if (playerCards[currentPlayer][0] === "3" && dealerCards[1] === "4")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "3" && dealerCards[1] === "5")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "3" && dealerCards[1] === "6")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "3" && dealerCards[1] === "7")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "3" && dealerCards[1] === "8")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "3" && dealerCards[1] === "9")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "3" && dealerCards[1] === "10")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "3" && dealerCards[1] === "J")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "3" && dealerCards[1] === "Q")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "3" && dealerCards[1] === "K")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "3" && dealerCards[1] === "A")
+                        optimalAction = ["Hit"];
+
+
+                    // covers pairs of 4's
+                    else if (playerCards[currentPlayer][0] === "4" && dealerCards[1] === "2")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "4" && dealerCards[1] === "3")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "4" && dealerCards[1] === "4")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "4" && dealerCards[1] === "5")
+                        optimalAction = ["Split_DAS", "Hit"];
+                    else if (playerCards[currentPlayer][0] === "4" && dealerCards[1] === "6")
+                        optimalAction = ["Split_DAS", "Hit"];
+                    else if (playerCards[currentPlayer][0] === "4" && dealerCards[1] === "7")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "4" && dealerCards[1] === "8")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "4" && dealerCards[1] === "9")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "4" && dealerCards[1] === "10")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "4" && dealerCards[1] === "J")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "4" && dealerCards[1] === "Q")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "4" && dealerCards[1] === "K")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "4" && dealerCards[1] === "A")
+                        optimalAction = ["Hit"];
+
+
+                    // covers pairs of 5's
+                    else if (playerCards[currentPlayer][0] === "5" && dealerCards[1] === "2")
+                        optimalAction = ["Double", "Hit"];
+                    else if (playerCards[currentPlayer][0] === "5" && dealerCards[1] === "3")
+                        optimalAction = ["Double", "Hit"];
+                    else if (playerCards[currentPlayer][0] === "5" && dealerCards[1] === "4")
+                        optimalAction = ["Double", "Hit"];
+                    else if (playerCards[currentPlayer][0] === "5" && dealerCards[1] === "5")
+                        optimalAction = ["Double", "Hit"];
+                    else if (playerCards[currentPlayer][0] === "5" && dealerCards[1] === "6")
+                        optimalAction = ["Double", "Hit"];
+                    else if (playerCards[currentPlayer][0] === "5" && dealerCards[1] === "7")
+                        optimalAction = ["Double", "Hit"];
+                    else if (playerCards[currentPlayer][0] === "5" && dealerCards[1] === "8")
+                        optimalAction = ["Double", "Hit"];
+                    else if (playerCards[currentPlayer][0] === "5" && dealerCards[1] === "9")
+                        optimalAction = ["Double", "Hit"];
+                    else if (playerCards[currentPlayer][0] === "5" && dealerCards[1] === "10")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "5" && dealerCards[1] === "J")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "5" && dealerCards[1] === "Q")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "5" && dealerCards[1] === "K")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "5" && dealerCards[1] === "A")
+                        optimalAction = ["Hit"];
+
+
+                    // covers pairs of 6's
+                    else if (playerCards[currentPlayer][0] === "6" && dealerCards[1] === "2")
+                        optimalAction = ["Split_DAS", "Hit"];
+                    else if (playerCards[currentPlayer][0] === "6" && dealerCards[1] === "3")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "6" && dealerCards[1] === "4")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "6" && dealerCards[1] === "5")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "6" && dealerCards[1] === "6")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "6" && dealerCards[1] === "7")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "6" && dealerCards[1] === "8")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "6" && dealerCards[1] === "9")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "6" && dealerCards[1] === "10")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "6" && dealerCards[1] === "J")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "6" && dealerCards[1] === "Q")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "6" && dealerCards[1] === "K")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "6" && dealerCards[1] === "A")
+                        optimalAction = ["Hit"];
+
+
+                    // covers pairs of 7's
+                    else if (playerCards[currentPlayer][0] === "7" && dealerCards[1] === "2")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "7" && dealerCards[1] === "3")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "7" && dealerCards[1] === "4")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "7" && dealerCards[1] === "5")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "7" && dealerCards[1] === "6")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "7" && dealerCards[1] === "7")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "7" && dealerCards[1] === "8")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "7" && dealerCards[1] === "9")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "7" && dealerCards[1] === "10")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "7" && dealerCards[1] === "J")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "7" && dealerCards[1] === "Q")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "7" && dealerCards[1] === "K")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "7" && dealerCards[1] === "A")
+                        optimalAction = ["Hit"];
+
+
+                    // covers pairs of 8's (always split)
+                    else if (playerCards[currentPlayer][0] === "8" && dealerCards[1] === "2")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "8" && dealerCards[1] === "3")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "8" && dealerCards[1] === "4")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "8" && dealerCards[1] === "5")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "8" && dealerCards[1] === "6")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "8" && dealerCards[1] === "7")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "8" && dealerCards[1] === "8")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "8" && dealerCards[1] === "9")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "8" && dealerCards[1] === "10")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "8" && dealerCards[1] === "J")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "8" && dealerCards[1] === "Q")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "8" && dealerCards[1] === "K")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "8" && dealerCards[1] === "A")
+                        optimalAction = ["Split"];
+
+
+                    // covers pairs of 9's
+                    else if (playerCards[currentPlayer][0] === "9" && dealerCards[1] === "2")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "9" && dealerCards[1] === "3")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "9" && dealerCards[1] === "4")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "9" && dealerCards[1] === "5")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "9" && dealerCards[1] === "6")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "9" && dealerCards[1] === "7")
+                        optimalAction = ["Stand"];
+                    else if (playerCards[currentPlayer][0] === "9" && dealerCards[1] === "8")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "9" && dealerCards[1] === "9")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "9" && dealerCards[1] === "10")
+                        optimalAction = ["Stand"];
+                    else if (playerCards[currentPlayer][0] === "9" && dealerCards[1] === "J")
+                        optimalAction = ["Stand"];
+                    else if (playerCards[currentPlayer][0] === "9" && dealerCards[1] === "Q")
+                        optimalAction = ["Stand"];
+                    else if (playerCards[currentPlayer][0] === "9" && dealerCards[1] === "K")
+                        optimalAction = ["Stand"];
+                    else if (playerCards[currentPlayer][0] === "9" && dealerCards[1] === "A")
+                        optimalAction = ["Stand"];
+
+
+                    // covers pairs of 10's (or equivalent) (always stand)
+                    else if ((playerCards[currentPlayer][0] === "10" || playerCards[currentPlayer][0] === "J" ||
+                        playerCards[currentPlayer][0] === "Q" || playerCards[currentPlayer][0] === "K") && 
+                        dealerCards[1] === "2")
+                        optimalAction = ["Stand"];
+                    else if ((playerCards[currentPlayer][0] === "10" || playerCards[currentPlayer][0] === "J" ||
+                        playerCards[currentPlayer][0] === "Q" || playerCards[currentPlayer][0] === "K") && 
+                        dealerCards[1] === "3")
+                        optimalAction = ["Stand"];
+                    else if ((playerCards[currentPlayer][0] === "10" || playerCards[currentPlayer][0] === "J" ||
+                        playerCards[currentPlayer][0] === "Q" || playerCards[currentPlayer][0] === "K") && 
+                        dealerCards[1] === "4")
+                        optimalAction = ["Stand"];
+                    else if ((playerCards[currentPlayer][0] === "10" || playerCards[currentPlayer][0] === "J" ||
+                        playerCards[currentPlayer][0] === "Q" || playerCards[currentPlayer][0] === "K") && 
+                        dealerCards[1] === "5")
+                        optimalAction = ["Stand"];
+                    else if ((playerCards[currentPlayer][0] === "10" || playerCards[currentPlayer][0] === "J" ||
+                        playerCards[currentPlayer][0] === "Q" || playerCards[currentPlayer][0] === "K") && 
+                        dealerCards[1] === "6")
+                        optimalAction = ["Stand"];
+                    else if ((playerCards[currentPlayer][0] === "10" || playerCards[currentPlayer][0] === "J" ||
+                        playerCards[currentPlayer][0] === "Q" || playerCards[currentPlayer][0] === "K") && 
+                        dealerCards[1] === "7")
+                        optimalAction = ["Stand"];
+                    else if ((playerCards[currentPlayer][0] === "10" || playerCards[currentPlayer][0] === "J" ||
+                        playerCards[currentPlayer][0] === "Q" || playerCards[currentPlayer][0] === "K") && 
+                        dealerCards[1] === "8")
+                        optimalAction = ["Stand"];
+                    else if ((playerCards[currentPlayer][0] === "10" || playerCards[currentPlayer][0] === "J" ||
+                        playerCards[currentPlayer][0] === "Q" || playerCards[currentPlayer][0] === "K") && 
+                        dealerCards[1] === "9")
+                        optimalAction = ["Stand"];
+                    else if ((playerCards[currentPlayer][0] === "10" || playerCards[currentPlayer][0] === "J" ||
+                        playerCards[currentPlayer][0] === "Q" || playerCards[currentPlayer][0] === "K") && 
+                        dealerCards[1] === "10")
+                        optimalAction = ["Stand"];
+                    else if ((playerCards[currentPlayer][0] === "10" || playerCards[currentPlayer][0] === "J" ||
+                        playerCards[currentPlayer][0] === "Q" || playerCards[currentPlayer][0] === "K") && 
+                        dealerCards[1] === "J")
+                        optimalAction = ["Stand"];
+                    else if ((playerCards[currentPlayer][0] === "10" || playerCards[currentPlayer][0] === "J" ||
+                        playerCards[currentPlayer][0] === "Q" || playerCards[currentPlayer][0] === "K") && 
+                        dealerCards[1] === "Q")
+                        optimalAction = ["Stand"];
+                    else if ((playerCards[currentPlayer][0] === "10" || playerCards[currentPlayer][0] === "J" ||
+                        playerCards[currentPlayer][0] === "Q" || playerCards[currentPlayer][0] === "K") && 
+                        dealerCards[1] === "K")
+                        optimalAction = ["Stand"];
+                    else if ((playerCards[currentPlayer][0] === "10" || playerCards[currentPlayer][0] === "J" ||
+                        playerCards[currentPlayer][0] === "Q" || playerCards[currentPlayer][0] === "K") && 
+                        dealerCards[1] === "A")
+                        optimalAction = ["Stand"];
+
+
+                    // covers pairs of A's (always split)
+                    else if (playerCards[currentPlayer][0] === "A" && dealerCards[1] === "2")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "A" && dealerCards[1] === "3")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "A" && dealerCards[1] === "4")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "A" && dealerCards[1] === "5")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "A" && dealerCards[1] === "6")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "A" && dealerCards[1] === "7")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "A" && dealerCards[1] === "8")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "A" && dealerCards[1] === "9")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "A" && dealerCards[1] === "10")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "A" && dealerCards[1] === "J")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "A" && dealerCards[1] === "Q")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "A" && dealerCards[1] === "K")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "A" && dealerCards[1] === "A")
+                        optimalAction = ["Split"];
+
+                }
+                else if (isSoft == 1)
+                {
+                    // soft 12's (always hit)
+                    if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "2")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "3")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "4")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "5")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "6")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "7")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "8")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "9")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "10")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "J")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "Q")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "K")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "A")
+                        optimalAction = ["Hit"];
+
+                    // soft 13's
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "2")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "3")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "4")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "5")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "6")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "7")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "8")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "9")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "10")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "J")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "Q")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "K")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "A")
+                        optimalAction = ["Hit"];
+                    
+
+                    // soft 14's
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "2")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "3")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "4")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "5")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "6")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "7")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "8")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "9")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "10")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "J")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "Q")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "K")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "A")
+                        optimalAction = ["Hit"];
+
+
+
+                    // soft 15's
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "2")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "3")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "4")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "5")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "6")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "7")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "8")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "9")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "10")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "J")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "Q")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "K")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "A")
+                        optimalAction = ["Hit"];
+
+
+                    // soft 16's
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "2")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "3")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "4")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "5")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "6")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "7")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "8")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "9")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "10")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "J")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "Q")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "K")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "A")
+                        optimalAction = ["Hit"];
+
+
+                    // soft 17's
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "2")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "3")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "4")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "5")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "6")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "7")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "8")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "9")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "10")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "J")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "Q")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "K")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "A")
+                        optimalAction = ["Hit"];
+
+
+                    // soft 18's
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "2")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "3")
+                        optimalAction = ["Double", "Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "4")
+                        optimalAction = ["Double", "Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "5")
+                        optimalAction = ["Double", "Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "6")
+                        optimalAction = ["Double", "Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "7")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "8")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "9")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "10")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "J")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "Q")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "K")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "A")
+                        optimalAction = ["Hit"];
+
+
+                    // soft 19's (always stand)
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 19 && dealerCards[1] === "2")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 19 && dealerCards[1] === "3")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 19 && dealerCards[1] === "4")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 19 && dealerCards[1] === "5")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 19 && dealerCards[1] === "6")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 19 && dealerCards[1] === "7")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 19 && dealerCards[1] === "8")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 19 && dealerCards[1] === "9")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 19 && dealerCards[1] === "10")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 19 && dealerCards[1] === "J")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 19 && dealerCards[1] === "Q")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 19 && dealerCards[1] === "K")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 19 && dealerCards[1] === "A")
+                        optimalAction = ["Stand"];
+
+
+
+                    // soft 20's (always stand)
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 20 && dealerCards[1] === "2")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 20 && dealerCards[1] === "3")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 20 && dealerCards[1] === "4")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 20 && dealerCards[1] === "5")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 20 && dealerCards[1] === "6")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 20 && dealerCards[1] === "7")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 20 && dealerCards[1] === "8")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 20 && dealerCards[1] === "9")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 20 && dealerCards[1] === "10")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 20 && dealerCards[1] === "J")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 20 && dealerCards[1] === "Q")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 20 && dealerCards[1] === "K")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 20 && dealerCards[1] === "A")
+                        optimalAction = ["Stand"];
+
+
+
+                    // soft 21's (always stand (BJ))
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 21 && dealerCards[1] === "2")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 21 && dealerCards[1] === "3")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 21 && dealerCards[1] === "4")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 21 && dealerCards[1] === "5")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 21 && dealerCards[1] === "6")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 21 && dealerCards[1] === "7")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 21 && dealerCards[1] === "8")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 21 && dealerCards[1] === "9")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 21 && dealerCards[1] === "10")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 21 && dealerCards[1] === "J")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 21 && dealerCards[1] === "Q")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 21 && dealerCards[1] === "K")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 21 && dealerCards[1] === "A")
+                        optimalAction = ["Stand"];
+                }
+                else
+                {
+                    // idk if hard 4's are possible (they are if youve already split)
+                    if (this.getHandValue(playerCards[currentPlayer]) == 4 && dealerCards[1] === "2")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 4 && dealerCards[1] === "3")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 4 && dealerCards[1] === "4")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 4 && dealerCards[1] === "5")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 4 && dealerCards[1] === "6")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 4 && dealerCards[1] === "7")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 4 && dealerCards[1] === "8")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 4 && dealerCards[1] === "9")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 4 && dealerCards[1] === "10")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 4 && dealerCards[1] === "J")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 4 && dealerCards[1] === "Q")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 4 && dealerCards[1] === "K")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 4 && dealerCards[1] === "A")
+                        optimalAction = ["Hit"];
+
+
+                    // hard 5's (always hit)
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 5 && dealerCards[1] === "2")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 5 && dealerCards[1] === "3")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 5 && dealerCards[1] === "4")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 5 && dealerCards[1] === "5")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 5 && dealerCards[1] === "6")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 5 && dealerCards[1] === "7")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 5 && dealerCards[1] === "8")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 5 && dealerCards[1] === "9")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 5 && dealerCards[1] === "10")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 5 && dealerCards[1] === "J")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 5 && dealerCards[1] === "Q")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 5 && dealerCards[1] === "K")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 5 && dealerCards[1] === "A")
+                        optimalAction = ["Hit"];
+
+                    // hard 6's (always hit)
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 6 && dealerCards[1] === "2")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 6 && dealerCards[1] === "3")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 6 && dealerCards[1] === "4")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 6 && dealerCards[1] === "5")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 6 && dealerCards[1] === "6")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 6 && dealerCards[1] === "7")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 6 && dealerCards[1] === "8")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 6 && dealerCards[1] === "9")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 6 && dealerCards[1] === "10")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 6 && dealerCards[1] === "J")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 6 && dealerCards[1] === "Q")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 6 && dealerCards[1] === "K")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 6 && dealerCards[1] === "A")
+                        optimalAction = ["Hit"];
+
+
+                    // hard 7's (always hit)
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 7 && dealerCards[1] === "2")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 7 && dealerCards[1] === "3")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 7 && dealerCards[1] === "4")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 7 && dealerCards[1] === "5")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 7 && dealerCards[1] === "6")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 7 && dealerCards[1] === "7")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 7 && dealerCards[1] === "8")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 7 && dealerCards[1] === "9")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 7 && dealerCards[1] === "10")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 7 && dealerCards[1] === "J")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 7 && dealerCards[1] === "Q")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 7 && dealerCards[1] === "K")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 7 && dealerCards[1] === "A")
+                        optimalAction = ["Hit"];
+
+
+                    // hard 8's (always hit)
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 8 && dealerCards[1] === "2")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 8 && dealerCards[1] === "3")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 8 && dealerCards[1] === "4")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 8 && dealerCards[1] === "5")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 8 && dealerCards[1] === "6")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 8 && dealerCards[1] === "7")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 8 && dealerCards[1] === "8")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 8 && dealerCards[1] === "9")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 8 && dealerCards[1] === "10")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 8 && dealerCards[1] === "J")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 8 && dealerCards[1] === "Q")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 8 && dealerCards[1] === "K")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 8 && dealerCards[1] === "A")
+                        optimalAction = ["Hit"];
+        
+
+                    // hard 9's
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 9 && dealerCards[1] === "2")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 9 && dealerCards[1] === "3")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 9 && dealerCards[1] === "4")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 9 && dealerCards[1] === "5")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 9 && dealerCards[1] === "6")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 9 && dealerCards[1] === "7")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 9 && dealerCards[1] === "8")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 9 && dealerCards[1] === "9")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 9 && dealerCards[1] === "10")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 9 && dealerCards[1] === "J")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 9 && dealerCards[1] === "Q")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 9 && dealerCards[1] === "K")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 9 && dealerCards[1] === "A")
+                        optimalAction = ["Hit"];
+
+
+                    // hard 10's
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 10 && dealerCards[1] === "2")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 10 && dealerCards[1] === "3")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 10 && dealerCards[1] === "4")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 10 && dealerCards[1] === "5")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 10 && dealerCards[1] === "6")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 10 && dealerCards[1] === "7")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 10 && dealerCards[1] === "8")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 10 && dealerCards[1] === "9")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 10 && dealerCards[1] === "10")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 10 && dealerCards[1] === "J")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 10 && dealerCards[1] === "Q")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 10 && dealerCards[1] === "K")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 10 && dealerCards[1] === "A")
+                        optimalAction = ["Hit"];
+
+
+                    // hard 11's
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 11 && dealerCards[1] === "2")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 11 && dealerCards[1] === "3")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 11 && dealerCards[1] === "4")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 11 && dealerCards[1] === "5")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 11 && dealerCards[1] === "6")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 11 && dealerCards[1] === "7")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 11 && dealerCards[1] === "8")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 11 && dealerCards[1] === "9")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 11 && dealerCards[1] === "10")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 11 && dealerCards[1] === "J")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 11 && dealerCards[1] === "Q")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 11 && dealerCards[1] === "K")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 11 && dealerCards[1] === "A")
+                        optimalAction = ["Hit"];
+
+
+                    // hard 12's
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "2")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "3")
+                        optimalAction = ["Hit"];
+                    else  if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "4")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "5")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "6")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "7")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "8")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "9")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "10")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "J")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "Q")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "K")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "A")
+                        optimalAction = ["Hit"];
+
+
+                    // hard 13's
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "2")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "3")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "4")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "5")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "6")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "7")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "8")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "9")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "10")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "J")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "Q")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "K")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "A")
+                        optimalAction = ["Hit"];
+
+
+                    // hard 14's
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "2")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "3")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "4")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "5")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "6")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "7")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "8")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "9")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "10")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "J")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "Q")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "K")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "A")
+                        optimalAction = ["Hit"];
+
+
+                    // hard 15's
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "2")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "3")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "4")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "5")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "6")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "7")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "8")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "9")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "10")
+                        optimalAction = ["Surrender", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "J")
+                        optimalAction = ["Surrender", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "Q")
+                        optimalAction = ["Surrender", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "K")
+                        optimalAction = ["Surrender", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "A")
+                        optimalAction = ["Hit"];
+
+
+                    // hard 16's
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "2")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "3")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "4")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "5")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "6")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "7")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "8")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "9")
+                        optimalAction = ["Surrender", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "10")
+                        optimalAction = ["Surrender", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "J")
+                        optimalAction = ["Surrender", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "Q")
+                        optimalAction = ["Surrender", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "K")
+                        optimalAction = ["Surrender", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "A")
+                        optimalAction = ["Surrender", "Hit"];
+
+
+                    // hard 17's (always stand)
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "2")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "3")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "4")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "5")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "6")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "7")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "8")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "9")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "10")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "J")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "Q")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "K")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "A")
+                        optimalAction = ["Stand"];
+
+
+                    // hard 18's (always stand)
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "2")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "3")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "4")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "5")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "6")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "7")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "8")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "9")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "10")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "J")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "Q")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "K")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "A")
+                        optimalAction = ["Stand"];
+
+
+                    // hard 19's (always stand)
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 19 && dealerCards[1] === "2")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 19 && dealerCards[1] === "3")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 19 && dealerCards[1] === "4")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 19 && dealerCards[1] === "5")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 19 && dealerCards[1] === "6")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 19 && dealerCards[1] === "7")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 19 && dealerCards[1] === "8")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 19 && dealerCards[1] === "9")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 19 && dealerCards[1] === "10")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 19 && dealerCards[1] === "J")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 19 && dealerCards[1] === "Q")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 19 && dealerCards[1] === "K")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 19 && dealerCards[1] === "A")
+                        optimalAction = ["Stand"];
+
+
+                    // hard 20's (always stand)
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 20 && dealerCards[1] === "2")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 20 && dealerCards[1] === "3")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 20 && dealerCards[1] === "4")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 20 && dealerCards[1] === "5")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 20 && dealerCards[1] === "6")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 20 && dealerCards[1] === "7")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 20 && dealerCards[1] === "8")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 20 && dealerCards[1] === "9")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 20 && dealerCards[1] === "10")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 20 && dealerCards[1] === "J")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 20 && dealerCards[1] === "Q")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 20 && dealerCards[1] === "K")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 20 && dealerCards[1] === "A")
+                        optimalAction = ["Stand"];
+
+
+
+                    // hard 21's (always stand)
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 21 && dealerCards[1] === "2")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 21 && dealerCards[1] === "3")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 21 && dealerCards[1] === "4")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 21 && dealerCards[1] === "5")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 21 && dealerCards[1] === "6")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 21 && dealerCards[1] === "7")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 21 && dealerCards[1] === "8")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 21 && dealerCards[1] === "9")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 21 && dealerCards[1] === "10")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 21 && dealerCards[1] === "J")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 21 && dealerCards[1] === "Q")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 21 && dealerCards[1] === "K")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 21 && dealerCards[1] === "A")
+                        optimalAction = ["Stand"];
+                }
+            }
+            else if (numSplits[currentPlayer] == 1)
+            {
+                if (currentPlayer == 0)
+                {
+                    if (isSoft == 1)
+                    {
+                        // soft 12's (always hit)
+                        if (this.splitGetHandValue(player1Hands[currentHand]) == 12 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 12 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 12 && dealerCards[1] === "4")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 12 && dealerCards[1] === "5")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 12 && dealerCards[1] === "6")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 12 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 12 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 12 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 12 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 12 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 12 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 12 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 12 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+                        // soft 13's
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 13 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 13 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 13 && dealerCards[1] === "4")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 13 && dealerCards[1] === "5")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 13 && dealerCards[1] === "6")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 13 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 13 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 13 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 13 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 13 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 13 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 13 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 13 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+                        
+
+                        // soft 14's
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 14 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 14 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 14 && dealerCards[1] === "4")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 14 && dealerCards[1] === "5")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 14 && dealerCards[1] === "6")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 14 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 14 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 14 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 14 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 14 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 14 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 14 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 14 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+
+                        // soft 15's
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 15 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 15 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 15 && dealerCards[1] === "4")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 15 && dealerCards[1] === "5")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 15 && dealerCards[1] === "6")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 15 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 15 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 15 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 15 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 15 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 15 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 15 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 15 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // soft 16's
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 16 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 16 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 16 && dealerCards[1] === "4")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 16 && dealerCards[1] === "5")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 16 && dealerCards[1] === "6")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 16 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 16 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 16 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 16 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 16 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 16 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 16 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 16 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // soft 17's
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 17 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 17 && dealerCards[1] === "3")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 17 && dealerCards[1] === "4")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 17 && dealerCards[1] === "5")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 17 && dealerCards[1] === "6")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 17 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 17 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 17 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 17 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 17 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 17 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 17 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 17 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // soft 18's
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 18 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 18 && dealerCards[1] === "3")
+                            optimalAction = ["Double", "Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 18 && dealerCards[1] === "4")
+                            optimalAction = ["Double", "Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 18 && dealerCards[1] === "5")
+                            optimalAction = ["Double", "Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 18 && dealerCards[1] === "6")
+                            optimalAction = ["Double", "Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 18 && dealerCards[1] === "7")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 18 && dealerCards[1] === "8")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 18 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 18 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 18 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 18 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 18 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 18 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // soft 19's (always stand)
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 19 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 19 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 19 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 19 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 19 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 19 && dealerCards[1] === "7")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 19 && dealerCards[1] === "8")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 19 && dealerCards[1] === "9")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 19 && dealerCards[1] === "10")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 19 && dealerCards[1] === "J")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 19 && dealerCards[1] === "Q")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 19 && dealerCards[1] === "K")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 19 && dealerCards[1] === "A")
+                            optimalAction = ["Stand"];
+
+
+
+                        // soft 20's (always stand)
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 20 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 20 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 20 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 20 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 20 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 20 && dealerCards[1] === "7")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 20 && dealerCards[1] === "8")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 20 && dealerCards[1] === "9")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 20 && dealerCards[1] === "10")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 20 && dealerCards[1] === "J")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 20 && dealerCards[1] === "Q")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 20 && dealerCards[1] === "K")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 20 && dealerCards[1] === "A")
+                            optimalAction = ["Stand"];
+
+
+
+                        // soft 21's (always stand (BJ))
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 21 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 21 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 21 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 21 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 21 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 21 && dealerCards[1] === "7")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 21 && dealerCards[1] === "8")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 21 && dealerCards[1] === "9")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 21 && dealerCards[1] === "10")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 21 && dealerCards[1] === "J")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 21 && dealerCards[1] === "Q")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 21 && dealerCards[1] === "K")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 21 && dealerCards[1] === "A")
+                            optimalAction = ["Stand"];
+                    }
+                    else
+                    {
+                        // idk if hard 4's are possible (they are if youve already split)
+                        if (this.splitGetHandValue(player1Hands[currentHand]) == 4 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 4 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 4 && dealerCards[1] === "4")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 4 && dealerCards[1] === "5")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 4 && dealerCards[1] === "6")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 4 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 4 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 4 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 4 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 4 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 4 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 4 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 4 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // hard 5's (always hit)
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 5 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 5 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 5 && dealerCards[1] === "4")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 5 && dealerCards[1] === "5")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 5 && dealerCards[1] === "6")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 5 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 5 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 5 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 5 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 5 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 5 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 5 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 5 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+                        // hard 6's (always hit)
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 6 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 6 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 6 && dealerCards[1] === "4")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 6 && dealerCards[1] === "5")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 6 && dealerCards[1] === "6")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 6 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 6 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 6 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 6 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 6 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 6 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 6 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 6 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // hard 7's (always hit)
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 7 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 7 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 7 && dealerCards[1] === "4")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 7 && dealerCards[1] === "5")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 7 && dealerCards[1] === "6")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 7 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 7 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 7 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 7 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 7 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 7 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 7 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 7 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // hard 8's (always hit)
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 8 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 8 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 8 && dealerCards[1] === "4")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 8 && dealerCards[1] === "5")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 8 && dealerCards[1] === "6")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 8 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 8 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 8 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 8 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 8 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 8 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 8 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 8 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+            
+
+                        // hard 9's
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 9 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 9 && dealerCards[1] === "3")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 9 && dealerCards[1] === "4")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 9 && dealerCards[1] === "5")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 9 && dealerCards[1] === "6")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 9 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 9 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 9 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 9 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 9 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 9 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 9 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 9 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // hard 10's
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 10 && dealerCards[1] === "2")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 10 && dealerCards[1] === "3")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 10 && dealerCards[1] === "4")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 10 && dealerCards[1] === "5")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 10 && dealerCards[1] === "6")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 10 && dealerCards[1] === "7")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 10 && dealerCards[1] === "8")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 10 && dealerCards[1] === "9")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 10 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 10 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 10 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 10 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 10 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // hard 11's
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 11 && dealerCards[1] === "2")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 11 && dealerCards[1] === "3")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 11 && dealerCards[1] === "4")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 11 && dealerCards[1] === "5")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 11 && dealerCards[1] === "6")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 11 && dealerCards[1] === "7")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 11 && dealerCards[1] === "8")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 11 && dealerCards[1] === "9")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 11 && dealerCards[1] === "10")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 11 && dealerCards[1] === "J")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 11 && dealerCards[1] === "Q")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 11 && dealerCards[1] === "K")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 11 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // hard 12's
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 12 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 12 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else  if (this.splitGetHandValue(player1Hands[currentHand]) == 12 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 12 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 12 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 12 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 12 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 12 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 12 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 12 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 12 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 12 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 12 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // hard 13's
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 13 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 13 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 13 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 13 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 13 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 13 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 13 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 13 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 13 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 13 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 13 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 13 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 13 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // hard 14's
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 14 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 14 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 14 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 14 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 14 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 14 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 14 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 14 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 14 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 14 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 14 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 14 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 14 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // hard 15's
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 15 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 15 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 15 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 15 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 15 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 15 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 15 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 15 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 15 && dealerCards[1] === "10")
+                            optimalAction = ["Surrender", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 15 && dealerCards[1] === "J")
+                            optimalAction = ["Surrender", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 15 && dealerCards[1] === "Q")
+                            optimalAction = ["Surrender", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 15 && dealerCards[1] === "K")
+                            optimalAction = ["Surrender", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 15 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // hard 16's
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 16 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 16 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 16 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 16 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 16 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 16 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 16 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 16 && dealerCards[1] === "9")
+                            optimalAction = ["Surrender", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 16 && dealerCards[1] === "10")
+                            optimalAction = ["Surrender", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 16 && dealerCards[1] === "J")
+                            optimalAction = ["Surrender", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 16 && dealerCards[1] === "Q")
+                            optimalAction = ["Surrender", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 16 && dealerCards[1] === "K")
+                            optimalAction = ["Surrender", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 16 && dealerCards[1] === "A")
+                            optimalAction = ["Surrender", "Hit"];
+
+
+                        // hard 17's (always stand)
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 17 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 17 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 17 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 17 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 17 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 17 && dealerCards[1] === "7")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 17 && dealerCards[1] === "8")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 17 && dealerCards[1] === "9")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 17 && dealerCards[1] === "10")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 17 && dealerCards[1] === "J")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 17 && dealerCards[1] === "Q")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 17 && dealerCards[1] === "K")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 17 && dealerCards[1] === "A")
+                            optimalAction = ["Stand"];
+
+
+                        // hard 18's (always stand)
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 18 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 18 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 18 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 18 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 18 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 18 && dealerCards[1] === "7")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 18 && dealerCards[1] === "8")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 18 && dealerCards[1] === "9")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 18 && dealerCards[1] === "10")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 18 && dealerCards[1] === "J")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 18 && dealerCards[1] === "Q")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 18 && dealerCards[1] === "K")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 18 && dealerCards[1] === "A")
+                            optimalAction = ["Stand"];
+
+
+                        // hard 19's (always stand)
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 19 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 19 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 19 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 19 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 19 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 19 && dealerCards[1] === "7")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 19 && dealerCards[1] === "8")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 19 && dealerCards[1] === "9")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 19 && dealerCards[1] === "10")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 19 && dealerCards[1] === "J")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 19 && dealerCards[1] === "Q")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 19 && dealerCards[1] === "K")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 19 && dealerCards[1] === "A")
+                            optimalAction = ["Stand"];
+
+
+                        // hard 20's (always stand)
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 20 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 20 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 20 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 20 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 20 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 20 && dealerCards[1] === "7")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 20 && dealerCards[1] === "8")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 20 && dealerCards[1] === "9")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 20 && dealerCards[1] === "10")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 20 && dealerCards[1] === "J")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 20 && dealerCards[1] === "Q")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 20 && dealerCards[1] === "K")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 20 && dealerCards[1] === "A")
+                            optimalAction = ["Stand"];
+
+
+
+                        // hard 21's (always stand)
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 21 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 21 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 21 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 21 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 21 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 21 && dealerCards[1] === "7")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 21 && dealerCards[1] === "8")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 21 && dealerCards[1] === "9")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 21 && dealerCards[1] === "10")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 21 && dealerCards[1] === "J")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 21 && dealerCards[1] === "Q")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 21 && dealerCards[1] === "K")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 21 && dealerCards[1] === "A")
+                            optimalAction = ["Stand"];
+                    }
+                }
+                else if (currentPlayer == 1)
+                {
+                    if (isSoft == 1)
+                    {
+                        // soft 12's (always hit)
+                        if (this.splitGetHandValue(player2Hands[currentHand]) == 12 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 12 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 12 && dealerCards[1] === "4")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 12 && dealerCards[1] === "5")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 12 && dealerCards[1] === "6")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 12 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 12 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 12 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 12 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 12 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 12 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 12 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 12 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+                        // soft 13's
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 13 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 13 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 13 && dealerCards[1] === "4")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 13 && dealerCards[1] === "5")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 13 && dealerCards[1] === "6")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 13 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 13 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 13 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 13 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 13 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 13 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 13 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 13 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+                        
+
+                        // soft 14's
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 14 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 14 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 14 && dealerCards[1] === "4")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 14 && dealerCards[1] === "5")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 14 && dealerCards[1] === "6")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 14 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 14 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 14 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 14 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 14 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 14 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 14 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 14 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+
+                        // soft 15's
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 15 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 15 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 15 && dealerCards[1] === "4")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 15 && dealerCards[1] === "5")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 15 && dealerCards[1] === "6")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 15 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 15 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 15 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 15 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 15 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 15 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 15 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 15 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // soft 16's
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 16 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 16 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 16 && dealerCards[1] === "4")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 16 && dealerCards[1] === "5")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 16 && dealerCards[1] === "6")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 16 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 16 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 16 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 16 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 16 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 16 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 16 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 16 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // soft 17's
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 17 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 17 && dealerCards[1] === "3")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 17 && dealerCards[1] === "4")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 17 && dealerCards[1] === "5")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 17 && dealerCards[1] === "6")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 17 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 17 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 17 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 17 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 17 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 17 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 17 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 17 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // soft 18's
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 18 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 18 && dealerCards[1] === "3")
+                            optimalAction = ["Double", "Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 18 && dealerCards[1] === "4")
+                            optimalAction = ["Double", "Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 18 && dealerCards[1] === "5")
+                            optimalAction = ["Double", "Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 18 && dealerCards[1] === "6")
+                            optimalAction = ["Double", "Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 18 && dealerCards[1] === "7")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 18 && dealerCards[1] === "8")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 18 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 18 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 18 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 18 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 18 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 18 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // soft 19's (always stand)
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 19 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 19 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 19 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 19 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 19 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 19 && dealerCards[1] === "7")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 19 && dealerCards[1] === "8")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 19 && dealerCards[1] === "9")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 19 && dealerCards[1] === "10")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 19 && dealerCards[1] === "J")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 19 && dealerCards[1] === "Q")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 19 && dealerCards[1] === "K")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 19 && dealerCards[1] === "A")
+                            optimalAction = ["Stand"];
+
+
+
+                        // soft 20's (always stand)
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 20 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 20 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 20 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 20 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 20 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 20 && dealerCards[1] === "7")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 20 && dealerCards[1] === "8")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 20 && dealerCards[1] === "9")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 20 && dealerCards[1] === "10")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 20 && dealerCards[1] === "J")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 20 && dealerCards[1] === "Q")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 20 && dealerCards[1] === "K")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 20 && dealerCards[1] === "A")
+                            optimalAction = ["Stand"];
+
+
+
+                        // soft 21's (always stand (BJ))
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 21 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 21 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 21 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 21 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 21 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 21 && dealerCards[1] === "7")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 21 && dealerCards[1] === "8")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 21 && dealerCards[1] === "9")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 21 && dealerCards[1] === "10")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 21 && dealerCards[1] === "J")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 21 && dealerCards[1] === "Q")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 21 && dealerCards[1] === "K")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 21 && dealerCards[1] === "A")
+                            optimalAction = ["Stand"];
+                    }
+                    else
+                    {
+                        // idk if hard 4's are possible (they are if youve already split)
+                        if (this.splitGetHandValue(player2Hands[currentHand]) == 4 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 4 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 4 && dealerCards[1] === "4")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 4 && dealerCards[1] === "5")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 4 && dealerCards[1] === "6")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 4 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 4 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 4 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 4 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 4 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 4 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 4 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 4 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // hard 5's (always hit)
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 5 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 5 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 5 && dealerCards[1] === "4")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 5 && dealerCards[1] === "5")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 5 && dealerCards[1] === "6")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 5 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 5 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 5 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 5 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 5 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 5 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 5 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 5 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+                        // hard 6's (always hit)
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 6 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 6 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 6 && dealerCards[1] === "4")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 6 && dealerCards[1] === "5")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 6 && dealerCards[1] === "6")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 6 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 6 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 6 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 6 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 6 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 6 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 6 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 6 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // hard 7's (always hit)
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 7 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 7 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 7 && dealerCards[1] === "4")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 7 && dealerCards[1] === "5")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 7 && dealerCards[1] === "6")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 7 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 7 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 7 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 7 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 7 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 7 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 7 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 7 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // hard 8's (always hit)
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 8 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 8 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 8 && dealerCards[1] === "4")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 8 && dealerCards[1] === "5")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 8 && dealerCards[1] === "6")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 8 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 8 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 8 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 8 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 8 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 8 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 8 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 8 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+            
+
+                        // hard 9's
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 9 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 9 && dealerCards[1] === "3")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 9 && dealerCards[1] === "4")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 9 && dealerCards[1] === "5")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 9 && dealerCards[1] === "6")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 9 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 9 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 9 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 9 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 9 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 9 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 9 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 9 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // hard 10's
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 10 && dealerCards[1] === "2")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 10 && dealerCards[1] === "3")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 10 && dealerCards[1] === "4")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 10 && dealerCards[1] === "5")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 10 && dealerCards[1] === "6")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 10 && dealerCards[1] === "7")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 10 && dealerCards[1] === "8")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 10 && dealerCards[1] === "9")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 10 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 10 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 10 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 10 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 10 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // hard 11's
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 11 && dealerCards[1] === "2")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 11 && dealerCards[1] === "3")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 11 && dealerCards[1] === "4")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 11 && dealerCards[1] === "5")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 11 && dealerCards[1] === "6")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 11 && dealerCards[1] === "7")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 11 && dealerCards[1] === "8")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 11 && dealerCards[1] === "9")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 11 && dealerCards[1] === "10")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 11 && dealerCards[1] === "J")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 11 && dealerCards[1] === "Q")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 11 && dealerCards[1] === "K")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 11 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // hard 12's
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 12 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 12 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else  if (this.splitGetHandValue(player2Hands[currentHand]) == 12 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 12 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 12 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 12 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 12 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 12 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 12 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 12 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 12 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 12 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 12 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // hard 13's
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 13 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 13 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 13 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 13 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 13 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 13 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 13 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 13 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 13 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 13 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 13 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 13 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 13 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // hard 14's
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 14 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 14 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 14 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 14 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 14 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 14 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 14 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 14 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 14 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 14 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 14 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 14 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 14 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // hard 15's
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 15 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 15 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 15 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 15 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 15 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 15 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 15 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 15 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 15 && dealerCards[1] === "10")
+                            optimalAction = ["Surrender", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 15 && dealerCards[1] === "J")
+                            optimalAction = ["Surrender", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 15 && dealerCards[1] === "Q")
+                            optimalAction = ["Surrender", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 15 && dealerCards[1] === "K")
+                            optimalAction = ["Surrender", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 15 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // hard 16's
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 16 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 16 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 16 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 16 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 16 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 16 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 16 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 16 && dealerCards[1] === "9")
+                            optimalAction = ["Surrender", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 16 && dealerCards[1] === "10")
+                            optimalAction = ["Surrender", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 16 && dealerCards[1] === "J")
+                            optimalAction = ["Surrender", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 16 && dealerCards[1] === "Q")
+                            optimalAction = ["Surrender", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 16 && dealerCards[1] === "K")
+                            optimalAction = ["Surrender", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 16 && dealerCards[1] === "A")
+                            optimalAction = ["Surrender", "Hit"];
+
+
+                        // hard 17's (always stand)
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 17 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 17 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 17 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 17 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 17 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 17 && dealerCards[1] === "7")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 17 && dealerCards[1] === "8")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 17 && dealerCards[1] === "9")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 17 && dealerCards[1] === "10")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 17 && dealerCards[1] === "J")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 17 && dealerCards[1] === "Q")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 17 && dealerCards[1] === "K")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 17 && dealerCards[1] === "A")
+                            optimalAction = ["Stand"];
+
+
+                        // hard 18's (always stand)
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 18 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 18 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 18 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 18 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 18 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 18 && dealerCards[1] === "7")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 18 && dealerCards[1] === "8")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 18 && dealerCards[1] === "9")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 18 && dealerCards[1] === "10")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 18 && dealerCards[1] === "J")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 18 && dealerCards[1] === "Q")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 18 && dealerCards[1] === "K")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 18 && dealerCards[1] === "A")
+                            optimalAction = ["Stand"];
+
+
+                        // hard 19's (always stand)
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 19 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 19 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 19 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 19 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 19 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 19 && dealerCards[1] === "7")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 19 && dealerCards[1] === "8")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 19 && dealerCards[1] === "9")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 19 && dealerCards[1] === "10")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 19 && dealerCards[1] === "J")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 19 && dealerCards[1] === "Q")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 19 && dealerCards[1] === "K")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 19 && dealerCards[1] === "A")
+                            optimalAction = ["Stand"];
+
+
+                        // hard 20's (always stand)
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 20 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 20 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 20 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 20 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 20 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 20 && dealerCards[1] === "7")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 20 && dealerCards[1] === "8")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 20 && dealerCards[1] === "9")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 20 && dealerCards[1] === "10")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 20 && dealerCards[1] === "J")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 20 && dealerCards[1] === "Q")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 20 && dealerCards[1] === "K")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 20 && dealerCards[1] === "A")
+                            optimalAction = ["Stand"];
+
+
+
+                        // hard 21's (always stand)
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 21 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 21 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 21 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 21 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 21 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 21 && dealerCards[1] === "7")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 21 && dealerCards[1] === "8")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 21 && dealerCards[1] === "9")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 21 && dealerCards[1] === "10")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 21 && dealerCards[1] === "J")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 21 && dealerCards[1] === "Q")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 21 && dealerCards[1] === "K")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 21 && dealerCards[1] === "A")
+                            optimalAction = ["Stand"];
+                    }
+                }
+                else if (currentPlayer == 2)
+                {
+                    if (isSoft == 1)
+                    {
+                        // soft 12's (always hit)
+                        if (this.splitGetHandValue(player3Hands[currentHand]) == 12 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 12 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 12 && dealerCards[1] === "4")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 12 && dealerCards[1] === "5")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 12 && dealerCards[1] === "6")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 12 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 12 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 12 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 12 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 12 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 12 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 12 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 12 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+                        // soft 13's
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 13 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 13 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 13 && dealerCards[1] === "4")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 13 && dealerCards[1] === "5")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 13 && dealerCards[1] === "6")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 13 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 13 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 13 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 13 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 13 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 13 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 13 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 13 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+                        
+
+                        // soft 14's
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 14 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 14 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 14 && dealerCards[1] === "4")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 14 && dealerCards[1] === "5")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 14 && dealerCards[1] === "6")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 14 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 14 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 14 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 14 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 14 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 14 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 14 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 14 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+
+                        // soft 15's
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 15 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 15 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 15 && dealerCards[1] === "4")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 15 && dealerCards[1] === "5")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 15 && dealerCards[1] === "6")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 15 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 15 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 15 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 15 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 15 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 15 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 15 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 15 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // soft 16's
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 16 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 16 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 16 && dealerCards[1] === "4")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 16 && dealerCards[1] === "5")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 16 && dealerCards[1] === "6")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 16 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 16 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 16 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 16 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 16 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 16 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 16 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 16 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // soft 17's
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 17 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 17 && dealerCards[1] === "3")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 17 && dealerCards[1] === "4")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 17 && dealerCards[1] === "5")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 17 && dealerCards[1] === "6")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 17 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 17 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 17 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 17 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 17 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 17 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 17 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 17 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // soft 18's
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 18 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 18 && dealerCards[1] === "3")
+                            optimalAction = ["Double", "Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 18 && dealerCards[1] === "4")
+                            optimalAction = ["Double", "Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 18 && dealerCards[1] === "5")
+                            optimalAction = ["Double", "Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 18 && dealerCards[1] === "6")
+                            optimalAction = ["Double", "Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 18 && dealerCards[1] === "7")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 18 && dealerCards[1] === "8")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 18 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 18 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 18 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 18 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 18 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 18 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // soft 19's (always stand)
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 19 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 19 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 19 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 19 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 19 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 19 && dealerCards[1] === "7")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 19 && dealerCards[1] === "8")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 19 && dealerCards[1] === "9")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 19 && dealerCards[1] === "10")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 19 && dealerCards[1] === "J")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 19 && dealerCards[1] === "Q")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 19 && dealerCards[1] === "K")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 19 && dealerCards[1] === "A")
+                            optimalAction = ["Stand"];
+
+
+
+                        // soft 20's (always stand)
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 20 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 20 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 20 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 20 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 20 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 20 && dealerCards[1] === "7")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 20 && dealerCards[1] === "8")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 20 && dealerCards[1] === "9")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 20 && dealerCards[1] === "10")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 20 && dealerCards[1] === "J")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 20 && dealerCards[1] === "Q")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 20 && dealerCards[1] === "K")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 20 && dealerCards[1] === "A")
+                            optimalAction = ["Stand"];
+
+
+
+                        // soft 21's (always stand (BJ))
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 21 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 21 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 21 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 21 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 21 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 21 && dealerCards[1] === "7")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 21 && dealerCards[1] === "8")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 21 && dealerCards[1] === "9")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 21 && dealerCards[1] === "10")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 21 && dealerCards[1] === "J")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 21 && dealerCards[1] === "Q")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 21 && dealerCards[1] === "K")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 21 && dealerCards[1] === "A")
+                            optimalAction = ["Stand"];
+                    }
+                    else
+                    {
+                        // idk if hard 4's are possible (they are if youve already split)
+                        if (this.splitGetHandValue(player3Hands[currentHand]) == 4 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 4 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 4 && dealerCards[1] === "4")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 4 && dealerCards[1] === "5")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 4 && dealerCards[1] === "6")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 4 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 4 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 4 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 4 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 4 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 4 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 4 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 4 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // hard 5's (always hit)
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 5 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 5 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 5 && dealerCards[1] === "4")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 5 && dealerCards[1] === "5")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 5 && dealerCards[1] === "6")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 5 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 5 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 5 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 5 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 5 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 5 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 5 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 5 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+                        // hard 6's (always hit)
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 6 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 6 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 6 && dealerCards[1] === "4")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 6 && dealerCards[1] === "5")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 6 && dealerCards[1] === "6")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 6 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 6 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 6 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 6 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 6 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 6 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 6 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 6 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // hard 7's (always hit)
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 7 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 7 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 7 && dealerCards[1] === "4")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 7 && dealerCards[1] === "5")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 7 && dealerCards[1] === "6")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 7 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 7 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 7 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 7 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 7 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 7 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 7 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 7 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // hard 8's (always hit)
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 8 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 8 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 8 && dealerCards[1] === "4")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 8 && dealerCards[1] === "5")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 8 && dealerCards[1] === "6")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 8 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 8 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 8 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 8 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 8 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 8 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 8 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 8 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+            
+
+                        // hard 9's
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 9 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 9 && dealerCards[1] === "3")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 9 && dealerCards[1] === "4")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 9 && dealerCards[1] === "5")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 9 && dealerCards[1] === "6")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 9 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 9 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 9 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 9 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 9 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 9 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 9 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 9 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // hard 10's
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 10 && dealerCards[1] === "2")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 10 && dealerCards[1] === "3")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 10 && dealerCards[1] === "4")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 10 && dealerCards[1] === "5")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 10 && dealerCards[1] === "6")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 10 && dealerCards[1] === "7")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 10 && dealerCards[1] === "8")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 10 && dealerCards[1] === "9")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 10 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 10 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 10 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 10 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 10 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // hard 11's
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 11 && dealerCards[1] === "2")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 11 && dealerCards[1] === "3")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 11 && dealerCards[1] === "4")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 11 && dealerCards[1] === "5")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 11 && dealerCards[1] === "6")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 11 && dealerCards[1] === "7")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 11 && dealerCards[1] === "8")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 11 && dealerCards[1] === "9")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 11 && dealerCards[1] === "10")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 11 && dealerCards[1] === "J")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 11 && dealerCards[1] === "Q")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 11 && dealerCards[1] === "K")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 11 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // hard 12's
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 12 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 12 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else  if (this.splitGetHandValue(player3Hands[currentHand]) == 12 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 12 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 12 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 12 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 12 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 12 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 12 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 12 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 12 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 12 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 12 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // hard 13's
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 13 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 13 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 13 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 13 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 13 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 13 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 13 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 13 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 13 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 13 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 13 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 13 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 13 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // hard 14's
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 14 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 14 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 14 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 14 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 14 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 14 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 14 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 14 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 14 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 14 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 14 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 14 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 14 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // hard 15's
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 15 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 15 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 15 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 15 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 15 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 15 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 15 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 15 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 15 && dealerCards[1] === "10")
+                            optimalAction = ["Surrender", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 15 && dealerCards[1] === "J")
+                            optimalAction = ["Surrender", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 15 && dealerCards[1] === "Q")
+                            optimalAction = ["Surrender", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 15 && dealerCards[1] === "K")
+                            optimalAction = ["Surrender", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 15 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // hard 16's
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 16 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 16 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 16 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 16 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 16 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 16 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 16 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 16 && dealerCards[1] === "9")
+                            optimalAction = ["Surrender", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 16 && dealerCards[1] === "10")
+                            optimalAction = ["Surrender", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 16 && dealerCards[1] === "J")
+                            optimalAction = ["Surrender", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 16 && dealerCards[1] === "Q")
+                            optimalAction = ["Surrender", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 16 && dealerCards[1] === "K")
+                            optimalAction = ["Surrender", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 16 && dealerCards[1] === "A")
+                            optimalAction = ["Surrender", "Hit"];
+
+
+                        // hard 17's (always stand)
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 17 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 17 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 17 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 17 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 17 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 17 && dealerCards[1] === "7")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 17 && dealerCards[1] === "8")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 17 && dealerCards[1] === "9")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 17 && dealerCards[1] === "10")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 17 && dealerCards[1] === "J")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 17 && dealerCards[1] === "Q")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 17 && dealerCards[1] === "K")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 17 && dealerCards[1] === "A")
+                            optimalAction = ["Stand"];
+
+
+                        // hard 18's (always stand)
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 18 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 18 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 18 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 18 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 18 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 18 && dealerCards[1] === "7")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 18 && dealerCards[1] === "8")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 18 && dealerCards[1] === "9")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 18 && dealerCards[1] === "10")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 18 && dealerCards[1] === "J")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 18 && dealerCards[1] === "Q")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 18 && dealerCards[1] === "K")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 18 && dealerCards[1] === "A")
+                            optimalAction = ["Stand"];
+
+
+                        // hard 19's (always stand)
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 19 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 19 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 19 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 19 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 19 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 19 && dealerCards[1] === "7")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 19 && dealerCards[1] === "8")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 19 && dealerCards[1] === "9")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 19 && dealerCards[1] === "10")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 19 && dealerCards[1] === "J")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 19 && dealerCards[1] === "Q")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 19 && dealerCards[1] === "K")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 19 && dealerCards[1] === "A")
+                            optimalAction = ["Stand"];
+
+
+                        // hard 20's (always stand)
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 20 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 20 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 20 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 20 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 20 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 20 && dealerCards[1] === "7")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 20 && dealerCards[1] === "8")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 20 && dealerCards[1] === "9")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 20 && dealerCards[1] === "10")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 20 && dealerCards[1] === "J")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 20 && dealerCards[1] === "Q")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 20 && dealerCards[1] === "K")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 20 && dealerCards[1] === "A")
+                            optimalAction = ["Stand"];
+
+
+
+                        // hard 21's (always stand)
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 21 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 21 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 21 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 21 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 21 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 21 && dealerCards[1] === "7")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 21 && dealerCards[1] === "8")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 21 && dealerCards[1] === "9")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 21 && dealerCards[1] === "10")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 21 && dealerCards[1] === "J")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 21 && dealerCards[1] === "Q")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 21 && dealerCards[1] === "K")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 21 && dealerCards[1] === "A")
+                            optimalAction = ["Stand"];
+                    }
+                }
+            }
+        }
+        else if (hitStandSoft17 == 1) // hits soft 17, 4-8 decks
+        {
+            if (numSplits[currentPlayer] == 0)
+            {
+                if (isPair == 1)
+                {
+                    // covers pairs of 2's
+                    if (playerCards[currentPlayer][0] === "2" && dealerCards[1] === "2")
+                        optimalAction = ["Split_DAS", "Hit"];
+                    else if (playerCards[currentPlayer][0] === "2" && dealerCards[1] === "3")
+                        optimalAction = ["Split_DAS", "Hit"];
+                    else if (playerCards[currentPlayer][0] === "2" && dealerCards[1] === "4")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "2" && dealerCards[1] === "5")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "2" && dealerCards[1] === "6")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "2" && dealerCards[1] === "7")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "2" && dealerCards[1] === "8")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "2" && dealerCards[1] === "9")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "2" && dealerCards[1] === "10")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "2" && dealerCards[1] === "J")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "2" && dealerCards[1] === "Q")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "2" && dealerCards[1] === "K")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "2" && dealerCards[1] === "A")
+                        optimalAction = ["Hit"];
+
+
+                    // covers pairs of 3's
+                    else if (playerCards[currentPlayer][0] === "3" && dealerCards[1] === "2")
+                        optimalAction = ["Split_DAS", "Hit"];
+                    else if (playerCards[currentPlayer][0] === "3" && dealerCards[1] === "3")
+                        optimalAction = ["Split_DAS", "Hit"];
+                    else if (playerCards[currentPlayer][0] === "3" && dealerCards[1] === "4")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "3" && dealerCards[1] === "5")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "3" && dealerCards[1] === "6")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "3" && dealerCards[1] === "7")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "3" && dealerCards[1] === "8")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "3" && dealerCards[1] === "9")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "3" && dealerCards[1] === "10")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "3" && dealerCards[1] === "J")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "3" && dealerCards[1] === "Q")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "3" && dealerCards[1] === "K")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "3" && dealerCards[1] === "A")
+                        optimalAction = ["Hit"];
+
+
+                    // covers pairs of 4's
+                    else if (playerCards[currentPlayer][0] === "4" && dealerCards[1] === "2")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "4" && dealerCards[1] === "3")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "4" && dealerCards[1] === "4")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "4" && dealerCards[1] === "5")
+                        optimalAction = ["Split_DAS", "Hit"];
+                    else if (playerCards[currentPlayer][0] === "4" && dealerCards[1] === "6")
+                        optimalAction = ["Split_DAS", "Hit"];
+                    else if (playerCards[currentPlayer][0] === "4" && dealerCards[1] === "7")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "4" && dealerCards[1] === "8")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "4" && dealerCards[1] === "9")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "4" && dealerCards[1] === "10")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "4" && dealerCards[1] === "J")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "4" && dealerCards[1] === "Q")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "4" && dealerCards[1] === "K")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "4" && dealerCards[1] === "A")
+                        optimalAction = ["Hit"];
+
+
+                    // covers pairs of 5's
+                    else if (playerCards[currentPlayer][0] === "5" && dealerCards[1] === "2")
+                        optimalAction = ["Double", "Hit"];
+                    else if (playerCards[currentPlayer][0] === "5" && dealerCards[1] === "3")
+                        optimalAction = ["Double", "Hit"];
+                    else if (playerCards[currentPlayer][0] === "5" && dealerCards[1] === "4")
+                        optimalAction = ["Double", "Hit"];
+                    else if (playerCards[currentPlayer][0] === "5" && dealerCards[1] === "5")
+                        optimalAction = ["Double", "Hit"];
+                    else if (playerCards[currentPlayer][0] === "5" && dealerCards[1] === "6")
+                        optimalAction = ["Double", "Hit"];
+                    else if (playerCards[currentPlayer][0] === "5" && dealerCards[1] === "7")
+                        optimalAction = ["Double", "Hit"];
+                    else if (playerCards[currentPlayer][0] === "5" && dealerCards[1] === "8")
+                        optimalAction = ["Double", "Hit"];
+                    else if (playerCards[currentPlayer][0] === "5" && dealerCards[1] === "9")
+                        optimalAction = ["Double", "Hit"];
+                    else if (playerCards[currentPlayer][0] === "5" && dealerCards[1] === "10")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "5" && dealerCards[1] === "J")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "5" && dealerCards[1] === "Q")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "5" && dealerCards[1] === "K")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "5" && dealerCards[1] === "A")
+                        optimalAction = ["Hit"];
+
+
+                    // covers pairs of 6's
+                    else if (playerCards[currentPlayer][0] === "6" && dealerCards[1] === "2")
+                        optimalAction = ["Split_DAS", "Hit"];
+                    else if (playerCards[currentPlayer][0] === "6" && dealerCards[1] === "3")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "6" && dealerCards[1] === "4")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "6" && dealerCards[1] === "5")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "6" && dealerCards[1] === "6")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "6" && dealerCards[1] === "7")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "6" && dealerCards[1] === "8")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "6" && dealerCards[1] === "9")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "6" && dealerCards[1] === "10")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "6" && dealerCards[1] === "J")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "6" && dealerCards[1] === "Q")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "6" && dealerCards[1] === "K")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "6" && dealerCards[1] === "A")
+                        optimalAction = ["Hit"];
+
+
+                    // covers pairs of 7's
+                    else if (playerCards[currentPlayer][0] === "7" && dealerCards[1] === "2")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "7" && dealerCards[1] === "3")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "7" && dealerCards[1] === "4")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "7" && dealerCards[1] === "5")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "7" && dealerCards[1] === "6")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "7" && dealerCards[1] === "7")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "7" && dealerCards[1] === "8")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "7" && dealerCards[1] === "9")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "7" && dealerCards[1] === "10")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "7" && dealerCards[1] === "J")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "7" && dealerCards[1] === "Q")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "7" && dealerCards[1] === "K")
+                        optimalAction = ["Hit"];
+                    else if (playerCards[currentPlayer][0] === "7" && dealerCards[1] === "A")
+                        optimalAction = ["Hit"];
+
+
+                    // covers pairs of 8's (always split)
+                    else if (playerCards[currentPlayer][0] === "8" && dealerCards[1] === "2")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "8" && dealerCards[1] === "3")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "8" && dealerCards[1] === "4")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "8" && dealerCards[1] === "5")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "8" && dealerCards[1] === "6")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "8" && dealerCards[1] === "7")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "8" && dealerCards[1] === "8")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "8" && dealerCards[1] === "9")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "8" && dealerCards[1] === "10")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "8" && dealerCards[1] === "J")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "8" && dealerCards[1] === "Q")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "8" && dealerCards[1] === "K")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "8" && dealerCards[1] === "A")
+                        optimalAction = ["Surrender", "Split"];
+
+
+                    // covers pairs of 9's
+                    else if (playerCards[currentPlayer][0] === "9" && dealerCards[1] === "2")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "9" && dealerCards[1] === "3")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "9" && dealerCards[1] === "4")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "9" && dealerCards[1] === "5")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "9" && dealerCards[1] === "6")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "9" && dealerCards[1] === "7")
+                        optimalAction = ["Stand"];
+                    else if (playerCards[currentPlayer][0] === "9" && dealerCards[1] === "8")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "9" && dealerCards[1] === "9")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "9" && dealerCards[1] === "10")
+                        optimalAction = ["Stand"];
+                    else if (playerCards[currentPlayer][0] === "9" && dealerCards[1] === "J")
+                        optimalAction = ["Stand"];
+                    else if (playerCards[currentPlayer][0] === "9" && dealerCards[1] === "Q")
+                        optimalAction = ["Stand"];
+                    else if (playerCards[currentPlayer][0] === "9" && dealerCards[1] === "K")
+                        optimalAction = ["Stand"];
+                    else if (playerCards[currentPlayer][0] === "9" && dealerCards[1] === "A")
+                        optimalAction = ["Stand"];
+
+
+                    // covers pairs of 10's (or equivalent) (always stand)
+                    else if ((playerCards[currentPlayer][0] === "10" || playerCards[currentPlayer][0] === "J" ||
+                        playerCards[currentPlayer][0] === "Q" || playerCards[currentPlayer][0] === "K") && 
+                        dealerCards[1] === "2")
+                        optimalAction = ["Stand"];
+                    else if ((playerCards[currentPlayer][0] === "10" || playerCards[currentPlayer][0] === "J" ||
+                        playerCards[currentPlayer][0] === "Q" || playerCards[currentPlayer][0] === "K") && 
+                        dealerCards[1] === "3")
+                        optimalAction = ["Stand"];
+                    else if ((playerCards[currentPlayer][0] === "10" || playerCards[currentPlayer][0] === "J" ||
+                        playerCards[currentPlayer][0] === "Q" || playerCards[currentPlayer][0] === "K") && 
+                        dealerCards[1] === "4")
+                        optimalAction = ["Stand"];
+                    else if ((playerCards[currentPlayer][0] === "10" || playerCards[currentPlayer][0] === "J" ||
+                        playerCards[currentPlayer][0] === "Q" || playerCards[currentPlayer][0] === "K") && 
+                        dealerCards[1] === "5")
+                        optimalAction = ["Stand"];
+                    else if ((playerCards[currentPlayer][0] === "10" || playerCards[currentPlayer][0] === "J" ||
+                        playerCards[currentPlayer][0] === "Q" || playerCards[currentPlayer][0] === "K") && 
+                        dealerCards[1] === "6")
+                        optimalAction = ["Stand"];
+                    else if ((playerCards[currentPlayer][0] === "10" || playerCards[currentPlayer][0] === "J" ||
+                        playerCards[currentPlayer][0] === "Q" || playerCards[currentPlayer][0] === "K") && 
+                        dealerCards[1] === "7")
+                        optimalAction = ["Stand"];
+                    else if ((playerCards[currentPlayer][0] === "10" || playerCards[currentPlayer][0] === "J" ||
+                        playerCards[currentPlayer][0] === "Q" || playerCards[currentPlayer][0] === "K") && 
+                        dealerCards[1] === "8")
+                        optimalAction = ["Stand"];
+                    else if ((playerCards[currentPlayer][0] === "10" || playerCards[currentPlayer][0] === "J" ||
+                        playerCards[currentPlayer][0] === "Q" || playerCards[currentPlayer][0] === "K") && 
+                        dealerCards[1] === "9")
+                        optimalAction = ["Stand"];
+                    else if ((playerCards[currentPlayer][0] === "10" || playerCards[currentPlayer][0] === "J" ||
+                        playerCards[currentPlayer][0] === "Q" || playerCards[currentPlayer][0] === "K") && 
+                        dealerCards[1] === "10")
+                        optimalAction = ["Stand"];
+                    else if ((playerCards[currentPlayer][0] === "10" || playerCards[currentPlayer][0] === "J" ||
+                        playerCards[currentPlayer][0] === "Q" || playerCards[currentPlayer][0] === "K") && 
+                        dealerCards[1] === "J")
+                        optimalAction = ["Stand"];
+                    else if ((playerCards[currentPlayer][0] === "10" || playerCards[currentPlayer][0] === "J" ||
+                        playerCards[currentPlayer][0] === "Q" || playerCards[currentPlayer][0] === "K") && 
+                        dealerCards[1] === "Q")
+                        optimalAction = ["Stand"];
+                    else if ((playerCards[currentPlayer][0] === "10" || playerCards[currentPlayer][0] === "J" ||
+                        playerCards[currentPlayer][0] === "Q" || playerCards[currentPlayer][0] === "K") && 
+                        dealerCards[1] === "K")
+                        optimalAction = ["Stand"];
+                    else if ((playerCards[currentPlayer][0] === "10" || playerCards[currentPlayer][0] === "J" ||
+                        playerCards[currentPlayer][0] === "Q" || playerCards[currentPlayer][0] === "K") && 
+                        dealerCards[1] === "A")
+                        optimalAction = ["Stand"];
+
+
+                    // covers pairs of A's (always split)
+                    else if (playerCards[currentPlayer][0] === "A" && dealerCards[1] === "2")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "A" && dealerCards[1] === "3")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "A" && dealerCards[1] === "4")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "A" && dealerCards[1] === "5")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "A" && dealerCards[1] === "6")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "A" && dealerCards[1] === "7")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "A" && dealerCards[1] === "8")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "A" && dealerCards[1] === "9")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "A" && dealerCards[1] === "10")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "A" && dealerCards[1] === "J")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "A" && dealerCards[1] === "Q")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "A" && dealerCards[1] === "K")
+                        optimalAction = ["Split"];
+                    else if (playerCards[currentPlayer][0] === "A" && dealerCards[1] === "A")
+                        optimalAction = ["Split"];
+
+                }
+                else if (isSoft == 1)
+                {
+                    // soft 12's (always hit)
+                    if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "2")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "3")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "4")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "5")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "6")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "7")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "8")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "9")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "10")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "J")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "Q")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "K")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "A")
+                        optimalAction = ["Hit"];
+
+                    // soft 13's
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "2")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "3")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "4")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "5")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "6")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "7")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "8")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "9")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "10")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "J")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "Q")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "K")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "A")
+                        optimalAction = ["Hit"];
+                    
+
+                    // soft 14's
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "2")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "3")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "4")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "5")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "6")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "7")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "8")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "9")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "10")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "J")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "Q")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "K")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "A")
+                        optimalAction = ["Hit"];
+
+
+
+                    // soft 15's
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "2")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "3")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "4")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "5")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "6")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "7")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "8")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "9")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "10")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "J")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "Q")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "K")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "A")
+                        optimalAction = ["Hit"];
+
+
+                    // soft 16's
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "2")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "3")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "4")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "5")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "6")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "7")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "8")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "9")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "10")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "J")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "Q")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "K")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "A")
+                        optimalAction = ["Hit"];
+
+
+                    // soft 17's
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "2")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "3")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "4")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "5")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "6")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "7")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "8")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "9")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "10")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "J")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "Q")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "K")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "A")
+                        optimalAction = ["Hit"];
+
+
+                    // soft 18's
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "2")
+                        optimalAction = ["Double", "Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "3")
+                        optimalAction = ["Double", "Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "4")
+                        optimalAction = ["Double", "Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "5")
+                        optimalAction = ["Double", "Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "6")
+                        optimalAction = ["Double", "Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "7")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "8")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "9")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "10")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "J")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "Q")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "K")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "A")
+                        optimalAction = ["Hit"];
+
+
+                    // soft 19's (always stand)
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 19 && dealerCards[1] === "2")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 19 && dealerCards[1] === "3")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 19 && dealerCards[1] === "4")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 19 && dealerCards[1] === "5")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 19 && dealerCards[1] === "6")
+                        optimalAction = ["Double", "Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 19 && dealerCards[1] === "7")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 19 && dealerCards[1] === "8")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 19 && dealerCards[1] === "9")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 19 && dealerCards[1] === "10")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 19 && dealerCards[1] === "J")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 19 && dealerCards[1] === "Q")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 19 && dealerCards[1] === "K")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 19 && dealerCards[1] === "A")
+                        optimalAction = ["Stand"];
+
+
+
+                    // soft 20's (always stand)
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 20 && dealerCards[1] === "2")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 20 && dealerCards[1] === "3")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 20 && dealerCards[1] === "4")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 20 && dealerCards[1] === "5")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 20 && dealerCards[1] === "6")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 20 && dealerCards[1] === "7")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 20 && dealerCards[1] === "8")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 20 && dealerCards[1] === "9")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 20 && dealerCards[1] === "10")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 20 && dealerCards[1] === "J")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 20 && dealerCards[1] === "Q")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 20 && dealerCards[1] === "K")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 20 && dealerCards[1] === "A")
+                        optimalAction = ["Stand"];
+
+
+
+                    // soft 21's (always stand (BJ))
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 21 && dealerCards[1] === "2")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 21 && dealerCards[1] === "3")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 21 && dealerCards[1] === "4")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 21 && dealerCards[1] === "5")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 21 && dealerCards[1] === "6")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 21 && dealerCards[1] === "7")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 21 && dealerCards[1] === "8")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 21 && dealerCards[1] === "9")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 21 && dealerCards[1] === "10")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 21 && dealerCards[1] === "J")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 21 && dealerCards[1] === "Q")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 21 && dealerCards[1] === "K")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 21 && dealerCards[1] === "A")
+                        optimalAction = ["Stand"];
+                }
+                else
+                {
+                    // idk if hard 4's are possible (they are if youve already split)
+                    if (this.getHandValue(playerCards[currentPlayer]) == 4 && dealerCards[1] === "2")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 4 && dealerCards[1] === "3")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 4 && dealerCards[1] === "4")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 4 && dealerCards[1] === "5")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 4 && dealerCards[1] === "6")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 4 && dealerCards[1] === "7")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 4 && dealerCards[1] === "8")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 4 && dealerCards[1] === "9")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 4 && dealerCards[1] === "10")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 4 && dealerCards[1] === "J")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 4 && dealerCards[1] === "Q")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 4 && dealerCards[1] === "K")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 4 && dealerCards[1] === "A")
+                        optimalAction = ["Hit"];
+
+
+                    // hard 5's (always hit)
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 5 && dealerCards[1] === "2")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 5 && dealerCards[1] === "3")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 5 && dealerCards[1] === "4")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 5 && dealerCards[1] === "5")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 5 && dealerCards[1] === "6")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 5 && dealerCards[1] === "7")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 5 && dealerCards[1] === "8")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 5 && dealerCards[1] === "9")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 5 && dealerCards[1] === "10")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 5 && dealerCards[1] === "J")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 5 && dealerCards[1] === "Q")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 5 && dealerCards[1] === "K")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 5 && dealerCards[1] === "A")
+                        optimalAction = ["Hit"];
+
+                    // hard 6's (always hit)
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 6 && dealerCards[1] === "2")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 6 && dealerCards[1] === "3")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 6 && dealerCards[1] === "4")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 6 && dealerCards[1] === "5")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 6 && dealerCards[1] === "6")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 6 && dealerCards[1] === "7")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 6 && dealerCards[1] === "8")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 6 && dealerCards[1] === "9")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 6 && dealerCards[1] === "10")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 6 && dealerCards[1] === "J")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 6 && dealerCards[1] === "Q")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 6 && dealerCards[1] === "K")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 6 && dealerCards[1] === "A")
+                        optimalAction = ["Hit"];
+
+
+                    // hard 7's (always hit)
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 7 && dealerCards[1] === "2")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 7 && dealerCards[1] === "3")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 7 && dealerCards[1] === "4")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 7 && dealerCards[1] === "5")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 7 && dealerCards[1] === "6")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 7 && dealerCards[1] === "7")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 7 && dealerCards[1] === "8")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 7 && dealerCards[1] === "9")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 7 && dealerCards[1] === "10")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 7 && dealerCards[1] === "J")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 7 && dealerCards[1] === "Q")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 7 && dealerCards[1] === "K")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 7 && dealerCards[1] === "A")
+                        optimalAction = ["Hit"];
+
+
+                    // hard 8's (always hit)
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 8 && dealerCards[1] === "2")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 8 && dealerCards[1] === "3")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 8 && dealerCards[1] === "4")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 8 && dealerCards[1] === "5")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 8 && dealerCards[1] === "6")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 8 && dealerCards[1] === "7")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 8 && dealerCards[1] === "8")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 8 && dealerCards[1] === "9")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 8 && dealerCards[1] === "10")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 8 && dealerCards[1] === "J")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 8 && dealerCards[1] === "Q")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 8 && dealerCards[1] === "K")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 8 && dealerCards[1] === "A")
+                        optimalAction = ["Hit"];
+        
+
+                    // hard 9's
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 9 && dealerCards[1] === "2")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 9 && dealerCards[1] === "3")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 9 && dealerCards[1] === "4")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 9 && dealerCards[1] === "5")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 9 && dealerCards[1] === "6")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 9 && dealerCards[1] === "7")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 9 && dealerCards[1] === "8")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 9 && dealerCards[1] === "9")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 9 && dealerCards[1] === "10")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 9 && dealerCards[1] === "J")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 9 && dealerCards[1] === "Q")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 9 && dealerCards[1] === "K")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 9 && dealerCards[1] === "A")
+                        optimalAction = ["Hit"];
+
+
+                    // hard 10's
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 10 && dealerCards[1] === "2")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 10 && dealerCards[1] === "3")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 10 && dealerCards[1] === "4")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 10 && dealerCards[1] === "5")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 10 && dealerCards[1] === "6")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 10 && dealerCards[1] === "7")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 10 && dealerCards[1] === "8")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 10 && dealerCards[1] === "9")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 10 && dealerCards[1] === "10")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 10 && dealerCards[1] === "J")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 10 && dealerCards[1] === "Q")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 10 && dealerCards[1] === "K")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 10 && dealerCards[1] === "A")
+                        optimalAction = ["Hit"];
+
+
+                    // hard 11's
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 11 && dealerCards[1] === "2")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 11 && dealerCards[1] === "3")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 11 && dealerCards[1] === "4")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 11 && dealerCards[1] === "5")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 11 && dealerCards[1] === "6")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 11 && dealerCards[1] === "7")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 11 && dealerCards[1] === "8")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 11 && dealerCards[1] === "9")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 11 && dealerCards[1] === "10")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 11 && dealerCards[1] === "J")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 11 && dealerCards[1] === "Q")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 11 && dealerCards[1] === "K")
+                        optimalAction = ["Double", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 11 && dealerCards[1] === "A")
+                        optimalAction = ["Double", "Hit"];
+
+
+                    // hard 12's
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "2")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "3")
+                        optimalAction = ["Hit"];
+                    else  if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "4")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "5")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "6")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "7")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "8")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "9")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "10")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "J")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "Q")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "K")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "A")
+                        optimalAction = ["Hit"];
+
+
+                    // hard 13's
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "2")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "3")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "4")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "5")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "6")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "7")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "8")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "9")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "10")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "J")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "Q")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "K")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "A")
+                        optimalAction = ["Hit"];
+
+
+                    // hard 14's
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "2")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "3")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "4")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "5")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "6")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "7")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "8")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "9")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "10")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "J")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "Q")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "K")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "A")
+                        optimalAction = ["Hit"];
+
+
+                    // hard 15's
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "2")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "3")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "4")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "5")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "6")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "7")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "8")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "9")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "10")
+                        optimalAction = ["Surrender", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "J")
+                        optimalAction = ["Surrender", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "Q")
+                        optimalAction = ["Surrender", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "K")
+                        optimalAction = ["Surrender", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "A")
+                        optimalAction = ["Surrender", "Hit"];
+
+
+                    // hard 16's
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "2")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "3")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "4")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "5")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "6")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "7")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "8")
+                        optimalAction = ["Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "9")
+                        optimalAction = ["Surrender", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "10")
+                        optimalAction = ["Surrender", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "J")
+                        optimalAction = ["Surrender", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "Q")
+                        optimalAction = ["Surrender", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "K")
+                        optimalAction = ["Surrender", "Hit"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "A")
+                        optimalAction = ["Surrender", "Hit"];
+
+
+                    // hard 17's (always stand)
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "2")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "3")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "4")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "5")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "6")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "7")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "8")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "9")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "10")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "J")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "Q")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "K")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "A")
+                        optimalAction = ["Surrender", "Stand"];
+
+
+                    // hard 18's (always stand)
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "2")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "3")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "4")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "5")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "6")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "7")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "8")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "9")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "10")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "J")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "Q")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "K")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "A")
+                        optimalAction = ["Stand"];
+
+
+                    // hard 19's (always stand)
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 19 && dealerCards[1] === "2")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 19 && dealerCards[1] === "3")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 19 && dealerCards[1] === "4")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 19 && dealerCards[1] === "5")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 19 && dealerCards[1] === "6")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 19 && dealerCards[1] === "7")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 19 && dealerCards[1] === "8")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 19 && dealerCards[1] === "9")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 19 && dealerCards[1] === "10")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 19 && dealerCards[1] === "J")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 19 && dealerCards[1] === "Q")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 19 && dealerCards[1] === "K")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 19 && dealerCards[1] === "A")
+                        optimalAction = ["Stand"];
+
+
+                    // hard 20's (always stand)
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 20 && dealerCards[1] === "2")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 20 && dealerCards[1] === "3")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 20 && dealerCards[1] === "4")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 20 && dealerCards[1] === "5")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 20 && dealerCards[1] === "6")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 20 && dealerCards[1] === "7")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 20 && dealerCards[1] === "8")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 20 && dealerCards[1] === "9")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 20 && dealerCards[1] === "10")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 20 && dealerCards[1] === "J")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 20 && dealerCards[1] === "Q")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 20 && dealerCards[1] === "K")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 20 && dealerCards[1] === "A")
+                        optimalAction = ["Stand"];
+
+
+
+                    // hard 21's (always stand)
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 21 && dealerCards[1] === "2")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 21 && dealerCards[1] === "3")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 21 && dealerCards[1] === "4")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 21 && dealerCards[1] === "5")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 21 && dealerCards[1] === "6")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 21 && dealerCards[1] === "7")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 21 && dealerCards[1] === "8")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 21 && dealerCards[1] === "9")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 21 && dealerCards[1] === "10")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 21 && dealerCards[1] === "J")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 21 && dealerCards[1] === "Q")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 21 && dealerCards[1] === "K")
+                        optimalAction = ["Stand"];
+                    else if (this.getHandValue(playerCards[currentPlayer]) == 21 && dealerCards[1] === "A")
+                        optimalAction = ["Stand"];
+                }
+            }
+            else if (numSplits[currentPlayer] == 1)
+            {
+                if (currentPlayer == 0)
+                {
+                    if (isSoft == 1)
+                    {
+                        // soft 12's (always hit)
+                        if (this.splitGetHandValue(player1Hands[currentHand]) == 12 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 12 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 12 && dealerCards[1] === "4")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 12 && dealerCards[1] === "5")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 12 && dealerCards[1] === "6")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 12 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 12 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 12 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 12 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 12 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 12 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 12 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 12 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+                        // soft 13's
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 13 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 13 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 13 && dealerCards[1] === "4")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 13 && dealerCards[1] === "5")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 13 && dealerCards[1] === "6")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 13 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 13 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 13 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 13 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 13 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 13 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 13 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 13 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+                        
+
+                        // soft 14's
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 14 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 14 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 14 && dealerCards[1] === "4")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 14 && dealerCards[1] === "5")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 14 && dealerCards[1] === "6")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 14 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 14 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 14 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 14 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 14 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 14 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 14 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 14 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+
+                        // soft 15's
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 15 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 15 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 15 && dealerCards[1] === "4")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 15 && dealerCards[1] === "5")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 15 && dealerCards[1] === "6")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 15 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 15 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 15 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 15 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 15 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 15 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 15 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 15 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // soft 16's
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 16 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 16 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 16 && dealerCards[1] === "4")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 16 && dealerCards[1] === "5")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 16 && dealerCards[1] === "6")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 16 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 16 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 16 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 16 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 16 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 16 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 16 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 16 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // soft 17's
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 17 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 17 && dealerCards[1] === "3")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 17 && dealerCards[1] === "4")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 17 && dealerCards[1] === "5")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 17 && dealerCards[1] === "6")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 17 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 17 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 17 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 17 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 17 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 17 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 17 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 17 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // soft 18's
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 18 && dealerCards[1] === "2")
+                            optimalAction = ["Double", "Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 18 && dealerCards[1] === "3")
+                            optimalAction = ["Double", "Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 18 && dealerCards[1] === "4")
+                            optimalAction = ["Double", "Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 18 && dealerCards[1] === "5")
+                            optimalAction = ["Double", "Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 18 && dealerCards[1] === "6")
+                            optimalAction = ["Double", "Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 18 && dealerCards[1] === "7")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 18 && dealerCards[1] === "8")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 18 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 18 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 18 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 18 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 18 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 18 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // soft 19's (always stand)
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 19 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 19 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 19 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 19 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 19 && dealerCards[1] === "6")
+                            optimalAction = ["Double", "Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 19 && dealerCards[1] === "7")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 19 && dealerCards[1] === "8")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 19 && dealerCards[1] === "9")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 19 && dealerCards[1] === "10")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 19 && dealerCards[1] === "J")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 19 && dealerCards[1] === "Q")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 19 && dealerCards[1] === "K")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 19 && dealerCards[1] === "A")
+                            optimalAction = ["Stand"];
+
+
+
+                        // soft 20's (always stand)
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 20 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 20 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 20 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 20 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 20 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 20 && dealerCards[1] === "7")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 20 && dealerCards[1] === "8")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 20 && dealerCards[1] === "9")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 20 && dealerCards[1] === "10")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 20 && dealerCards[1] === "J")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 20 && dealerCards[1] === "Q")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 20 && dealerCards[1] === "K")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 20 && dealerCards[1] === "A")
+                            optimalAction = ["Stand"];
+
+
+
+                        // soft 21's (always stand (BJ))
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 21 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 21 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 21 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 21 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 21 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 21 && dealerCards[1] === "7")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 21 && dealerCards[1] === "8")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 21 && dealerCards[1] === "9")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 21 && dealerCards[1] === "10")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 21 && dealerCards[1] === "J")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 21 && dealerCards[1] === "Q")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 21 && dealerCards[1] === "K")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 21 && dealerCards[1] === "A")
+                            optimalAction = ["Stand"];
+                    }
+                    else
+                    {
+                        // idk if hard 4's are possible (they are if youve already split)
+                        if (this.splitGetHandValue(player1Hands[currentHand]) == 4 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 4 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 4 && dealerCards[1] === "4")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 4 && dealerCards[1] === "5")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 4 && dealerCards[1] === "6")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 4 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 4 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 4 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 4 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 4 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 4 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 4 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 4 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // hard 5's (always hit)
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 5 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 5 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 5 && dealerCards[1] === "4")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 5 && dealerCards[1] === "5")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 5 && dealerCards[1] === "6")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 5 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 5 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 5 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 5 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 5 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 5 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 5 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 5 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+                        // hard 6's (always hit)
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 6 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 6 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 6 && dealerCards[1] === "4")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 6 && dealerCards[1] === "5")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 6 && dealerCards[1] === "6")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 6 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 6 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 6 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 6 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 6 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 6 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 6 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 6 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // hard 7's (always hit)
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 7 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 7 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 7 && dealerCards[1] === "4")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 7 && dealerCards[1] === "5")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 7 && dealerCards[1] === "6")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 7 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 7 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 7 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 7 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 7 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 7 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 7 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 7 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // hard 8's (always hit)
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 8 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 8 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 8 && dealerCards[1] === "4")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 8 && dealerCards[1] === "5")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 8 && dealerCards[1] === "6")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 8 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 8 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 8 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 8 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 8 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 8 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 8 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 8 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+            
+
+                        // hard 9's
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 9 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 9 && dealerCards[1] === "3")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 9 && dealerCards[1] === "4")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 9 && dealerCards[1] === "5")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 9 && dealerCards[1] === "6")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 9 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 9 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 9 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 9 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 9 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 9 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 9 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 9 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // hard 10's
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 10 && dealerCards[1] === "2")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 10 && dealerCards[1] === "3")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 10 && dealerCards[1] === "4")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 10 && dealerCards[1] === "5")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 10 && dealerCards[1] === "6")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 10 && dealerCards[1] === "7")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 10 && dealerCards[1] === "8")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 10 && dealerCards[1] === "9")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 10 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 10 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 10 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 10 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 10 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // hard 11's
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 11 && dealerCards[1] === "2")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 11 && dealerCards[1] === "3")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 11 && dealerCards[1] === "4")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 11 && dealerCards[1] === "5")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 11 && dealerCards[1] === "6")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 11 && dealerCards[1] === "7")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 11 && dealerCards[1] === "8")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 11 && dealerCards[1] === "9")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 11 && dealerCards[1] === "10")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 11 && dealerCards[1] === "J")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 11 && dealerCards[1] === "Q")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 11 && dealerCards[1] === "K")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 11 && dealerCards[1] === "A")
+                            optimalAction = ["Double", "Hit"];
+
+
+                        // hard 12's
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 12 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 12 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else  if (this.splitGetHandValue(player1Hands[currentHand]) == 12 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 12 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 12 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 12 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 12 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 12 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 12 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 12 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 12 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 12 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 12 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // hard 13's
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 13 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 13 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 13 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 13 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 13 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 13 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 13 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 13 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 13 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 13 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 13 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 13 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 13 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // hard 14's
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 14 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 14 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 14 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 14 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 14 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 14 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 14 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 14 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 14 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 14 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 14 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 14 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 14 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // hard 15's
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 15 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 15 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 15 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 15 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 15 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 15 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 15 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 15 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 15 && dealerCards[1] === "10")
+                            optimalAction = ["Surrender", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 15 && dealerCards[1] === "J")
+                            optimalAction = ["Surrender", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 15 && dealerCards[1] === "Q")
+                            optimalAction = ["Surrender", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 15 && dealerCards[1] === "K")
+                            optimalAction = ["Surrender", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 15 && dealerCards[1] === "A")
+                            optimalAction = ["Surrender", "Hit"];
+
+
+                        // hard 16's
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 16 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 16 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 16 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 16 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 16 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 16 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 16 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 16 && dealerCards[1] === "9")
+                            optimalAction = ["Surrender", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 16 && dealerCards[1] === "10")
+                            optimalAction = ["Surrender", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 16 && dealerCards[1] === "J")
+                            optimalAction = ["Surrender", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 16 && dealerCards[1] === "Q")
+                            optimalAction = ["Surrender", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 16 && dealerCards[1] === "K")
+                            optimalAction = ["Surrender", "Hit"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 16 && dealerCards[1] === "A")
+                            optimalAction = ["Surrender", "Hit"];
+
+
+                        // hard 17's (always stand)
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 17 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 17 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 17 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 17 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 17 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 17 && dealerCards[1] === "7")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 17 && dealerCards[1] === "8")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 17 && dealerCards[1] === "9")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 17 && dealerCards[1] === "10")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 17 && dealerCards[1] === "J")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 17 && dealerCards[1] === "Q")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 17 && dealerCards[1] === "K")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 17 && dealerCards[1] === "A")
+                            optimalAction = ["Surrender", "Stand"];
+
+
+                        // hard 18's (always stand)
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 18 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 18 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 18 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 18 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 18 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 18 && dealerCards[1] === "7")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 18 && dealerCards[1] === "8")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 18 && dealerCards[1] === "9")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 18 && dealerCards[1] === "10")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 18 && dealerCards[1] === "J")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 18 && dealerCards[1] === "Q")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 18 && dealerCards[1] === "K")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 18 && dealerCards[1] === "A")
+                            optimalAction = ["Stand"];
+
+
+                        // hard 19's (always stand)
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 19 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 19 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 19 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 19 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 19 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 19 && dealerCards[1] === "7")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 19 && dealerCards[1] === "8")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 19 && dealerCards[1] === "9")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 19 && dealerCards[1] === "10")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 19 && dealerCards[1] === "J")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 19 && dealerCards[1] === "Q")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 19 && dealerCards[1] === "K")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 19 && dealerCards[1] === "A")
+                            optimalAction = ["Stand"];
+
+
+                        // hard 20's (always stand)
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 20 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 20 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 20 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 20 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 20 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 20 && dealerCards[1] === "7")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 20 && dealerCards[1] === "8")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 20 && dealerCards[1] === "9")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 20 && dealerCards[1] === "10")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 20 && dealerCards[1] === "J")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 20 && dealerCards[1] === "Q")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 20 && dealerCards[1] === "K")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 20 && dealerCards[1] === "A")
+                            optimalAction = ["Stand"];
+
+
+
+                        // hard 21's (always stand)
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 21 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 21 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 21 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 21 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 21 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 21 && dealerCards[1] === "7")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 21 && dealerCards[1] === "8")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 21 && dealerCards[1] === "9")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 21 && dealerCards[1] === "10")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 21 && dealerCards[1] === "J")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 21 && dealerCards[1] === "Q")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 21 && dealerCards[1] === "K")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player1Hands[currentHand]) == 21 && dealerCards[1] === "A")
+                            optimalAction = ["Stand"];
+                    }
+                }
+                else if (currentPlayer == 1)
+                {
+                    if (isSoft == 1)
+                    {
+                        // soft 12's (always hit)
+                        if (this.splitGetHandValue(player2Hands[currentHand]) == 12 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 12 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 12 && dealerCards[1] === "4")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 12 && dealerCards[1] === "5")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 12 && dealerCards[1] === "6")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 12 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 12 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 12 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 12 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 12 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 12 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 12 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 12 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+                        // soft 13's
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 13 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 13 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 13 && dealerCards[1] === "4")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 13 && dealerCards[1] === "5")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 13 && dealerCards[1] === "6")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 13 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 13 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 13 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 13 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 13 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 13 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 13 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 13 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+                        
+
+                        // soft 14's
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 14 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 14 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 14 && dealerCards[1] === "4")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 14 && dealerCards[1] === "5")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 14 && dealerCards[1] === "6")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 14 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 14 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 14 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 14 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 14 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 14 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 14 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 14 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+
+                        // soft 15's
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 15 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 15 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 15 && dealerCards[1] === "4")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 15 && dealerCards[1] === "5")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 15 && dealerCards[1] === "6")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 15 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 15 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 15 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 15 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 15 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 15 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 15 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 15 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // soft 16's
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 16 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 16 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 16 && dealerCards[1] === "4")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 16 && dealerCards[1] === "5")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 16 && dealerCards[1] === "6")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 16 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 16 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 16 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 16 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 16 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 16 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 16 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 16 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // soft 17's
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 17 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 17 && dealerCards[1] === "3")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 17 && dealerCards[1] === "4")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 17 && dealerCards[1] === "5")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 17 && dealerCards[1] === "6")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 17 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 17 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 17 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 17 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 17 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 17 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 17 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 17 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // soft 18's
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 18 && dealerCards[1] === "2")
+                            optimalAction = ["Double", "Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 18 && dealerCards[1] === "3")
+                            optimalAction = ["Double", "Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 18 && dealerCards[1] === "4")
+                            optimalAction = ["Double", "Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 18 && dealerCards[1] === "5")
+                            optimalAction = ["Double", "Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 18 && dealerCards[1] === "6")
+                            optimalAction = ["Double", "Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 18 && dealerCards[1] === "7")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 18 && dealerCards[1] === "8")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 18 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 18 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 18 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 18 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 18 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 18 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // soft 19's (always stand)
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 19 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 19 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 19 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 19 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 19 && dealerCards[1] === "6")
+                            optimalAction = ["Double", "Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 19 && dealerCards[1] === "7")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 19 && dealerCards[1] === "8")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 19 && dealerCards[1] === "9")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 19 && dealerCards[1] === "10")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 19 && dealerCards[1] === "J")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 19 && dealerCards[1] === "Q")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 19 && dealerCards[1] === "K")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 19 && dealerCards[1] === "A")
+                            optimalAction = ["Stand"];
+
+
+
+                        // soft 20's (always stand)
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 20 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 20 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 20 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 20 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 20 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 20 && dealerCards[1] === "7")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 20 && dealerCards[1] === "8")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 20 && dealerCards[1] === "9")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 20 && dealerCards[1] === "10")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 20 && dealerCards[1] === "J")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 20 && dealerCards[1] === "Q")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 20 && dealerCards[1] === "K")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 20 && dealerCards[1] === "A")
+                            optimalAction = ["Stand"];
+
+
+
+                        // soft 21's (always stand (BJ))
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 21 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 21 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 21 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 21 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 21 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 21 && dealerCards[1] === "7")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 21 && dealerCards[1] === "8")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 21 && dealerCards[1] === "9")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 21 && dealerCards[1] === "10")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 21 && dealerCards[1] === "J")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 21 && dealerCards[1] === "Q")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 21 && dealerCards[1] === "K")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 21 && dealerCards[1] === "A")
+                            optimalAction = ["Stand"];
+                    }
+                    else
+                    {
+                        // idk if hard 4's are possible (they are if youve already split)
+                        if (this.splitGetHandValue(player2Hands[currentHand]) == 4 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 4 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 4 && dealerCards[1] === "4")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 4 && dealerCards[1] === "5")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 4 && dealerCards[1] === "6")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 4 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 4 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 4 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 4 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 4 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 4 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 4 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 4 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // hard 5's (always hit)
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 5 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 5 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 5 && dealerCards[1] === "4")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 5 && dealerCards[1] === "5")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 5 && dealerCards[1] === "6")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 5 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 5 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 5 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 5 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 5 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 5 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 5 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 5 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+                        // hard 6's (always hit)
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 6 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 6 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 6 && dealerCards[1] === "4")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 6 && dealerCards[1] === "5")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 6 && dealerCards[1] === "6")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 6 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 6 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 6 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 6 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 6 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 6 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 6 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 6 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // hard 7's (always hit)
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 7 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 7 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 7 && dealerCards[1] === "4")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 7 && dealerCards[1] === "5")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 7 && dealerCards[1] === "6")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 7 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 7 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 7 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 7 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 7 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 7 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 7 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 7 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // hard 8's (always hit)
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 8 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 8 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 8 && dealerCards[1] === "4")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 8 && dealerCards[1] === "5")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 8 && dealerCards[1] === "6")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 8 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 8 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 8 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 8 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 8 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 8 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 8 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 8 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+            
+
+                        // hard 9's
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 9 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 9 && dealerCards[1] === "3")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 9 && dealerCards[1] === "4")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 9 && dealerCards[1] === "5")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 9 && dealerCards[1] === "6")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 9 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 9 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 9 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 9 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 9 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 9 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 9 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 9 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // hard 10's
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 10 && dealerCards[1] === "2")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 10 && dealerCards[1] === "3")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 10 && dealerCards[1] === "4")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 10 && dealerCards[1] === "5")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 10 && dealerCards[1] === "6")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 10 && dealerCards[1] === "7")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 10 && dealerCards[1] === "8")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 10 && dealerCards[1] === "9")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 10 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 10 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 10 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 10 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 10 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // hard 11's
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 11 && dealerCards[1] === "2")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 11 && dealerCards[1] === "3")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 11 && dealerCards[1] === "4")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 11 && dealerCards[1] === "5")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 11 && dealerCards[1] === "6")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 11 && dealerCards[1] === "7")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 11 && dealerCards[1] === "8")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 11 && dealerCards[1] === "9")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 11 && dealerCards[1] === "10")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 11 && dealerCards[1] === "J")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 11 && dealerCards[1] === "Q")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 11 && dealerCards[1] === "K")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 11 && dealerCards[1] === "A")
+                            optimalAction = ["Double", "Hit"];
+
+
+                        // hard 12's
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 12 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 12 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else  if (this.splitGetHandValue(player2Hands[currentHand]) == 12 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 12 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 12 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 12 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 12 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 12 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 12 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 12 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 12 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 12 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 12 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // hard 13's
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 13 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 13 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 13 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 13 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 13 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 13 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 13 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 13 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 13 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 13 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 13 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 13 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 13 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // hard 14's
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 14 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 14 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 14 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 14 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 14 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 14 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 14 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 14 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 14 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 14 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 14 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 14 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 14 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // hard 15's
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 15 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 15 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 15 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 15 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 15 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 15 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 15 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 15 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 15 && dealerCards[1] === "10")
+                            optimalAction = ["Surrender", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 15 && dealerCards[1] === "J")
+                            optimalAction = ["Surrender", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 15 && dealerCards[1] === "Q")
+                            optimalAction = ["Surrender", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 15 && dealerCards[1] === "K")
+                            optimalAction = ["Surrender", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 15 && dealerCards[1] === "A")
+                            optimalAction = ["Surrender", "Hit"];
+
+
+                        // hard 16's
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 16 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 16 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 16 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 16 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 16 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 16 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 16 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 16 && dealerCards[1] === "9")
+                            optimalAction = ["Surrender", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 16 && dealerCards[1] === "10")
+                            optimalAction = ["Surrender", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 16 && dealerCards[1] === "J")
+                            optimalAction = ["Surrender", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 16 && dealerCards[1] === "Q")
+                            optimalAction = ["Surrender", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 16 && dealerCards[1] === "K")
+                            optimalAction = ["Surrender", "Hit"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 16 && dealerCards[1] === "A")
+                            optimalAction = ["Surrender", "Hit"];
+
+
+                        // hard 17's (always stand)
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 17 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 17 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 17 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 17 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 17 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 17 && dealerCards[1] === "7")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 17 && dealerCards[1] === "8")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 17 && dealerCards[1] === "9")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 17 && dealerCards[1] === "10")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 17 && dealerCards[1] === "J")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 17 && dealerCards[1] === "Q")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 17 && dealerCards[1] === "K")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 17 && dealerCards[1] === "A")
+                            optimalAction = ["Surrender", "Stand"];
+
+
+                        // hard 18's (always stand)
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 18 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 18 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 18 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 18 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 18 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 18 && dealerCards[1] === "7")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 18 && dealerCards[1] === "8")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 18 && dealerCards[1] === "9")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 18 && dealerCards[1] === "10")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 18 && dealerCards[1] === "J")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 18 && dealerCards[1] === "Q")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 18 && dealerCards[1] === "K")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 18 && dealerCards[1] === "A")
+                            optimalAction = ["Stand"];
+
+
+                        // hard 19's (always stand)
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 19 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 19 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 19 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 19 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 19 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 19 && dealerCards[1] === "7")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 19 && dealerCards[1] === "8")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 19 && dealerCards[1] === "9")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 19 && dealerCards[1] === "10")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 19 && dealerCards[1] === "J")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 19 && dealerCards[1] === "Q")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 19 && dealerCards[1] === "K")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 19 && dealerCards[1] === "A")
+                            optimalAction = ["Stand"];
+
+
+                        // hard 20's (always stand)
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 20 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 20 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 20 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 20 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 20 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 20 && dealerCards[1] === "7")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 20 && dealerCards[1] === "8")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 20 && dealerCards[1] === "9")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 20 && dealerCards[1] === "10")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 20 && dealerCards[1] === "J")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 20 && dealerCards[1] === "Q")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 20 && dealerCards[1] === "K")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 20 && dealerCards[1] === "A")
+                            optimalAction = ["Stand"];
+
+
+
+                        // hard 21's (always stand)
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 21 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 21 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 21 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 21 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 21 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 21 && dealerCards[1] === "7")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 21 && dealerCards[1] === "8")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 21 && dealerCards[1] === "9")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 21 && dealerCards[1] === "10")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 21 && dealerCards[1] === "J")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 21 && dealerCards[1] === "Q")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 21 && dealerCards[1] === "K")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player2Hands[currentHand]) == 21 && dealerCards[1] === "A")
+                            optimalAction = ["Stand"];
+                    }
+                }
+                else if (currentPlayer == 2)
+                {
+                    if (isSoft == 1)
+                    {
+                        // soft 12's (always hit)
+                        if (this.splitGetHandValue(player3Hands[currentHand]) == 12 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 12 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 12 && dealerCards[1] === "4")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 12 && dealerCards[1] === "5")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 12 && dealerCards[1] === "6")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 12 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 12 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 12 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 12 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 12 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 12 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 12 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 12 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+                        // soft 13's
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 13 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 13 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 13 && dealerCards[1] === "4")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 13 && dealerCards[1] === "5")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 13 && dealerCards[1] === "6")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 13 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 13 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 13 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 13 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 13 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 13 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 13 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 13 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+                        
+
+                        // soft 14's
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 14 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 14 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 14 && dealerCards[1] === "4")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 14 && dealerCards[1] === "5")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 14 && dealerCards[1] === "6")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 14 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 14 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 14 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 14 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 14 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 14 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 14 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 14 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+
+                        // soft 15's
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 15 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 15 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 15 && dealerCards[1] === "4")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 15 && dealerCards[1] === "5")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 15 && dealerCards[1] === "6")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 15 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 15 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 15 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 15 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 15 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 15 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 15 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 15 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // soft 16's
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 16 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 16 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 16 && dealerCards[1] === "4")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 16 && dealerCards[1] === "5")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 16 && dealerCards[1] === "6")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 16 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 16 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 16 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 16 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 16 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 16 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 16 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 16 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // soft 17's
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 17 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 17 && dealerCards[1] === "3")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 17 && dealerCards[1] === "4")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 17 && dealerCards[1] === "5")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 17 && dealerCards[1] === "6")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 17 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 17 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 17 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 17 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 17 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 17 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 17 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 17 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // soft 18's
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 18 && dealerCards[1] === "2")
+                            optimalAction = ["Double", "Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 18 && dealerCards[1] === "3")
+                            optimalAction = ["Double", "Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 18 && dealerCards[1] === "4")
+                            optimalAction = ["Double", "Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 18 && dealerCards[1] === "5")
+                            optimalAction = ["Double", "Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 18 && dealerCards[1] === "6")
+                            optimalAction = ["Double", "Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 18 && dealerCards[1] === "7")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 18 && dealerCards[1] === "8")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 18 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 18 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 18 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 18 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 18 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 18 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // soft 19's (always stand)
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 19 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 19 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 19 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 19 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 19 && dealerCards[1] === "6")
+                            optimalAction = ["Double", "Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 19 && dealerCards[1] === "7")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 19 && dealerCards[1] === "8")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 19 && dealerCards[1] === "9")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 19 && dealerCards[1] === "10")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 19 && dealerCards[1] === "J")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 19 && dealerCards[1] === "Q")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 19 && dealerCards[1] === "K")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 19 && dealerCards[1] === "A")
+                            optimalAction = ["Stand"];
+
+
+
+                        // soft 20's (always stand)
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 20 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 20 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 20 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 20 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 20 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 20 && dealerCards[1] === "7")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 20 && dealerCards[1] === "8")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 20 && dealerCards[1] === "9")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 20 && dealerCards[1] === "10")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 20 && dealerCards[1] === "J")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 20 && dealerCards[1] === "Q")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 20 && dealerCards[1] === "K")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 20 && dealerCards[1] === "A")
+                            optimalAction = ["Stand"];
+
+
+
+                        // soft 21's (always stand (BJ))
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 21 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 21 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 21 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 21 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 21 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 21 && dealerCards[1] === "7")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 21 && dealerCards[1] === "8")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 21 && dealerCards[1] === "9")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 21 && dealerCards[1] === "10")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 21 && dealerCards[1] === "J")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 21 && dealerCards[1] === "Q")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 21 && dealerCards[1] === "K")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 21 && dealerCards[1] === "A")
+                            optimalAction = ["Stand"];
+                    }
+                    else
+                    {
+                        // idk if hard 4's are possible (they are if youve already split)
+                        if (this.splitGetHandValue(player3Hands[currentHand]) == 4 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 4 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 4 && dealerCards[1] === "4")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 4 && dealerCards[1] === "5")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 4 && dealerCards[1] === "6")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 4 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 4 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 4 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 4 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 4 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 4 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 4 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 4 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // hard 5's (always hit)
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 5 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 5 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 5 && dealerCards[1] === "4")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 5 && dealerCards[1] === "5")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 5 && dealerCards[1] === "6")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 5 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 5 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 5 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 5 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 5 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 5 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 5 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 5 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+                        // hard 6's (always hit)
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 6 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 6 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 6 && dealerCards[1] === "4")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 6 && dealerCards[1] === "5")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 6 && dealerCards[1] === "6")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 6 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 6 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 6 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 6 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 6 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 6 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 6 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 6 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // hard 7's (always hit)
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 7 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 7 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 7 && dealerCards[1] === "4")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 7 && dealerCards[1] === "5")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 7 && dealerCards[1] === "6")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 7 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 7 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 7 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 7 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 7 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 7 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 7 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 7 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // hard 8's (always hit)
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 8 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 8 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 8 && dealerCards[1] === "4")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 8 && dealerCards[1] === "5")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 8 && dealerCards[1] === "6")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 8 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 8 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 8 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 8 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 8 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 8 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 8 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 8 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+            
+
+                        // hard 9's
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 9 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 9 && dealerCards[1] === "3")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 9 && dealerCards[1] === "4")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 9 && dealerCards[1] === "5")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 9 && dealerCards[1] === "6")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 9 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 9 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 9 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 9 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 9 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 9 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 9 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 9 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // hard 10's
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 10 && dealerCards[1] === "2")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 10 && dealerCards[1] === "3")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 10 && dealerCards[1] === "4")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 10 && dealerCards[1] === "5")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 10 && dealerCards[1] === "6")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 10 && dealerCards[1] === "7")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 10 && dealerCards[1] === "8")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 10 && dealerCards[1] === "9")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 10 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 10 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 10 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 10 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 10 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // hard 11's
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 11 && dealerCards[1] === "2")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 11 && dealerCards[1] === "3")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 11 && dealerCards[1] === "4")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 11 && dealerCards[1] === "5")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 11 && dealerCards[1] === "6")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 11 && dealerCards[1] === "7")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 11 && dealerCards[1] === "8")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 11 && dealerCards[1] === "9")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 11 && dealerCards[1] === "10")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 11 && dealerCards[1] === "J")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 11 && dealerCards[1] === "Q")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 11 && dealerCards[1] === "K")
+                            optimalAction = ["Double", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 11 && dealerCards[1] === "A")
+                            optimalAction = ["Double", "Hit"];
+
+
+                        // hard 12's
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 12 && dealerCards[1] === "2")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 12 && dealerCards[1] === "3")
+                            optimalAction = ["Hit"];
+                        else  if (this.splitGetHandValue(player3Hands[currentHand]) == 12 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 12 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 12 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 12 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 12 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 12 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 12 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 12 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 12 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 12 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 12 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // hard 13's
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 13 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 13 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 13 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 13 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 13 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 13 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 13 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 13 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 13 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 13 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 13 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 13 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 13 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // hard 14's
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 14 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 14 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 14 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 14 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 14 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 14 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 14 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 14 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 14 && dealerCards[1] === "10")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 14 && dealerCards[1] === "J")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 14 && dealerCards[1] === "Q")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 14 && dealerCards[1] === "K")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 14 && dealerCards[1] === "A")
+                            optimalAction = ["Hit"];
+
+
+                        // hard 15's
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 15 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 15 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 15 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 15 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 15 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 15 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 15 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 15 && dealerCards[1] === "9")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 15 && dealerCards[1] === "10")
+                            optimalAction = ["Surrender", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 15 && dealerCards[1] === "J")
+                            optimalAction = ["Surrender", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 15 && dealerCards[1] === "Q")
+                            optimalAction = ["Surrender", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 15 && dealerCards[1] === "K")
+                            optimalAction = ["Surrender", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 15 && dealerCards[1] === "A")
+                            optimalAction = ["Surrender", "Hit"];
+
+
+                        // hard 16's
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 16 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 16 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 16 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 16 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 16 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 16 && dealerCards[1] === "7")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 16 && dealerCards[1] === "8")
+                            optimalAction = ["Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 16 && dealerCards[1] === "9")
+                            optimalAction = ["Surrender", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 16 && dealerCards[1] === "10")
+                            optimalAction = ["Surrender", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 16 && dealerCards[1] === "J")
+                            optimalAction = ["Surrender", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 16 && dealerCards[1] === "Q")
+                            optimalAction = ["Surrender", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 16 && dealerCards[1] === "K")
+                            optimalAction = ["Surrender", "Hit"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 16 && dealerCards[1] === "A")
+                            optimalAction = ["Surrender", "Hit"];
+
+
+                        // hard 17's (always stand)
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 17 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 17 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 17 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 17 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 17 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 17 && dealerCards[1] === "7")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 17 && dealerCards[1] === "8")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 17 && dealerCards[1] === "9")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 17 && dealerCards[1] === "10")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 17 && dealerCards[1] === "J")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 17 && dealerCards[1] === "Q")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 17 && dealerCards[1] === "K")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 17 && dealerCards[1] === "A")
+                            optimalAction = ["Surrender", "Stand"];
+
+
+                        // hard 18's (always stand)
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 18 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 18 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 18 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 18 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 18 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 18 && dealerCards[1] === "7")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 18 && dealerCards[1] === "8")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 18 && dealerCards[1] === "9")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 18 && dealerCards[1] === "10")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 18 && dealerCards[1] === "J")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 18 && dealerCards[1] === "Q")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 18 && dealerCards[1] === "K")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 18 && dealerCards[1] === "A")
+                            optimalAction = ["Stand"];
+
+
+                        // hard 19's (always stand)
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 19 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 19 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 19 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 19 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 19 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 19 && dealerCards[1] === "7")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 19 && dealerCards[1] === "8")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 19 && dealerCards[1] === "9")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 19 && dealerCards[1] === "10")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 19 && dealerCards[1] === "J")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 19 && dealerCards[1] === "Q")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 19 && dealerCards[1] === "K")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 19 && dealerCards[1] === "A")
+                            optimalAction = ["Stand"];
+
+
+                        // hard 20's (always stand)
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 20 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 20 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 20 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 20 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 20 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 20 && dealerCards[1] === "7")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 20 && dealerCards[1] === "8")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 20 && dealerCards[1] === "9")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 20 && dealerCards[1] === "10")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 20 && dealerCards[1] === "J")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 20 && dealerCards[1] === "Q")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 20 && dealerCards[1] === "K")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 20 && dealerCards[1] === "A")
+                            optimalAction = ["Stand"];
+
+
+
+                        // hard 21's (always stand)
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 21 && dealerCards[1] === "2")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 21 && dealerCards[1] === "3")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 21 && dealerCards[1] === "4")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 21 && dealerCards[1] === "5")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 21 && dealerCards[1] === "6")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 21 && dealerCards[1] === "7")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 21 && dealerCards[1] === "8")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 21 && dealerCards[1] === "9")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 21 && dealerCards[1] === "10")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 21 && dealerCards[1] === "J")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 21 && dealerCards[1] === "Q")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 21 && dealerCards[1] === "K")
+                            optimalAction = ["Stand"];
+                        else if (this.splitGetHandValue(player3Hands[currentHand]) == 21 && dealerCards[1] === "A")
+                            optimalAction = ["Stand"];
+                    }
+                }
+            }
+        }
+
+        if (optimalAction[0] == "Stand" && standDisabled == 1)
+            bestAvailableAction = optimalAction[1];
+        else if (optimalAction[0] == "Double" && doubleDisabled == 1)
+            bestAvailableAction = optimalAction[1];
+        else if (optimalAction[0] == "Surrender" && surrenderDisabled == 1)
+            bestAvailableAction = optimalAction[1];
+        else if (optimalAction[0] == "Insurance" && insuranceDisabled == 1)
+            bestAvailableAction = optimalAction[1];
+        else if (optimalAction[0] == "Split" && splitDisabled == 1)
+            bestAvailableAction = optimalAction[1];
+        else
+            bestAvailableAction = optimalAction[0];
+
+        if (action == bestAvailableAction)
+        {
+            playerPoints = playerPoints + 1;
+        }
+        else
+        {
+            playerPoints = playerPoints - 1;
+        }
+
+        // updates suggestions
         if (numActions == 0)
             this.eraseSuggestions();
 
@@ -2757,15 +10043,15 @@ class GameScene extends Phaser.Scene {
         {
             if (currentPlayer == 0)
             {
-                player1Hand1Suggestions[numActions].setText("A" + (numActions + 1) + " - " + action);
+                player1Hand1Suggestions[numActions].setText("A" + (numActions + 1) + " - " + action + "\nShould be " + bestAvailableAction);
             }
             else if (currentPlayer == 1)
             {
-                player2Hand1Suggestions[numActions].setText("A" + (numActions + 1) + " - " + action);
+                player2Hand1Suggestions[numActions].setText("A" + (numActions + 1) + " - " + action + "\nShould be " + bestAvailableAction);
             }
             else if (currentPlayer == 2)
             {
-                player3Hand1Suggestions[numActions].setText("A" + (numActions + 1) + " - " + action);
+                player3Hand1Suggestions[numActions].setText("A" + (numActions + 1) + " - " + action + "\nShould be " + bestAvailableAction);
             }
         }
         else if (numSplits[currentPlayer] == 1)
@@ -2774,761 +10060,51 @@ class GameScene extends Phaser.Scene {
             {
                 if (currentHand == 1)
                 {
-                    player1Hand1Suggestions[numActions].setText("A" + (numActions + 1) + " - " + action);
+                    player1Hand1Suggestions[numActions].setText("A" + (numActions + 1) + " - " + action + "\nShould be " + bestAvailableAction);
                 }
                 else if (currentHand == 2)
                 {
-                    player1Hand2Suggestions[numActions].setText("A" + (numActions + 1) + " - " + action);
+                    player1Hand2Suggestions[numActions].setText("A" + (numActions + 1) + " - " + action + "\nShould be " + bestAvailableAction);
                 }
             }
             else if (currentPlayer == 1)
             {
                 if (currentHand == 1)
                 {
-                    player2Hand1Suggestions[numActions].setText("A" + (numActions + 1) + " - " + action);
+                    player2Hand1Suggestions[numActions].setText("A" + (numActions + 1) + " - " + action + "\nShould be " + bestAvailableAction);
                 }
                 else if (currentHand == 2)
                 {
-                    player2Hand2Suggestions[numActions].setText("A" + (numActions + 1) + " - " + action);
+                    player2Hand2Suggestions[numActions].setText("A" + (numActions + 1) + " - " + action + "\nShould be " + bestAvailableAction);
                 }
             }
             else if (currentPlayer == 2)
             {
                 if (currentHand == 1)
                 {
-                    player3Hand1Suggestions[numActions].setText("A" + (numActions + 1) + " - " + action);
+                    player3Hand1Suggestions[numActions].setText("A" + (numActions + 1) + " - " + action + "\nShould be " + bestAvailableAction);
                 }
                 else if (currentHand == 2)
                 {
-                    player3Hand2Suggestions[numActions].setText("A" + (numActions + 1) + " - " + action);
+                    player3Hand2Suggestions[numActions].setText("A" + (numActions + 1) + " - " + action + "\nShould be " + bestAvailableAction);
                 }
             }
         }
 
-        // soft = has ace
-        var isSoft = 0;
+        userPoints = {
+            points: playerPoints,
+        };
 
-        var isPair = 0;
+        function httpUpdatePointsAsync(URL) {
+            var xmlHttp = new XMLHttpRequest();
 
-        // action should be: Hit, Double, Stand, Surrender, Insurance, or Split
-
-        for (let i = 0; i < playerCards[currentPlayer].length; i++)
-            if (playerCards[currentPlayer][i] === "A")
-                isSoft = 1;
-
-        if (playerCards[currentPlayer][0] === playerCards[currentPlayer][1] && playerCards[currentPlayer].length == 2)
-            isPair = 1;
-
-        if (isPair == 1)
-        {
-            // covers pairs of 2's
-            if (playerCards[currentPlayer][0] === "2" && dealerCards[1] === "2" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "2" && dealerCards[1] === "3" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "2" && dealerCards[1] === "4" && action === "Split")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "2" && dealerCards[1] === "5" && action === "Split")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "2" && dealerCards[1] === "6" && action === "Split")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "2" && dealerCards[1] === "7" && action === "Split")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "2" && dealerCards[1] === "8" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "2" && dealerCards[1] === "9" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "2" && dealerCards[1] === "10" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "2" && dealerCards[1] === "J" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "2" && dealerCards[1] === "Q" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "2" && dealerCards[1] === "K" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "2" && dealerCards[1] === "A" && action === "Hit")
-                playerPoints = playerPoints + 1;
-
-
-            // covers pairs of 3's
-            else if (playerCards[currentPlayer][0] === "3" && dealerCards[1] === "2" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "3" && dealerCards[1] === "3" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "3" && dealerCards[1] === "4" && action === "Split")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "3" && dealerCards[1] === "5" && action === "Split")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "3" && dealerCards[1] === "6" && action === "Split")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "3" && dealerCards[1] === "7" && action === "Split")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "3" && dealerCards[1] === "8" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "3" && dealerCards[1] === "9" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "3" && dealerCards[1] === "10" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "3" && dealerCards[1] === "J" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "3" && dealerCards[1] === "Q" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "3" && dealerCards[1] === "K" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "3" && dealerCards[1] === "A" && action === "Hit")
-                playerPoints = playerPoints + 1;
-
-
-            // covers pairs of 4's
-            else if (playerCards[currentPlayer][0] === "4" && dealerCards[1] === "2" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "4" && dealerCards[1] === "3" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "4" && dealerCards[1] === "4" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "4" && dealerCards[1] === "5" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "4" && dealerCards[1] === "6" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "4" && dealerCards[1] === "7" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "4" && dealerCards[1] === "8" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "4" && dealerCards[1] === "9" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "4" && dealerCards[1] === "10" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "4" && dealerCards[1] === "J" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "4" && dealerCards[1] === "Q" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "4" && dealerCards[1] === "K" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "4" && dealerCards[1] === "A" && action === "Hit")
-                playerPoints = playerPoints + 1;
-
-
-            // covers pairs of 5's
-            else if (playerCards[currentPlayer][0] === "5" && dealerCards[1] === "2" && action === "Double")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "5" && dealerCards[1] === "3" && action === "Double")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "5" && dealerCards[1] === "4" && action === "Double")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "5" && dealerCards[1] === "5" && action === "Double")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "5" && dealerCards[1] === "6" && action === "Double")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "5" && dealerCards[1] === "7" && action === "Double")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "5" && dealerCards[1] === "8" && action === "Double")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "5" && dealerCards[1] === "9" && action === "Double")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "5" && dealerCards[1] === "10" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "5" && dealerCards[1] === "J" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "5" && dealerCards[1] === "Q" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "5" && dealerCards[1] === "K" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "5" && dealerCards[1] === "A" && action === "Hit")
-                playerPoints = playerPoints + 1;
-
-
-            // covers pairs of 6's
-            else if (playerCards[currentPlayer][0] === "6" && dealerCards[1] === "2" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "6" && dealerCards[1] === "3" && action === "Split")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "6" && dealerCards[1] === "4" && action === "Split")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "6" && dealerCards[1] === "5" && action === "Split")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "6" && dealerCards[1] === "6" && action === "Split")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "6" && dealerCards[1] === "7" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "6" && dealerCards[1] === "8" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "6" && dealerCards[1] === "9" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "6" && dealerCards[1] === "10" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "6" && dealerCards[1] === "J" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "6" && dealerCards[1] === "Q" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "6" && dealerCards[1] === "K" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "6" && dealerCards[1] === "A" && action === "Hit")
-                playerPoints = playerPoints + 1;
-
-
-            // covers pairs of 7's
-            else if (playerCards[currentPlayer][0] === "7" && dealerCards[1] === "2" && action === "Split")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "7" && dealerCards[1] === "3" && action === "Split")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "7" && dealerCards[1] === "4" && action === "Split")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "7" && dealerCards[1] === "5" && action === "Split")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "7" && dealerCards[1] === "6" && action === "Split")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "7" && dealerCards[1] === "7" && action === "Split")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "7" && dealerCards[1] === "8" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "7" && dealerCards[1] === "9" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "7" && dealerCards[1] === "10" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "7" && dealerCards[1] === "J" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "7" && dealerCards[1] === "Q" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "7" && dealerCards[1] === "K" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "7" && dealerCards[1] === "A" && action === "Hit")
-                playerPoints = playerPoints + 1;
-
-
-            // covers pairs of 8's (always split)
-            else if (playerCards[currentPlayer][0] === "8" && action === "Split")
-                playerPoints = playerPoints + 1;
-
-
-            // covers pairs of 9's
-            else if (playerCards[currentPlayer][0] === "9" && dealerCards[1] === "2" && action === "Split")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "9" && dealerCards[1] === "3" && action === "Split")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "9" && dealerCards[1] === "4" && action === "Split")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "9" && dealerCards[1] === "5" && action === "Split")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "9" && dealerCards[1] === "6" && action === "Split")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "9" && dealerCards[1] === "7" && action === "Stand")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "9" && dealerCards[1] === "8" && action === "Split")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "9" && dealerCards[1] === "9" && action === "Split")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "9" && dealerCards[1] === "10" && action === "Stand")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "9" && dealerCards[1] === "J" && action === "Stand")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "9" && dealerCards[1] === "Q" && action === "Stand")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "9" && dealerCards[1] === "K" && action === "Stand")
-                playerPoints = playerPoints + 1;
-            else if (playerCards[currentPlayer][0] === "9" && dealerCards[1] === "A" && action === "Stand")
-                playerPoints = playerPoints + 1;
-
-
-            // covers pairs of 10's (or equivalent) (always stand)
-            else if ((playerCards[currentPlayer][0] === "10" || playerCards[currentPlayer][0] === "J" ||
-                playerCards[currentPlayer][0] === "Q" || playerCards[currentPlayer][0] === "K") && action === "Stand")
-                playerPoints = playerPoints + 1;
-
-
-
-            // covers pairs of A's (always split)
-            else if (playerCards[currentPlayer][0] === "A" && action === "Split")
-                playerPoints = playerPoints + 1;
-
-            else
-                playerPoints = playerPoints - 1;
-
+            xmlHttp.open('POST', URL, true);
+            xmlHttp.setRequestHeader('Content-type', 'application/json');
+            xmlHttp.send(JSON.stringify(userPoints));
         }
-        else if (isSoft == 1)
-        {
-            // soft 12's (always hit)
-            if (this.getHandValue(playerCards[currentPlayer]) == 12 && action === "Hit")
-                playerPoints = playerPoints + 1;
-            
 
-            // soft 13's
-            else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "2" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "3" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "4" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "5" && action === "Double")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "6" && action === "Double")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "7" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "8" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "9" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "10" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "J" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "Q" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "K" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "A" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            
-
-            // soft 14's
-            else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "2" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "3" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "4" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "5" && action === "Double")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "6" && action === "Double")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "7" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "8" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "9" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "10" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "J" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "Q" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "K" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "A" && action === "Hit")
-                playerPoints = playerPoints + 1;
-
-
-
-            // soft 15's
-            else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "2" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "3" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "4" && action === "Double")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "5" && action === "Double")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "6" && action === "Double")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "7" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "8" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "9" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "10" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "J" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "Q" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "K" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "A" && action === "Hit")
-                playerPoints = playerPoints + 1;
-
-
-            // soft 16's
-            else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "2" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "3" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "4" && action === "Double")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "5" && action === "Double")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "6" && action === "Double")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "7" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "8" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "9" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "10" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "J" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "Q" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "K" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "A" && action === "Hit")
-                playerPoints = playerPoints + 1;
-
-
-            // soft 17's
-            else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "2" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "3" && action === "Double")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "4" && action === "Double")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "5" && action === "Double")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "6" && action === "Double")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "7" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "8" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "9" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "10" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "J" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "Q" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "K" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 17 && dealerCards[1] === "A" && action === "Hit")
-                playerPoints = playerPoints + 1;
-
-
-            // soft 18's
-            else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "2" && action === "Stand")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "3" && action === "Double")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "4" && action === "Double")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "5" && action === "Double")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "6" && action === "Double")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "7" && action === "Stand")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "8" && action === "Stand")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "9" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "10" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "J" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "Q" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "K" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 18 && dealerCards[1] === "A" && action === "Hit")
-                playerPoints = playerPoints + 1;
-
-
-            // soft 19's (always stand)
-            else if (this.getHandValue(playerCards[currentPlayer]) == 19 && action === "Stand")
-                playerPoints = playerPoints + 1;
-
-
-            // soft 20's (always stand)
-            else if (this.getHandValue(playerCards[currentPlayer]) == 20 && action === "Stand")
-                playerPoints = playerPoints + 1;
-
-
-            // soft 21's (always stand (BJ))
-            else if (this.getHandValue(playerCards[currentPlayer]) == 21 && action === "Stand")
-                playerPoints = playerPoints + 1;
-
-            else
-                playerPoints = playerPoints - 1;
-        }
-        else
-        {
-            // idk if hard 4's are possible
-
-
-            // hard 5's (always hit)
-            if (this.getHandValue(playerCards[currentPlayer]) == 5 && action === "Hit")
-                playerPoints = playerPoints + 1;
-
-            // hard 6's (always hit)
-            else if (this.getHandValue(playerCards[currentPlayer]) == 6 && action === "Hit")
-                playerPoints = playerPoints + 1;
-
-
-            // hard 7's (always hit)
-            else if (this.getHandValue(playerCards[currentPlayer]) == 7 && action === "Hit")
-                playerPoints = playerPoints + 1;
-
-
-            // hard 8's (always hit)
-            else if (this.getHandValue(playerCards[currentPlayer]) == 8 && action === "Hit")
-                playerPoints = playerPoints + 1;
-  
-
-            // hard 9's
-            else if (this.getHandValue(playerCards[currentPlayer]) == 9 && dealerCards[1] === "2" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 9 && dealerCards[1] === "3" && action === "Double")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 9 && dealerCards[1] === "4" && action === "Double")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 9 && dealerCards[1] === "5" && action === "Double")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 9 && dealerCards[1] === "6" && action === "Double")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 9 && dealerCards[1] === "7" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 9 && dealerCards[1] === "8" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 9 && dealerCards[1] === "9" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 9 && dealerCards[1] === "10" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 9 && dealerCards[1] === "J" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 9 && dealerCards[1] === "Q" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 9 && dealerCards[1] === "K" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 9 && dealerCards[1] === "A" && action === "Hit")
-                playerPoints = playerPoints + 1;
-
-
-            // hard 10's
-            else if (this.getHandValue(playerCards[currentPlayer]) == 10 && dealerCards[1] === "2" && action === "Double")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 10 && dealerCards[1] === "3" && action === "Double")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 10 && dealerCards[1] === "4" && action === "Double")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 10 && dealerCards[1] === "5" && action === "Double")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 10 && dealerCards[1] === "6" && action === "Double")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 10 && dealerCards[1] === "7" && action === "Double")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 10 && dealerCards[1] === "8" && action === "Double")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 10 && dealerCards[1] === "9" && action === "Double")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 10 && dealerCards[1] === "10" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 10 && dealerCards[1] === "J" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 10 && dealerCards[1] === "Q" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 10 && dealerCards[1] === "K" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 10 && dealerCards[1] === "A" && action === "Hit")
-                playerPoints = playerPoints + 1;
-
-
-            // hard 11's
-            else if (this.getHandValue(playerCards[currentPlayer]) == 11 && dealerCards[1] === "2" && action === "Double")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 11 && dealerCards[1] === "3" && action === "Double")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 11 && dealerCards[1] === "4" && action === "Double")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 11 && dealerCards[1] === "5" && action === "Double")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 11 && dealerCards[1] === "6" && action === "Double")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 11 && dealerCards[1] === "7" && action === "Double")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 11 && dealerCards[1] === "8" && action === "Double")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 11 && dealerCards[1] === "9" && action === "Double")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 11 && dealerCards[1] === "10" && action === "Double")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 11 && dealerCards[1] === "J" && action === "Double")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 11 && dealerCards[1] === "Q" && action === "Double")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 11 && dealerCards[1] === "K" && action === "Double")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 11 && dealerCards[1] === "A" && action === "Hit")
-                playerPoints = playerPoints + 1;
-
-
-            // hard 12's
-            else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "2" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "3" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else  if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "4" && action === "Stand")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "5" && action === "Stand")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "6" && action === "Stand")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "7" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "8" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "9" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "10" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "J" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "Q" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "K" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 12 && dealerCards[1] === "A" && action === "Hit")
-                playerPoints = playerPoints + 1;
-
-
-            // hard 13's
-            else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "2" && action === "Stand")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "3" && action === "Stand")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "4" && action === "Stand")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "5" && action === "Stand")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "6" && action === "Stand")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "7" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "8" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "9" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "10" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "J" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "Q" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "K" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 13 && dealerCards[1] === "A" && action === "Hit")
-                playerPoints = playerPoints + 1;
-
-
-            // hard 14's
-            else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "2" && action === "Stand")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "3" && action === "Stand")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "4" && action === "Stand")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "5" && action === "Stand")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "6" && action === "Stand")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "7" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "8" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "9" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "10" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "J" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "Q" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "K" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 14 && dealerCards[1] === "A" && action === "Hit")
-                playerPoints = playerPoints + 1;
-
-
-            // hard 15's
-            else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "2" && action === "Stand")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "3" && action === "Stand")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "4" && action === "Stand")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "5" && action === "Stand")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "6" && action === "Stand")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "7" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "8" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "9" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "10" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "J" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "Q" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "K" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 15 && dealerCards[1] === "A" && action === "Hit")
-                playerPoints = playerPoints + 1;
-
-
-            // hard 16's
-            else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "2" && action === "Stand")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "3" && action === "Stand")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "4" && action === "Stand")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "5" && action === "Stand")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "6" && action === "Stand")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "7" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "8" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "9" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "10" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "J" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "Q" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "K" && action === "Hit")
-                playerPoints = playerPoints + 1;
-            else if (this.getHandValue(playerCards[currentPlayer]) == 16 && dealerCards[1] === "A" && action === "Hit")
-                playerPoints = playerPoints + 1;
-
-
-            // hard 17's (always stand)
-            else if (this.getHandValue(playerCards[currentPlayer]) == 17 && action === "Stand")
-                playerPoints = playerPoints + 1;
-
-
-            // hard 18's (always stand)
-            else if (this.getHandValue(playerCards[currentPlayer]) == 18 && action === "Stand")
-                playerPoints = playerPoints + 1;
-
-
-            // hard 19's (always stand)
-            else if (this.getHandValue(playerCards[currentPlayer]) == 19 && action === "Stand")
-                playerPoints = playerPoints + 1;
-
-
-
-            // hard 20's (always stand)
-            else if (this.getHandValue(playerCards[currentPlayer]) == 20 && action === "Stand")
-                playerPoints = playerPoints + 1;
-
-
-
-            // hard 21's (always stand)
-            else if (this.getHandValue(playerCards[currentPlayer]) == 21 && action === "Stand")
-                playerPoints = playerPoints + 1;
-
-
-            else
-                playerPoints = playerPoints - 1;
-        }
+        // Send user points after a player has played a round to UpdatePoints Route/API to update the database
+        httpUpdatePointsAsync('/UpdatePoints');
 
         numActions = numActions + 1;
     };
@@ -5460,7 +12036,31 @@ class GameScene extends Phaser.Scene {
         doubleOption = confirmedSettingsDoubleOption;
         
         // add the API post request here
+        userSettings = {
+            decks: numDecks,
+            players: numPlayers,
+            deckPenetration: deckPen,
+            min: minBet,
+            max: maxBet,
+            spoiler: countSpoiler,
+            peeking: peekingOption,
+            payout: blackjackPayout,
+            split: hitSplitAces,
+            doubleSplit: doubleAfterSplit,
+            hitStandSoftSeventeen: hitStandSoft17,
+            doubleOpt: doubleOption
+        };
 
+        function httpUpdateSettingsAsync(URL) {
+            var xmlHttp = new XMLHttpRequest();
+
+            xmlHttp.open('POST', URL, true);
+            xmlHttp.setRequestHeader('Content-type', 'application/json');
+            xmlHttp.send(JSON.stringify(userSettings));
+        }
+
+        // Send user settings after a player has played a round to UpdateSettings Route/API to update the database
+        httpUpdateSettingsAsync('/UpdateSettings');
 
 
         dealerCardDisplay.setText("Dealer Cards: \n");
