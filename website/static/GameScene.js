@@ -52,8 +52,9 @@ let trueCount = 0;
 let cardIndex = 0;
 
 // unchangeable settings
-let playerCurrency = 50000;
-let playerPoints = 0;
+let user;
+let playerCurrency;
+let playerPoints;
 let maxSplits = 1; // cant go higher due to graphics constraints
 let insuranceOption = 1; // 1 = late, 0 = early (SHOULD ALWAYS REMAIN 1)
 
@@ -312,21 +313,33 @@ let deckVariation = Math.floor(Math.random()*10) - 5;
 let noBjIndicator;
 let noBjText;
 
+let player1Hand1Suggestions = [];
+let player1Hand2Suggestions = [];
+
+let player2Hand1Suggestions = [];
+let player2Hand2Suggestions = [];
+
+let player3Hand1Suggestions = [];
+let player3Hand2Suggestions = [];
+
+let numActions = 0;
+
+let standDisabled = 0;
+let doubleDisabled = 0;
+let surrenderDisabled = 0;
+let insuranceDisabled = 0;
+let splitDisabled = 0;
+
 //TODO:
-// test how settings work with diff number of players
 
 // fix point system (insurance/surrender/can Split or Not/True Count)
 // CHECK WHETHER I NEED TO LOOK FOR WHETHER USER CAN DOUBLE OR NOT (MAYBE A VARIABLE CALLED 'firstAction' OR SOMETHING)
 // make suggestion displays on the right side (same y-level as corresponding player displays), also
 // show "Correct" or "Incorrect" for the users actions, as well as how much each hand profited/lost that round
 
-// POLISH:
-// bug test (a lot)
-
-// BUGS/TESTING:
-
 // NOTES:
 // should only take insurance at a TRUE 3 or above
+
 
 let gameOptions = {
  
@@ -349,6 +362,30 @@ let textStyle = {
     boundsAlignH: "center", // bounds center align horizontally
     boundsAlignV: "middle" // bounds center align vertically
 };
+
+
+function httpGetAsyncUser(URL) {
+    var xmlHttp = new XMLHttpRequest();
+    var sentUser, data;
+
+    // If there was a correct response then update the currency and points from the user information stored in the database
+    xmlHttp.onreadystatechange = function() {
+        if (xmlHttp.readyState == 4 && xmlHttp.status == 200)
+        {
+            data = xmlHttp.responseText;
+            sentUser = JSON.parse(data);
+            playerCurrency = sentUser["currency"];
+            playerPoints = sentUser["points"];
+        }
+    }
+
+    xmlHttp.open('GET', URL, true);
+    xmlHttp.send(null);
+}
+
+// Receives the user information at the beginning of the game from sendUser Route/API
+httpGetAsyncUser('/sendUser');
+
 
 function updateInfo(i, j) {
 
@@ -2287,7 +2324,6 @@ class GameScene extends Phaser.Scene {
         return false;
     };
 
-    // (update this for splits, since splits CANT be BJ)
     isWinOrLoss() {
 
         let dealerHandValue = this.getHandValue(dealerCards);
@@ -2685,10 +2721,89 @@ class GameScene extends Phaser.Scene {
         }
 
         currencyScoreBoard.setText("Currency: $" + playerCurrency);
+
+        user = {
+            currency: playerCurrency,
+            points: playerPoints
+        };
+
+        function httpSendAsyncUser(URL) {
+            var xmlHttp = new XMLHttpRequest();
+
+            xmlHttp.open('POST', URL, true);
+            xmlHttp.setRequestHeader('Content-type', 'application/json');
+            xmlHttp.send(JSON.stringify(user));
+        }
+
+        // Send user information after a player has played a round to sendUser Route/API to update the database
+        httpSendAsyncUser('/sendUser');
+
     };
 
-    // pass true count, can split or not
+    // pass true count, can split or not, can double or not, can surrender or not, insurance round or not
     baseGameBasicStrategy(currentPlayer, action) {
+
+        console.log(doubleDisabled);
+        console.log(standDisabled);
+        console.log(surrenderDisabled);
+        console.log(insuranceDisabled);
+        console.log(splitDisabled);
+        console.log("------------------")
+
+        if (numActions == 0)
+            this.eraseSuggestions();
+
+        if (numSplits[currentPlayer] == 0)
+        {
+            if (currentPlayer == 0)
+            {
+                player1Hand1Suggestions[numActions].setText("A" + (numActions + 1) + " - " + action);
+            }
+            else if (currentPlayer == 1)
+            {
+                player2Hand1Suggestions[numActions].setText("A" + (numActions + 1) + " - " + action);
+            }
+            else if (currentPlayer == 2)
+            {
+                player3Hand1Suggestions[numActions].setText("A" + (numActions + 1) + " - " + action);
+            }
+        }
+        else if (numSplits[currentPlayer] == 1)
+        {
+            if (currentPlayer == 0)
+            {
+                if (currentHand == 1)
+                {
+                    player1Hand1Suggestions[numActions].setText("A" + (numActions + 1) + " - " + action);
+                }
+                else if (currentHand == 2)
+                {
+                    player1Hand2Suggestions[numActions].setText("A" + (numActions + 1) + " - " + action);
+                }
+            }
+            else if (currentPlayer == 1)
+            {
+                if (currentHand == 1)
+                {
+                    player2Hand1Suggestions[numActions].setText("A" + (numActions + 1) + " - " + action);
+                }
+                else if (currentHand == 2)
+                {
+                    player2Hand2Suggestions[numActions].setText("A" + (numActions + 1) + " - " + action);
+                }
+            }
+            else if (currentPlayer == 2)
+            {
+                if (currentHand == 1)
+                {
+                    player3Hand1Suggestions[numActions].setText("A" + (numActions + 1) + " - " + action);
+                }
+                else if (currentHand == 2)
+                {
+                    player3Hand2Suggestions[numActions].setText("A" + (numActions + 1) + " - " + action);
+                }
+            }
+        }
 
         // soft = has ace
         var isSoft = 0;
@@ -3414,6 +3529,8 @@ class GameScene extends Phaser.Scene {
             else
                 playerPoints = playerPoints - 1;
         }
+
+        numActions = numActions + 1;
     };
 
     revealDealerInfo(dealerCards) {
@@ -3516,7 +3633,14 @@ class GameScene extends Phaser.Scene {
         playerStand.setInteractive({ useHandCursor: true });
 
         if (peekingOption != 2)
+        {
             playerSurrender.setInteractive({ useHandCursor: true});
+            surrenderDisabled = 0;
+        }
+        else
+        {
+            surrenderDisabled = 1;
+        }
 
         playerHit.setTexture('normalButton');
         playerDouble.setTexture('normalButton');
@@ -3587,6 +3711,7 @@ class GameScene extends Phaser.Scene {
     disableStandButton() {
 
         playerStand.disableInteractive();
+        standDisabled = 1;
 
         playerStand.setTexture('lockedButton');
 
@@ -3607,6 +3732,7 @@ class GameScene extends Phaser.Scene {
     enableStandButton() {
 
         playerStand.setInteractive({ useHandCursor: true});
+        standDisabled = 0;
 
         playerStand.setTexture('normalButton');
 
@@ -3627,6 +3753,7 @@ class GameScene extends Phaser.Scene {
     disableDoubleButton(){
 
         playerDouble.disableInteractive();
+        doubleDisabled = 1;
 
         playerDouble.setTexture('lockedButton');
 
@@ -3648,6 +3775,7 @@ class GameScene extends Phaser.Scene {
     enableDoubleButton(){
 
         playerDouble.setInteractive({ useHandCursor: true});
+        doubleDisabled = 0;
 
         playerDouble.setTexture('normalButton');
 
@@ -3668,6 +3796,7 @@ class GameScene extends Phaser.Scene {
     disableSurrenderButton(){
 
         playerSurrender.disableInteractive();
+        surrenderDisabled = 1;
 
         playerSurrender.setTexture('lockedButton');
 
@@ -3688,6 +3817,7 @@ class GameScene extends Phaser.Scene {
     enableSurrenderButton(){
 
         playerSurrender.setInteractive({ useHandCursor: true});
+        surrenderDisabled = 0;
 
         playerSurrender.setTexture('normalButton');
 
@@ -3708,6 +3838,7 @@ class GameScene extends Phaser.Scene {
     disableInsuranceButton(){
 
         playerInsurance.disableInteractive();
+        insuranceDisabled = 1;
 
         playerInsurance.setTexture('lockedButton');
 
@@ -3728,6 +3859,7 @@ class GameScene extends Phaser.Scene {
     enableInsuranceButton(){
 
         playerInsurance.setInteractive({ useHandCursor: true});
+        insuranceDisabled = 0;
 
         playerInsurance.setTexture('normalButton');
 
@@ -3748,6 +3880,7 @@ class GameScene extends Phaser.Scene {
     disableSplitButton(){
 
         playerSplit.disableInteractive();
+        splitDisabled = 1;
 
         playerSplit.setTexture('lockedButton');
 
@@ -3769,6 +3902,7 @@ class GameScene extends Phaser.Scene {
     enableSplitButton(){
 
         playerSplit.setInteractive({ useHandCursor: true});
+        splitDisabled = 0;
 
         playerSplit.setTexture('normalButton');
 
@@ -5007,6 +5141,308 @@ class GameScene extends Phaser.Scene {
         playerInsurance.setY(845);
     };
 
+    eraseSuggestions() {
+
+        player1Hand1Suggestions[0].setText("");
+        player1Hand1Suggestions[1].setText("");
+        player1Hand1Suggestions[2].setText("");
+        player1Hand1Suggestions[3].setText("");
+        player1Hand1Suggestions[4].setText("");
+        player1Hand1Suggestions[5].setText("");
+
+        player1Hand2Suggestions[0].setText("");
+        player1Hand2Suggestions[1].setText("");
+        player1Hand2Suggestions[2].setText("");
+        player1Hand2Suggestions[3].setText("");
+        player1Hand2Suggestions[4].setText("");
+        player1Hand2Suggestions[5].setText("");
+
+        player2Hand1Suggestions[0].setText("");
+        player2Hand1Suggestions[1].setText("");
+        player2Hand1Suggestions[2].setText("");
+        player2Hand1Suggestions[3].setText("");
+        player2Hand1Suggestions[4].setText("");
+        player2Hand1Suggestions[5].setText("");
+
+        player2Hand2Suggestions[0].setText("");
+        player2Hand2Suggestions[1].setText("");
+        player2Hand2Suggestions[2].setText("");
+        player2Hand2Suggestions[3].setText("");
+        player2Hand2Suggestions[4].setText("");
+        player2Hand2Suggestions[5].setText("");
+
+        player3Hand1Suggestions[0].setText("");
+        player3Hand1Suggestions[1].setText("");
+        player3Hand1Suggestions[2].setText("");
+        player3Hand1Suggestions[3].setText("");
+        player3Hand1Suggestions[4].setText("");
+        player3Hand1Suggestions[5].setText("");
+
+        player3Hand2Suggestions[0].setText("");
+        player3Hand2Suggestions[1].setText("");
+        player3Hand2Suggestions[2].setText("");
+        player3Hand2Suggestions[3].setText("");
+        player3Hand2Suggestions[4].setText("");
+        player3Hand2Suggestions[5].setText("");
+
+        /*
+        if (numSplits[currentPlayer] == 0)
+        {
+            
+            if (currentPlayer == 0)
+            {
+                player1Hand1Suggestions[0].setText("");
+                player1Hand1Suggestions[1].setText("");
+                player1Hand1Suggestions[2].setText("");
+                player1Hand1Suggestions[3].setText("");
+                player1Hand1Suggestions[4].setText("");
+                player1Hand1Suggestions[5].setText("");
+
+                player1Hand2Suggestions[0].setText("");
+                player1Hand2Suggestions[1].setText("");
+                player1Hand2Suggestions[2].setText("");
+                player1Hand2Suggestions[3].setText("");
+                player1Hand2Suggestions[4].setText("");
+                player1Hand2Suggestions[5].setText("");
+
+                player2Hand1Suggestions[0].setText("");
+                player2Hand1Suggestions[1].setText("");
+                player2Hand1Suggestions[2].setText("");
+                player2Hand1Suggestions[3].setText("");
+                player2Hand1Suggestions[4].setText("");
+                player2Hand1Suggestions[5].setText("");
+
+                player2Hand2Suggestions[0].setText("");
+                player2Hand2Suggestions[1].setText("");
+                player2Hand2Suggestions[2].setText("");
+                player2Hand2Suggestions[3].setText("");
+                player2Hand2Suggestions[4].setText("");
+                player2Hand2Suggestions[5].setText("");
+
+                player3Hand1Suggestions[0].setText("");
+                player3Hand1Suggestions[1].setText("");
+                player3Hand1Suggestions[2].setText("");
+                player3Hand1Suggestions[3].setText("");
+                player3Hand1Suggestions[4].setText("");
+                player3Hand1Suggestions[5].setText("");
+
+                player3Hand2Suggestions[0].setText("");
+                player3Hand2Suggestions[1].setText("");
+                player3Hand2Suggestions[2].setText("");
+                player3Hand2Suggestions[3].setText("");
+                player3Hand2Suggestions[4].setText("");
+                player3Hand2Suggestions[5].setText("");
+            }
+            else if (currentPlayer == 1)
+            {
+                player1Hand1Suggestions[0].setText("");
+                player1Hand1Suggestions[1].setText("");
+                player1Hand1Suggestions[2].setText("");
+                player1Hand1Suggestions[3].setText("");
+                player1Hand1Suggestions[4].setText("");
+                player1Hand1Suggestions[5].setText("");
+
+                player1Hand2Suggestions[0].setText("");
+                player1Hand2Suggestions[1].setText("");
+                player1Hand2Suggestions[2].setText("");
+                player1Hand2Suggestions[3].setText("");
+                player1Hand2Suggestions[4].setText("");
+                player1Hand2Suggestions[5].setText("");
+            }
+            else if (currentPlayer == 2)
+            {
+                player1Hand1Suggestions[0].setText("");
+                player1Hand1Suggestions[1].setText("");
+                player1Hand1Suggestions[2].setText("");
+                player1Hand1Suggestions[3].setText("");
+                player1Hand1Suggestions[4].setText("");
+                player1Hand1Suggestions[5].setText("");
+
+                player1Hand2Suggestions[0].setText("");
+                player1Hand2Suggestions[1].setText("");
+                player1Hand2Suggestions[2].setText("");
+                player1Hand2Suggestions[3].setText("");
+                player1Hand2Suggestions[4].setText("");
+                player1Hand2Suggestions[5].setText("");
+
+                player2Hand1Suggestions[0].setText("");
+                player2Hand1Suggestions[1].setText("");
+                player2Hand1Suggestions[2].setText("");
+                player2Hand1Suggestions[3].setText("");
+                player2Hand1Suggestions[4].setText("");
+                player2Hand1Suggestions[5].setText("");
+
+                player2Hand2Suggestions[0].setText("");
+                player2Hand2Suggestions[1].setText("");
+                player2Hand2Suggestions[2].setText("");
+                player2Hand2Suggestions[3].setText("");
+                player2Hand2Suggestions[4].setText("");
+                player2Hand2Suggestions[5].setText("");
+
+                player3Hand1Suggestions[0].setText("");
+                player3Hand1Suggestions[1].setText("");
+                player3Hand1Suggestions[2].setText("");
+                player3Hand1Suggestions[3].setText("");
+                player3Hand1Suggestions[4].setText("");
+                player3Hand1Suggestions[5].setText("");
+
+                player3Hand2Suggestions[0].setText("");
+                player3Hand2Suggestions[1].setText("");
+                player3Hand2Suggestions[2].setText("");
+                player3Hand2Suggestions[3].setText("");
+                player3Hand2Suggestions[4].setText("");
+                player3Hand2Suggestions[5].setText("");
+            }
+        }
+        else if (numSplits[currentPlayer == 1])
+        {
+            if (currentPlayer == 0)
+            {
+                player1Hand1Suggestions[0].setText("");
+                player1Hand1Suggestions[1].setText("");
+                player1Hand1Suggestions[2].setText("");
+                player1Hand1Suggestions[3].setText("");
+                player1Hand1Suggestions[4].setText("");
+                player1Hand1Suggestions[5].setText("");
+
+                player1Hand2Suggestions[0].setText("");
+                player1Hand2Suggestions[1].setText("");
+                player1Hand2Suggestions[2].setText("");
+                player1Hand2Suggestions[3].setText("");
+                player1Hand2Suggestions[4].setText("");
+                player1Hand2Suggestions[5].setText("");
+
+                player2Hand1Suggestions[0].setText("");
+                player2Hand1Suggestions[1].setText("");
+                player2Hand1Suggestions[2].setText("");
+                player2Hand1Suggestions[3].setText("");
+                player2Hand1Suggestions[4].setText("");
+                player2Hand1Suggestions[5].setText("");
+
+                player2Hand2Suggestions[0].setText("");
+                player2Hand2Suggestions[1].setText("");
+                player2Hand2Suggestions[2].setText("");
+                player2Hand2Suggestions[3].setText("");
+                player2Hand2Suggestions[4].setText("");
+                player2Hand2Suggestions[5].setText("");
+
+                player3Hand1Suggestions[0].setText("");
+                player3Hand1Suggestions[1].setText("");
+                player3Hand1Suggestions[2].setText("");
+                player3Hand1Suggestions[3].setText("");
+                player3Hand1Suggestions[4].setText("");
+                player3Hand1Suggestions[5].setText("");
+
+                player3Hand2Suggestions[0].setText("");
+                player3Hand2Suggestions[1].setText("");
+                player3Hand2Suggestions[2].setText("");
+                player3Hand2Suggestions[3].setText("");
+                player3Hand2Suggestions[4].setText("");
+                player3Hand2Suggestions[5].setText("");
+            }
+            else if (currentPlayer == 1)
+            {
+                if (currentHand == 1)
+                {
+                    player1Hand1Suggestions[0].setText("");
+                    player1Hand1Suggestions[1].setText("");
+                    player1Hand1Suggestions[2].setText("");
+                    player1Hand1Suggestions[3].setText("");
+                    player1Hand1Suggestions[4].setText("");
+                    player1Hand1Suggestions[5].setText("");
+
+                    player1Hand2Suggestions[0].setText("");
+                    player1Hand2Suggestions[1].setText("");
+                    player1Hand2Suggestions[2].setText("");
+                    player1Hand2Suggestions[3].setText("");
+                    player1Hand2Suggestions[4].setText("");
+                    player1Hand2Suggestions[5].setText("");
+                }
+                else if (currentHand == 2)
+                {
+                    player1Hand1Suggestions[0].setText("");
+                    player1Hand1Suggestions[1].setText("");
+                    player1Hand1Suggestions[2].setText("");
+                    player1Hand1Suggestions[3].setText("");
+                    player1Hand1Suggestions[4].setText("");
+                    player1Hand1Suggestions[5].setText("");
+
+                    player1Hand2Suggestions[0].setText("");
+                    player1Hand2Suggestions[1].setText("");
+                    player1Hand2Suggestions[2].setText("");
+                    player1Hand2Suggestions[3].setText("");
+                    player1Hand2Suggestions[4].setText("");
+                    player1Hand2Suggestions[5].setText("");
+
+                    player2Hand1Suggestions[0].setText("");
+                    player2Hand1Suggestions[1].setText("");
+                    player2Hand1Suggestions[2].setText("");
+                    player2Hand1Suggestions[3].setText("");
+                    player2Hand1Suggestions[4].setText("");
+                    player2Hand1Suggestions[5].setText("");
+                }
+            }
+            else if (currentPlayer == 2)
+            {
+                if (currentHand == 1)
+                {
+                    player1Hand1Suggestions[0].setText("");
+                    player1Hand1Suggestions[1].setText("");
+                    player1Hand1Suggestions[2].setText("");
+                    player1Hand1Suggestions[3].setText("");
+                    player1Hand1Suggestions[4].setText("");
+                    player1Hand1Suggestions[5].setText("");
+
+                    player1Hand2Suggestions[0].setText("");
+                    player1Hand2Suggestions[1].setText("");
+                    player1Hand2Suggestions[2].setText("");
+                    player1Hand2Suggestions[3].setText("");
+                    player1Hand2Suggestions[4].setText("");
+                    player1Hand2Suggestions[5].setText("");
+
+                    player2Hand1Suggestions[0].setText("");
+                    player2Hand1Suggestions[1].setText("");
+                    player2Hand1Suggestions[2].setText("");
+                    player2Hand1Suggestions[3].setText("");
+                    player2Hand1Suggestions[4].setText("");
+                    player2Hand1Suggestions[5].setText("");
+
+                    player2Hand2Suggestions[0].setText("");
+                    player2Hand2Suggestions[1].setText("");
+                    player2Hand2Suggestions[2].setText("");
+                    player2Hand2Suggestions[3].setText("");
+                    player2Hand2Suggestions[4].setText("");
+                    player2Hand2Suggestions[5].setText("");
+                }
+                else if (currentHand == 2)
+                {
+                    player2Hand1Suggestions[0].setText("");
+                    player2Hand1Suggestions[1].setText("");
+                    player2Hand1Suggestions[2].setText("");
+                    player2Hand1Suggestions[3].setText("");
+                    player2Hand1Suggestions[4].setText("");
+                    player2Hand1Suggestions[5].setText("");
+
+                    player2Hand2Suggestions[0].setText("");
+                    player2Hand2Suggestions[1].setText("");
+                    player2Hand2Suggestions[2].setText("");
+                    player2Hand2Suggestions[3].setText("");
+                    player2Hand2Suggestions[4].setText("");
+                    player2Hand2Suggestions[5].setText("");
+
+                    player3Hand1Suggestions[0].setText("");
+                    player3Hand1Suggestions[1].setText("");
+                    player3Hand1Suggestions[2].setText("");
+                    player3Hand1Suggestions[3].setText("");
+                    player3Hand1Suggestions[4].setText("");
+                    player3Hand1Suggestions[5].setText("");
+                }
+            }
+        }
+        */
+
+    };
+
     resetBoard() {
 
         numDecks = confirmedSettingsNumDecks;
@@ -5023,6 +5459,9 @@ class GameScene extends Phaser.Scene {
         hitStandSoft17 = confirmedSettingsHitStandSoft17;
         doubleOption = confirmedSettingsDoubleOption;
         
+        // add the API post request here
+
+
 
         dealerCardDisplay.setText("Dealer Cards: \n");
         if (numPlayers >= 1)
@@ -5229,6 +5668,7 @@ class GameScene extends Phaser.Scene {
         player2HandBets = [];
         player3HandBets = [];
         currentHand = 0;
+        numActions = 0;
         handIndicator.setVisible(false);
 
         player1ChipArrays = [[], [], [], []];
@@ -5241,6 +5681,48 @@ class GameScene extends Phaser.Scene {
 
         noBjIndicator.visible = false;
         noBjText.visible = false;
+
+        player1Hand1Suggestions[0].setText("");
+        player1Hand1Suggestions[1].setText("");
+        player1Hand1Suggestions[2].setText("");
+        player1Hand1Suggestions[3].setText("");
+        player1Hand1Suggestions[4].setText("");
+        player1Hand1Suggestions[5].setText("");
+
+        player1Hand2Suggestions[0].setText("");
+        player1Hand2Suggestions[1].setText("");
+        player1Hand2Suggestions[2].setText("");
+        player1Hand2Suggestions[3].setText("");
+        player1Hand2Suggestions[4].setText("");
+        player1Hand2Suggestions[5].setText("");
+
+        player2Hand1Suggestions[0].setText("");
+        player2Hand1Suggestions[1].setText("");
+        player2Hand1Suggestions[2].setText("");
+        player2Hand1Suggestions[3].setText("");
+        player2Hand1Suggestions[4].setText("");
+        player2Hand1Suggestions[5].setText("");
+
+        player2Hand2Suggestions[0].setText("");
+        player2Hand2Suggestions[1].setText("");
+        player2Hand2Suggestions[2].setText("");
+        player2Hand2Suggestions[3].setText("");
+        player2Hand2Suggestions[4].setText("");
+        player2Hand2Suggestions[5].setText("");
+
+        player3Hand1Suggestions[0].setText("");
+        player3Hand1Suggestions[1].setText("");
+        player3Hand1Suggestions[2].setText("");
+        player3Hand1Suggestions[3].setText("");
+        player3Hand1Suggestions[4].setText("");
+        player3Hand1Suggestions[5].setText("");
+
+        player3Hand2Suggestions[0].setText("");
+        player3Hand2Suggestions[1].setText("");
+        player3Hand2Suggestions[2].setText("");
+        player3Hand2Suggestions[3].setText("");
+        player3Hand2Suggestions[4].setText("");
+        player3Hand2Suggestions[5].setText("");
 
         // check if player has enough currency to go another round
         if (playerCurrency < minBet * numPlayers)
@@ -5634,27 +6116,27 @@ class GameScene extends Phaser.Scene {
                     if (playerCurrency >= player1Bet * .5)
                         this.enableInsuranceButton();
 
-                        if (playerCurrency >= player1Bet)
-                            this.enableDoubleButton();
-                        else
-                            this.disableDoubleButton();
-        
-                        if (playerCards[0][0] === playerCards[0][1] && playerCurrency >= player1Bet)
-                            this.enableSplitButton();
-                        else
-                            this.disableSplitButton();
+                    if (playerCurrency >= player1Bet)
+                        this.enableDoubleButton();
+                    else
+                        this.disableDoubleButton();
+    
+                    if (playerCards[0][0] === playerCards[0][1] && playerCurrency >= player1Bet)
+                        this.enableSplitButton();
+                    else
+                        this.disableSplitButton();
 
-                        if (peekingOption == 2)
-                            this.scene.disableSurrenderButton();
+                    if (peekingOption == 2)
+                        this.scene.disableSurrenderButton();
 
-                        if (doubleOption == 1 && (this.getHandValue(playerCards[currentPlayer]) < 9 || this.getHandValue(playerCards[currentPlayer]) > 11))
-                            this.disableDoubleButton();
-                        else if (doubleOption == 2 && (this.getHandValue(playerCards[currentPlayer]) < 9 || this.getHandValue(playerCards[currentPlayer]) > 10))
-                            this.disableDoubleButton();
-                        else if (doubleOption == 1 && (this.getHandValue(playerCards[currentPlayer]) >= 9 && this.getHandValue(playerCards[currentPlayer]) <= 11) && playerCurrency >= player1Bet)
-                            this.enableDoubleButton();
-                        else if (doubleOption == 2 && (this.getHandValue(playerCards[currentPlayer]) >= 9 && this.getHandValue(playerCards[currentPlayer]) <= 10) && playerCurrency >= player1Bet)
-                            this.enableDoubleButton();
+                    if (doubleOption == 1 && (this.getHandValue(playerCards[currentPlayer]) < 9 || this.getHandValue(playerCards[currentPlayer]) > 11))
+                        this.disableDoubleButton();
+                    else if (doubleOption == 2 && (this.getHandValue(playerCards[currentPlayer]) < 9 || this.getHandValue(playerCards[currentPlayer]) > 10))
+                        this.disableDoubleButton();
+                    else if (doubleOption == 1 && (this.getHandValue(playerCards[currentPlayer]) >= 9 && this.getHandValue(playerCards[currentPlayer]) <= 11) && playerCurrency >= player1Bet)
+                        this.enableDoubleButton();
+                    else if (doubleOption == 2 && (this.getHandValue(playerCards[currentPlayer]) >= 9 && this.getHandValue(playerCards[currentPlayer]) <= 10) && playerCurrency >= player1Bet)
+                        this.enableDoubleButton();
                 }
                 else if ((dealerCards[1] === "10" || dealerCards[1] === "J" || dealerCards[1] === "Q" || dealerCards[1] === "K") && (peekingOption == 1 || peekingOption == 2))
                 {
@@ -5698,6 +6180,8 @@ class GameScene extends Phaser.Scene {
                             this.enableDoubleButton();
                         else if (doubleOption == 2 && (this.getHandValue(playerCards[currentPlayer]) >= 9 && this.getHandValue(playerCards[currentPlayer]) <= 10) && playerCurrency >= player1Bet)
                             this.enableDoubleButton();
+
+                        this.disableInsuranceButton();
                     }
                 }
                 else
@@ -5723,6 +6207,8 @@ class GameScene extends Phaser.Scene {
                         this.enableDoubleButton();
                     else if (doubleOption == 2 && (this.getHandValue(playerCards[currentPlayer]) >= 9 && this.getHandValue(playerCards[currentPlayer]) <= 10) && playerCurrency >= player1Bet)
                         this.enableDoubleButton();
+
+                    this.disableInsuranceButton();
                 }
             }
             else if (insuranceOption == 1)
@@ -5734,6 +6220,7 @@ class GameScene extends Phaser.Scene {
                     this.disableBettingButtons();
                     this.disableSplitButton();
                     this.disableSurrenderButton();
+                    this.disableDoubleButton();
                     this.disableActionButtons();
 
                     if (playerCurrency >= player1Bet * .5)
@@ -5811,6 +6298,8 @@ class GameScene extends Phaser.Scene {
                         this.enableDoubleButton();
                     else if (doubleOption == 2 && (this.getHandValue(playerCards[currentPlayer]) >= 9 && this.getHandValue(playerCards[currentPlayer]) <= 10) && playerCurrency >= player1Bet)
                         this.enableDoubleButton();
+
+                    this.disableInsuranceButton();
                 }
 
             }
@@ -5946,6 +6435,49 @@ class GameScene extends Phaser.Scene {
             player3Hand1Display.setText("");
             player3Hand2Display.setText("");
         }
+
+        // suggestion displays on the right side
+        player1Hand1Suggestions[0] = this.add.text(1175, 150, "", {fontSize: '20px', fill: '#fff'});
+        player1Hand1Suggestions[1] = this.add.text(1175, 250, "", {fontSize: '20px', fill: '#fff'});
+        player1Hand1Suggestions[2] = this.add.text(1175, 350, "", {fontSize: '20px', fill: '#fff'});
+        player1Hand1Suggestions[3] = this.add.text(1175, 450, "", {fontSize: '20px', fill: '#fff'});
+        player1Hand1Suggestions[4] = this.add.text(1175, 550, "", {fontSize: '20px', fill: '#fff'});
+        player1Hand1Suggestions[5] = this.add.text(1175, 650, "", {fontSize: '20px', fill: '#fff'});
+
+        player1Hand2Suggestions[0] = this.add.text(1175, 150, "", {fontSize: '20px', fill: '#fff'});
+        player1Hand2Suggestions[1] = this.add.text(1175, 250, "", {fontSize: '20px', fill: '#fff'});
+        player1Hand2Suggestions[2] = this.add.text(1175, 350, "", {fontSize: '20px', fill: '#fff'});
+        player1Hand2Suggestions[3] = this.add.text(1175, 450, "", {fontSize: '20px', fill: '#fff'});
+        player1Hand2Suggestions[4] = this.add.text(1175, 550, "", {fontSize: '20px', fill: '#fff'});
+        player1Hand2Suggestions[5] = this.add.text(1175, 650, "", {fontSize: '20px', fill: '#fff'});
+
+        player2Hand1Suggestions[0] = this.add.text(1175, 150, "", {fontSize: '20px', fill: '#fff'});
+        player2Hand1Suggestions[1] = this.add.text(1175, 250, "", {fontSize: '20px', fill: '#fff'});
+        player2Hand1Suggestions[2] = this.add.text(1175, 350, "", {fontSize: '20px', fill: '#fff'});
+        player2Hand1Suggestions[3] = this.add.text(1175, 450, "", {fontSize: '20px', fill: '#fff'});
+        player2Hand1Suggestions[4] = this.add.text(1175, 550, "", {fontSize: '20px', fill: '#fff'});
+        player2Hand1Suggestions[5] = this.add.text(1175, 650, "", {fontSize: '20px', fill: '#fff'});
+
+        player2Hand2Suggestions[0] = this.add.text(1175, 150, "", {fontSize: '20px', fill: '#fff'});
+        player2Hand2Suggestions[1] = this.add.text(1175, 250, "", {fontSize: '20px', fill: '#fff'});
+        player2Hand2Suggestions[2] = this.add.text(1175, 350, "", {fontSize: '20px', fill: '#fff'});
+        player2Hand2Suggestions[3] = this.add.text(1175, 450, "", {fontSize: '20px', fill: '#fff'});
+        player2Hand2Suggestions[4] = this.add.text(1175, 550, "", {fontSize: '20px', fill: '#fff'});
+        player2Hand2Suggestions[5] = this.add.text(1175, 650, "", {fontSize: '20px', fill: '#fff'});
+
+        player3Hand1Suggestions[0] = this.add.text(1175, 150, "", {fontSize: '20px', fill: '#fff'});
+        player3Hand1Suggestions[1] = this.add.text(1175, 250, "", {fontSize: '20px', fill: '#fff'});
+        player3Hand1Suggestions[2] = this.add.text(1175, 350, "", {fontSize: '20px', fill: '#fff'});
+        player3Hand1Suggestions[3] = this.add.text(1175, 450, "", {fontSize: '20px', fill: '#fff'});
+        player3Hand1Suggestions[4] = this.add.text(1175, 550, "", {fontSize: '20px', fill: '#fff'});
+        player3Hand1Suggestions[5] = this.add.text(1175, 650, "", {fontSize: '20px', fill: '#fff'});
+
+        player3Hand2Suggestions[0] = this.add.text(1175, 150, "", {fontSize: '20px', fill: '#fff'});
+        player3Hand2Suggestions[1] = this.add.text(1175, 250, "", {fontSize: '20px', fill: '#fff'});
+        player3Hand2Suggestions[2] = this.add.text(1175, 350, "", {fontSize: '20px', fill: '#fff'});
+        player3Hand2Suggestions[3] = this.add.text(1175, 450, "", {fontSize: '20px', fill: '#fff'});
+        player3Hand2Suggestions[4] = this.add.text(1175, 550, "", {fontSize: '20px', fill: '#fff'});
+        player3Hand2Suggestions[5] = this.add.text(1175, 650, "", {fontSize: '20px', fill: '#fff'});
 
         // places controlPanel
         controlPanel = this.add.rectangle(700, 875, 1400, 275, 0x008b8b);
@@ -8417,6 +8949,8 @@ class GameScene extends Phaser.Scene {
                                 player1TurnIndicator.fillColor = 0xFFFFFF;
                                 player2TurnIndicator.fillColor = 0x8E1600;
                                 currentPlayer = currentPlayer + 1;
+                                numActions = 0;
+                                // this.scene.eraseSuggestions();
                                 currentHand = 0;
 
                                 if (peekingOption != 2)
@@ -8457,7 +8991,9 @@ class GameScene extends Phaser.Scene {
                             else
                             {
                                 // plus more stuff since if its the last player
+                                numActions = 0;
                                 currentHand = 0;
+                                // this.scene.eraseSuggestions();
                                 dealerCard.visible = false;
                                 shuffledDeck[cardInts[dealerIndex]].setDepth(1);
                                 this.scene.revealDealerInfo(dealerCards);
@@ -8477,6 +9013,8 @@ class GameScene extends Phaser.Scene {
                                 player2TurnIndicator.fillColor = 0xFFFFFF;
                                 player3TurnIndicator.fillColor = 0x8E1600;
                                 currentPlayer = currentPlayer + 1;
+                                numActions = 0;
+                                // this.scene.eraseSuggestions();
                                 currentHand = 0;
 
                                 if (peekingOption != 2)
@@ -8519,6 +9057,8 @@ class GameScene extends Phaser.Scene {
                                 player2TurnIndicator.fillColor = 0xFFFFFF;
                                 player1TurnIndicator.fillColor = 0x8E1600;
                                 currentPlayer = 0;
+                                numActions = 0;
+                                // this.scene.eraseSuggestions();
                                 currentHand = 0;
 
                                 // plus more stuff since if its the last player
@@ -8539,6 +9079,8 @@ class GameScene extends Phaser.Scene {
                             player3TurnIndicator.fillColor = 0xFFFFFF;
                             player1TurnIndicator.fillColor = 0x8E1600;
                             currentPlayer = 0;
+                            numActions = 0;
+                            // this.scene.eraseSuggestions();
                             currentHand = 0;
 
                             // plus more stuff since if its the last player
@@ -8673,7 +9215,9 @@ class GameScene extends Phaser.Scene {
                             if (currentHand != numSplits[currentPlayer] + 1)
                             {
                                 handIndicator.setPosition(cardX[0][0] - splitSpacing, cardY[0][0] + handIndicatorSpacing);
+                                numActions = 0;
                                 currentHand = currentHand + 1;
+                                // this.scene.eraseSuggestions();
 
                                 if (playerCurrency >= player1Bet)
                                     this.scene.enableDoubleButton();
@@ -8704,7 +9248,9 @@ class GameScene extends Phaser.Scene {
                                 {
                                     player1TurnIndicator.fillColor = 0xFFFFFF;
                                     player2TurnIndicator.fillColor = 0x8E1600;
+                                    numActions = 0;
                                     currentPlayer = currentPlayer + 1;
+                                    // this.scene.eraseSuggestions();
 
                                     if (peekingOption != 2)
                                         this.scene.enableSurrenderButton();
@@ -8744,7 +9290,9 @@ class GameScene extends Phaser.Scene {
                                 else
                                 {
                                     // plus more stuff since if its the last player
+                                    numActions = 0;
                                     currentHand = 0;
+                                    // this.scene.eraseSuggestions();
                                     dealerCard.visible = false;
                                     shuffledDeck[cardInts[dealerIndex]].setDepth(1);
                                     this.scene.revealDealerInfo(dealerCards);
@@ -8764,7 +9312,9 @@ class GameScene extends Phaser.Scene {
                             if (currentHand != numSplits[currentPlayer] + 1)
                             {
                                 handIndicator.setPosition(cardX[0][1] - splitSpacing, cardY[0][1] + handIndicatorSpacing);
+                                numActions = 0;
                                 currentHand = currentHand + 1;
+                                // this.scene.eraseSuggestions();
 
                                 if (playerCurrency >= player2Bet)
                                     this.scene.enableDoubleButton();
@@ -8796,6 +9346,8 @@ class GameScene extends Phaser.Scene {
                                     player2TurnIndicator.fillColor = 0xFFFFFF;
                                     player3TurnIndicator.fillColor = 0x8E1600;
                                     currentPlayer = currentPlayer + 1;
+                                    numActions = 0;
+                                    // this.scene.eraseSuggestions();
 
                                     if (peekingOption != 2)
                                         this.scene.enableSurrenderButton();
@@ -8836,6 +9388,8 @@ class GameScene extends Phaser.Scene {
                                 {
                                     // plus more stuff since if its the last player
                                     currentHand = 0;
+                                    numActions = 0;
+                                    // this.scene.eraseSuggestions();
                                     dealerCard.visible = false;
                                     shuffledDeck[cardInts[dealerIndex]].setDepth(1);
                                     this.scene.revealDealerInfo(dealerCards);
@@ -8856,6 +9410,8 @@ class GameScene extends Phaser.Scene {
                             {
                                 handIndicator.setPosition(cardX[0][2] - splitSpacing, cardY[0][2] + handIndicatorSpacing);
                                 currentHand = currentHand + 1;
+                                numActions = 0;
+                                // this.scene.eraseSuggestions();
 
                                 if (playerCurrency >= player3Bet)
                                     this.scene.enableDoubleButton();
@@ -8885,6 +9441,8 @@ class GameScene extends Phaser.Scene {
                                 player3TurnIndicator.fillColor = 0xFFFFFF;
                                 player1TurnIndicator.fillColor = 0x8E1600;
                                 currentPlayer = 0;
+                                numActions = 0;
+                                // this.scene.eraseSuggestions();
 
                                 // plus more stuff since if its the last player
                                 currentHand = 0;
@@ -9063,6 +9621,8 @@ class GameScene extends Phaser.Scene {
                             player1TurnIndicator.fillColor = 0xFFFFFF;
                             player2TurnIndicator.fillColor = 0x8E1600;
                             currentPlayer = currentPlayer + 1;
+                            numActions = 0;
+                            // this.scene.eraseSuggestions();
 
                             if (peekingOption != 2)
                                 this.scene.enableSurrenderButton();
@@ -9102,6 +9662,8 @@ class GameScene extends Phaser.Scene {
                         else
                         {
                             // plus more stuff since if its the last player
+                            numActions = 0;
+                            // this.scene.eraseSuggestions();
                             dealerCard.visible = false;
                             shuffledDeck[cardInts[dealerIndex]].setDepth(1);
                             this.scene.revealDealerInfo(dealerCards);
@@ -9211,6 +9773,8 @@ class GameScene extends Phaser.Scene {
                             player2TurnIndicator.fillColor = 0xFFFFFF;
                             player3TurnIndicator.fillColor = 0x8E1600;
                             currentPlayer = currentPlayer + 1;
+                            numActions = 0;
+                            // this.scene.eraseSuggestions();
 
                             if (peekingOption != 2)
                                 this.scene.enableSurrenderButton();
@@ -9252,6 +9816,8 @@ class GameScene extends Phaser.Scene {
                             player2TurnIndicator.fillColor = 0xFFFFFF;
                             player1TurnIndicator.fillColor = 0x8E1600;
                             currentPlayer = 0;
+                            numActions = 0;
+                            // this.scene.eraseSuggestions();
 
                             // plus more stuff since if its the last player
                             dealerCard.visible = false;
@@ -9361,6 +9927,8 @@ class GameScene extends Phaser.Scene {
                         player3TurnIndicator.fillColor = 0xFFFFFF;
                         player1TurnIndicator.fillColor = 0x8E1600;
                         currentPlayer = 0;
+                        numActions = 0;
+                        // this.scene.eraseSuggestions();
 
                         // plus more stuff since if its the last player
                         dealerCard.visible = false;
@@ -9377,9 +9945,8 @@ class GameScene extends Phaser.Scene {
 
                 }
             }
-            if (numSplits[currentPlayer] == 1)
+            else if (numSplits[currentPlayer] == 1)
             {
-
                 if ((currentPlayer == 0 && numPlayers >= 1 && !this.scene.splitIsBust(player1Hands[currentHand - 1])) || (currentPlayer == 1 && numPlayers >= 2 && !this.scene.splitIsBust(player2Hands[currentHand - 1])) || (currentPlayer == 2 && numPlayers >= 3 && !this.scene.splitIsBust(player3Hands[currentHand - 1])))
                 {
                     playerDouble.setTexture('clickedButton');
@@ -9583,6 +10150,8 @@ class GameScene extends Phaser.Scene {
 
                             handIndicator.setPosition(cardX[0][0] - splitSpacing, cardY[0][0] + handIndicatorSpacing);
                             currentHand = currentHand + 1;
+                            numActions = 0;
+                            // this.scene.eraseSuggestions();
 
                             if (doubleOption == 1 && (this.scene.splitGetHandValue(player1Hands[currentHand]) < 9 || this.scene.splitGetHandValue(player1Hands[currentHand]) > 11))
                                 this.scene.disableDoubleButton();
@@ -9689,12 +10258,16 @@ class GameScene extends Phaser.Scene {
                             player1HandBets[currentHand - 1] = player1Bet * 2;
                             handIndicator.setVisible(false);
                             currentHand = 0;
+                            numActions = 0;
+                            // this.scene.eraseSuggestions();
 
                             if (numPlayers != 1)
                             {
                                 player1TurnIndicator.fillColor = 0xFFFFFF;
                                 player2TurnIndicator.fillColor = 0x8E1600;
                                 currentPlayer = currentPlayer + 1;
+                                numActions = 0;
+                                // this.scene.eraseSuggestions();
 
                                 if (peekingOption != 2)
                                     this.scene.enableSurrenderButton();
@@ -9734,6 +10307,8 @@ class GameScene extends Phaser.Scene {
                             else
                             {
                                 // plus more stuff since if its the last player
+                                numActions = 0;
+                                // this.scene.eraseSuggestions();
                                 dealerCard.visible = false;
                                 shuffledDeck[cardInts[dealerIndex]].setDepth(1);
                                 this.scene.revealDealerInfo(dealerCards);
@@ -9851,6 +10426,8 @@ class GameScene extends Phaser.Scene {
 
                             handIndicator.setPosition(cardX[0][1] - splitSpacing, cardY[0][1] + handIndicatorSpacing);
                             currentHand = currentHand + 1;
+                            numActions = 0;
+                            // this.scene.eraseSuggestions();
 
                             if (doubleOption == 1 && (this.scene.splitGetHandValue(player2Hands[currentHand]) < 9 || this.scene.splitGetHandValue(player2Hands[currentHand]) > 11))
                                 this.scene.disableDoubleButton();
@@ -9957,12 +10534,16 @@ class GameScene extends Phaser.Scene {
                             player2HandBets[currentHand - 1] = player2Bet * 2;
                             handIndicator.setVisible(false);
                             currentHand = 0;
+                            numActions = 0;
+                            // this.scene.eraseSuggestions();
 
                             if (numPlayers != 2)
                             {
                                 player2TurnIndicator.fillColor = 0xFFFFFF;
                                 player3TurnIndicator.fillColor = 0x8E1600;
                                 currentPlayer = currentPlayer + 1;
+                                numActions = 0;
+                                // this.scene.eraseSuggestions();
 
                                 if (peekingOption != 2)
                                     this.scene.enableSurrenderButton();
@@ -10002,6 +10583,8 @@ class GameScene extends Phaser.Scene {
                             else
                             {
                                 // plus more stuff since if its the last player
+                                numActions = 0;
+                                // this.scene.eraseSuggestions();
                                 dealerCard.visible = false;
                                 shuffledDeck[cardInts[dealerIndex]].setDepth(1);
                                 this.scene.revealDealerInfo(dealerCards);
@@ -10119,6 +10702,8 @@ class GameScene extends Phaser.Scene {
 
                             handIndicator.setPosition(cardX[0][2] - splitSpacing, cardY[0][2] + handIndicatorSpacing);
                             currentHand = currentHand + 1;
+                            numActions = 0;
+                            // this.scene.eraseSuggestions();
 
                             if (doubleOption == 1 && (this.scene.splitGetHandValue(player3Hands[currentHand]) < 9 || this.scene.splitGetHandValue(player3Hands[currentHand]) > 11))
                                 this.scene.disableDoubleButton();
@@ -10225,6 +10810,8 @@ class GameScene extends Phaser.Scene {
                             player3HandBets[currentHand - 1] = player3Bet * 2;
                             handIndicator.setVisible(false);
                             currentHand = 0;
+                            numActions = 0;
+                            // this.scene.eraseSuggestions();
                             
                             // plus more stuff since if its the last player
                             dealerCard.visible = false;
@@ -10251,6 +10838,7 @@ class GameScene extends Phaser.Scene {
 
             if (insuranceRound == 1)
             {
+                this.scene.baseGameBasicStrategy(currentPlayer, "Stand");
                 if (currentPlayer == 0)
                 {
                     if (numPlayers != 1)
@@ -10258,6 +10846,8 @@ class GameScene extends Phaser.Scene {
                         player1TurnIndicator.fillColor = 0xFFFFFF;
                         player2TurnIndicator.fillColor = 0x8E1600;
                         currentPlayer = currentPlayer + 1;
+                        numActions = 0;
+                        // this.scene.eraseSuggestions();
 
                         if (peekingOption == 2)
                             this.scene.disableSurrenderButton();
@@ -10269,6 +10859,8 @@ class GameScene extends Phaser.Scene {
                         {
                             // reveal dealer cards
                             // go to iswinorloss
+                            numActions = 0;
+                            // this.scene.eraseSuggestions();
                             dealerCard.visible = false;
                             shuffledDeck[cardInts[dealerIndex]].setDepth(1);
                             this.scene.revealDealerInfo(dealerCards);
@@ -10286,6 +10878,8 @@ class GameScene extends Phaser.Scene {
                             player1TurnIndicator.fillColor = 0x8E1600;
                             player2TurnIndicator.fillColor = 0xFFFFFF;
                             player3TurnIndicator.fillColor = 0xFFFFFF;
+                            numActions = 0;
+                            // this.scene.eraseSuggestions();
 
                             this.scene.enableActionButtons();
 
@@ -10322,6 +10916,8 @@ class GameScene extends Phaser.Scene {
                         player2TurnIndicator.fillColor = 0xFFFFFF;
                         player3TurnIndicator.fillColor = 0x8E1600;
                         currentPlayer = currentPlayer + 1;
+                        numActions = 0;
+                        // this.scene.eraseSuggestions();
                         
                         if (peekingOption == 2)
                             this.scene.disableSurrenderButton();
@@ -10333,6 +10929,8 @@ class GameScene extends Phaser.Scene {
                         {
                             // reveal dealer cards
                             // go to iswinorloss
+                            numActions = 0;
+                            // this.scene.eraseSuggestions();
                             dealerCard.visible = false;
                             shuffledDeck[cardInts[dealerIndex]].setDepth(1);
                             this.scene.revealDealerInfo(dealerCards);
@@ -10350,6 +10948,8 @@ class GameScene extends Phaser.Scene {
                             player1TurnIndicator.fillColor = 0x8E1600;
                             player2TurnIndicator.fillColor = 0xFFFFFF;
                             player3TurnIndicator.fillColor = 0xFFFFFF;
+                            numActions = 0;
+                            // this.scene.eraseSuggestions();
 
                             this.scene.enableActionButtons();
 
@@ -10386,6 +10986,8 @@ class GameScene extends Phaser.Scene {
                     {
                         // reveal dealer cards
                         // go to iswinorloss
+                        numActions = 0;
+                        // this.scene.eraseSuggestions();
                         dealerCard.visible = false;
                         shuffledDeck[cardInts[dealerIndex]].setDepth(1);
                         this.scene.revealDealerInfo(dealerCards);
@@ -10403,6 +11005,8 @@ class GameScene extends Phaser.Scene {
                         player1TurnIndicator.fillColor = 0x8E1600;
                         player2TurnIndicator.fillColor = 0xFFFFFF;
                         player3TurnIndicator.fillColor = 0xFFFFFF;
+                        numActions = 0;
+                        // this.scene.eraseSuggestions();
 
                         this.scene.enableActionButtons();
 
@@ -10446,6 +11050,8 @@ class GameScene extends Phaser.Scene {
                             player1TurnIndicator.fillColor = 0xFFFFFF;
                             player2TurnIndicator.fillColor = 0x8E1600;
                             currentPlayer = currentPlayer + 1;
+                            numActions = 0;
+                            // this.scene.eraseSuggestions();
 
                             if (peekingOption != 2)
                             this.scene.enableSurrenderButton();
@@ -10485,6 +11091,8 @@ class GameScene extends Phaser.Scene {
                         else
                         {
                             // plus more stuff since if its the last player
+                            numActions = 0;
+                            // this.scene.eraseSuggestions();
                             dealerCard.visible = false;
                             shuffledDeck[cardInts[dealerIndex]].setDepth(1);
                             this.scene.revealDealerInfo(dealerCards);
@@ -10504,6 +11112,8 @@ class GameScene extends Phaser.Scene {
                             player2TurnIndicator.fillColor = 0xFFFFFF;
                             player3TurnIndicator.fillColor = 0x8E1600;
                             currentPlayer = currentPlayer + 1;
+                            numActions = 0;
+                            // this.scene.eraseSuggestions();
 
                             if (peekingOption != 2)
                                 this.scene.enableSurrenderButton();
@@ -10545,6 +11155,8 @@ class GameScene extends Phaser.Scene {
                             player2TurnIndicator.fillColor = 0xFFFFFF;
                             player1TurnIndicator.fillColor = 0x8E1600;
                             currentPlayer = 0;
+                            numActions = 0;
+                            // this.scene.eraseSuggestions();
 
                             dealerCard.visible = false;
                             shuffledDeck[cardInts[dealerIndex]].setDepth(1);
@@ -10563,6 +11175,8 @@ class GameScene extends Phaser.Scene {
                         player3TurnIndicator.fillColor = 0xFFFFFF;
                         player1TurnIndicator.fillColor = 0x8E1600;
                         currentPlayer = 0;
+                        numActions = 0;
+                        // this.scene.eraseSuggestions();
                         dealerCard.visible = false;
                         shuffledDeck[cardInts[dealerIndex]].setDepth(1);
                         this.scene.revealDealerInfo(dealerCards);
@@ -10587,6 +11201,8 @@ class GameScene extends Phaser.Scene {
                         {
                             handIndicator.setPosition(cardX[0][0] - splitSpacing, cardY[0][0] + handIndicatorSpacing);
                             currentHand = currentHand + 1;
+                            numActions = 0;
+                            // this.scene.eraseSuggestions();
 
                             if (playerCurrency >= player1Bet)
                                 this.scene.enableDoubleButton();
@@ -10618,6 +11234,8 @@ class GameScene extends Phaser.Scene {
                                 player1TurnIndicator.fillColor = 0xFFFFFF;
                                 player2TurnIndicator.fillColor = 0x8E1600;
                                 currentPlayer = currentPlayer + 1;
+                                numActions = 0;
+                                // this.scene.eraseSuggestions();
 
                                 if (peekingOption != 2)
                                     this.scene.enableSurrenderButton();
@@ -10658,6 +11276,8 @@ class GameScene extends Phaser.Scene {
                             {
                                 // plus more stuff since if its the last player
                                 currentHand = 0;
+                                numActions = 0;
+                                // this.scene.eraseSuggestions();
                                 dealerCard.visible = false;
                                 shuffledDeck[cardInts[dealerIndex]].setDepth(1);
                                 this.scene.revealDealerInfo(dealerCards);
@@ -10678,6 +11298,8 @@ class GameScene extends Phaser.Scene {
                         {
                             handIndicator.setPosition(cardX[0][1] - splitSpacing, cardY[0][1] + handIndicatorSpacing);
                             currentHand = currentHand + 1;
+                            numActions = 0;
+                            // this.scene.eraseSuggestions();
 
                             if (playerCurrency >= player2Bet)
                                 this.scene.enableDoubleButton();
@@ -10709,6 +11331,8 @@ class GameScene extends Phaser.Scene {
                                 player2TurnIndicator.fillColor = 0xFFFFFF;
                                 player3TurnIndicator.fillColor = 0x8E1600;
                                 currentPlayer = currentPlayer + 1;
+                                numActions = 0;
+                                // this.scene.eraseSuggestions();
                                 
                                 if (peekingOption != 2)
                                     this.scene.enableSurrenderButton();
@@ -10749,6 +11373,8 @@ class GameScene extends Phaser.Scene {
                             {
                                 // plus more stuff since if its the last player
                                 currentHand = 0;
+                                numActions = 0;
+                                // this.scene.eraseSuggestions();
                                 dealerCard.visible = false;
                                 shuffledDeck[cardInts[dealerIndex]].setDepth(1);
                                 this.scene.revealDealerInfo(dealerCards);
@@ -10769,6 +11395,8 @@ class GameScene extends Phaser.Scene {
                         {
                             handIndicator.setPosition(cardX[0][2] - splitSpacing, cardY[0][2] + handIndicatorSpacing);
                             currentHand = currentHand + 1;
+                            numActions = 0;
+                            // this.scene.eraseSuggestions();
 
                             if (playerCurrency >= player3Bet)
                                 this.scene.enableDoubleButton();
@@ -10798,6 +11426,8 @@ class GameScene extends Phaser.Scene {
                             player3TurnIndicator.fillColor = 0xFFFFFF;
                             player1TurnIndicator.fillColor = 0x8E1600;
                             currentPlayer = 0;
+                            numActions = 0;
+                            // this.scene.eraseSuggestions();
 
                             // plus more stuff since if its the last player
                             currentHand = 0;
@@ -10823,6 +11453,7 @@ class GameScene extends Phaser.Scene {
         playerSurrender.on('pointerdown', function(){
 
             playerSurrender.setTexture('clickedButton');
+            this.scene.baseGameBasicStrategy(currentPlayer, "Surrender");
 
             if (currentPlayer == 0)
             {
@@ -10835,6 +11466,8 @@ class GameScene extends Phaser.Scene {
                     player1TurnIndicator.fillColor = 0xFFFFFF;
                     player2TurnIndicator.fillColor = 0x8E1600;
                     currentPlayer = currentPlayer + 1;
+                    numActions = 0;
+                    // this.scene.eraseSuggestions();
 
                     if (playerCurrency >= player2Bet)
                         this.scene.enableDoubleButton();
@@ -10872,6 +11505,8 @@ class GameScene extends Phaser.Scene {
                     player1CardDisplay.setTint(0xFFA500);
                     updateInfo();
                     // plus more stuff since if its the last player
+                    numActions = 0;
+                    // this.scene.eraseSuggestions();
                     dealerCard.visible = false;
                     shuffledDeck[cardInts[dealerIndex]].setDepth(1);
                     this.scene.revealDealerInfo(dealerCards);
@@ -10895,6 +11530,8 @@ class GameScene extends Phaser.Scene {
                     player2TurnIndicator.fillColor = 0xFFFFFF;
                     player3TurnIndicator.fillColor = 0x8E1600;
                     currentPlayer = currentPlayer + 1;
+                    numActions = 0;
+                    // this.scene.eraseSuggestions();
 
                     if (playerCurrency >= player3Bet)
                         this.scene.enableDoubleButton();
@@ -10934,6 +11571,8 @@ class GameScene extends Phaser.Scene {
                     player2TurnIndicator.fillColor = 0xFFFFFF;
                     player1TurnIndicator.fillColor = 0x8E1600;
                     currentPlayer = 0;
+                    numActions = 0;
+                    // this.scene.eraseSuggestions();
                     dealerCard.visible = false;
                     shuffledDeck[cardInts[dealerIndex]].setDepth(1);
                     this.scene.revealDealerInfo(dealerCards);
@@ -10955,6 +11594,8 @@ class GameScene extends Phaser.Scene {
                 player3TurnIndicator.fillColor = 0xFFFFFF;
                 player1TurnIndicator.fillColor = 0x8E1600;
                 currentPlayer = 0;
+                numActions = 0;
+                // this.scene.eraseSuggestions();
                 dealerCard.visible = false;
                 shuffledDeck[cardInts[dealerIndex]].setDepth(1);
                 this.scene.revealDealerInfo(dealerCards);
@@ -10973,6 +11614,7 @@ class GameScene extends Phaser.Scene {
         playerInsurance.on('pointerdown', function(){
 
             playerInsurance.setTexture('clickedButton');
+            this.scene.baseGameBasicStrategy(currentPlayer, "Insurance");
 
             if (insuranceRound == 0)
                 this.scene.disableInsuranceButton();
@@ -11375,6 +12017,8 @@ class GameScene extends Phaser.Scene {
                         player1TurnIndicator.fillColor = 0xFFFFFF;
                         player2TurnIndicator.fillColor = 0x8E1600;
                         currentPlayer = currentPlayer + 1;
+                        numActions = 0;
+                        // this.scene.eraseSuggestions();
                     }
                     else
                     {
@@ -11383,6 +12027,8 @@ class GameScene extends Phaser.Scene {
                         {
                             // reveal dealer cards
                             // go to iswinorloss
+                            numActions = 0;
+                            // this.scene.eraseSuggestions();
                             dealerCard.visible = false;
                             shuffledDeck[cardInts[dealerIndex]].setDepth(1);
                             this.scene.revealDealerInfo(dealerCards);
@@ -11400,6 +12046,8 @@ class GameScene extends Phaser.Scene {
                             player1TurnIndicator.fillColor = 0x8E1600;
                             player2TurnIndicator.fillColor = 0xFFFFFF;
                             player3TurnIndicator.fillColor = 0xFFFFFF;
+                            numActions = 0;
+                            // this.scene.eraseSuggestions();
 
                             this.scene.enableActionButtons();
 
@@ -11436,6 +12084,8 @@ class GameScene extends Phaser.Scene {
                         player2TurnIndicator.fillColor = 0xFFFFFF;
                         player3TurnIndicator.fillColor = 0x8E1600;
                         currentPlayer = currentPlayer + 1;
+                        numActions = 0;
+                        // this.scene.eraseSuggestions();
                     }
                     else
                     {
@@ -11444,6 +12094,8 @@ class GameScene extends Phaser.Scene {
                         {
                             // reveal dealer cards
                             // go to iswinorloss
+                            numActions = 0;
+                            // this.scene.eraseSuggestions();
                             dealerCard.visible = false;
                             shuffledDeck[cardInts[dealerIndex]].setDepth(1);
                             this.scene.revealDealerInfo(dealerCards);
@@ -11461,6 +12113,8 @@ class GameScene extends Phaser.Scene {
                             player1TurnIndicator.fillColor = 0x8E1600;
                             player2TurnIndicator.fillColor = 0xFFFFFF;
                             player3TurnIndicator.fillColor = 0xFFFFFF;
+                            numActions = 0;
+                            // this.scene.eraseSuggestions();
 
                             this.scene.enableActionButtons();
 
@@ -11497,6 +12151,8 @@ class GameScene extends Phaser.Scene {
                     {
                         // reveal dealer cards
                         // go to iswinorloss
+                        numActions = 0;
+                        // this.scene.eraseSuggestions();
                         dealerCard.visible = false;
                         shuffledDeck[cardInts[dealerIndex]].setDepth(1);
                         this.scene.revealDealerInfo(dealerCards);
@@ -11514,6 +12170,8 @@ class GameScene extends Phaser.Scene {
                         player1TurnIndicator.fillColor = 0x8E1600;
                         player2TurnIndicator.fillColor = 0xFFFFFF;
                         player3TurnIndicator.fillColor = 0xFFFFFF;
+                        numActions = 0;
+                        // this.scene.eraseSuggestions();
 
                         this.scene.enableActionButtons();
 
@@ -11550,6 +12208,7 @@ class GameScene extends Phaser.Scene {
         playerSplit.on('pointerdown', function(){
 
             playerSplit.setTexture('clickedButton');
+            this.scene.baseGameBasicStrategy(currentPlayer, "Split");
             this.scene.disableSplitButton();
             this.scene.disableInsuranceButton();
             this.scene.disableSurrenderButton();
@@ -11730,6 +12389,7 @@ class GameScene extends Phaser.Scene {
                         handIndicator.setPosition(cardX[0][0] + splitSpacing, cardY[0][0] + handIndicatorSpacing);
                         handIndicator.setVisible(true);
                         currentHand = 1;
+                        numActions = 0;
                     }
                     else
                     {
@@ -11777,11 +12437,15 @@ class GameScene extends Phaser.Scene {
                         player1TurnIndicator.fillColor = 0xFFFFFF;
                         player2TurnIndicator.fillColor = 0x8E1600;
                         currentPlayer = currentPlayer + 1;
+                        numActions = 0;
+                        // this.scene.eraseSuggestions();
                     }
                     else if (player1Hands[0][0] === "A" && hitSplitAces == 0 && numPlayers == 1)
                     {
                         // plus more stuff since if its the last player
                         currentHand = 0;
+                        numActions = 0;
+                        // this.scene.eraseSuggestions();
                         dealerCard.visible = false;
                         shuffledDeck[cardInts[dealerIndex]].setDepth(1);
                         this.scene.revealDealerInfo(dealerCards);
@@ -11959,6 +12623,7 @@ class GameScene extends Phaser.Scene {
                         handIndicator.setPosition(cardX[0][1] + splitSpacing, cardY[0][1] + handIndicatorSpacing);
                         handIndicator.setVisible(true);
                         currentHand = 1;
+                        numActions = 0;
                     }
                     else
                     {
@@ -12005,11 +12670,15 @@ class GameScene extends Phaser.Scene {
                         player2TurnIndicator.fillColor = 0xFFFFFF;
                         player3TurnIndicator.fillColor = 0x8E1600;
                         currentPlayer = currentPlayer + 1;
+                        numActions = 0;
+                        // this.scene.eraseSuggestions();
                     }
                     else if (player2Hands[0][0] === "A" && hitSplitAces == 0 && numPlayers == 2)
                     {
                         // plus more stuff since if its the last player
                         currentHand = 0;
+                        numActions = 0;
+                        // this.scene.eraseSuggestions();
                         dealerCard.visible = false;
                         shuffledDeck[cardInts[dealerIndex]].setDepth(1);
                         this.scene.revealDealerInfo(dealerCards);
@@ -12185,6 +12854,7 @@ class GameScene extends Phaser.Scene {
                         handIndicator.setPosition(cardX[0][2] + splitSpacing, cardY[0][2] + handIndicatorSpacing);
                         handIndicator.setVisible(true);
                         currentHand = 1;
+                        numActions = 0;
                     }
                     else
                     {
@@ -12230,6 +12900,8 @@ class GameScene extends Phaser.Scene {
                     {
                         // plus more stuff since if its the last player
                         currentHand = 0;
+                        numActions = 0;
+                        // this.scene.eraseSuggestions();
                         dealerCard.visible = false;
                         shuffledDeck[cardInts[dealerIndex]].setDepth(1);
                         this.scene.revealDealerInfo(dealerCards);
