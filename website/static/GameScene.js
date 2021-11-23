@@ -2753,6 +2753,8 @@ class GameScene extends Phaser.Scene {
 
     baseGameBasicStrategy(currentPlayer, action) {
 
+        currentHand = currentHand - 1;
+
         // soft = has ace
         var isSoft = 0;
 
@@ -10023,21 +10025,30 @@ class GameScene extends Phaser.Scene {
             bestAvailableAction = optimalAction[1];
         else if (optimalAction[0] == "Split" && splitDisabled == 1)
             bestAvailableAction = optimalAction[1];
+        else if (optimalAction[0] == "Split_DAS" && doubleAfterSplit == 0)
+            bestAvailableAction = optimalAction[1];
         else
             bestAvailableAction = optimalAction[0];
+
+        if (bestAvailableAction == "Split_DAS")
+            bestAvailableAction = "Split";
 
         if (action == bestAvailableAction)
         {
             playerPoints = playerPoints + 1;
+            pointScoreBoard.setText("Points: " + playerPoints);
         }
         else
         {
             playerPoints = playerPoints - 1;
+            pointScoreBoard.setText("Points: " + playerPoints);
         }
 
         // updates suggestions
         if (numActions == 0)
             this.eraseSuggestions();
+
+        currentHand = currentHand + 1;
 
         if (numSplits[currentPlayer] == 0)
         {
