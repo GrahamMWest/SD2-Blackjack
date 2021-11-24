@@ -1,2 +1,184 @@
 {% extends "base.html" %} 
 {% block title %}Blackjack Definitions{% endblock %}
+
+{% block content %}
+
+<div class="container">
+    <br>
+    
+    <h1 class="page_heading">Blackjack Definitions</h1>
+    
+    <br>
+
+    <div style="color: lightgray; text-shadow: 2px 2px black; font-size:20px; text-align: center;">
+
+        The following are definitions about the game of Blackjack. 
+
+    </div>
+
+    <br>
+
+    <hr style="width:100%; color:black"> <br>
+
+    <pre style="color: lightgray; text-shadow: 2px 2px black; font-size:20px">
+<b>Action</b> - The current player who is in the process of taking their turn. That player 
+currently has “the action.”
+
+<hr style="width:100%; color:black"> 
+<b>Advantaged players</b>: Card counters who have perfected the art of card counting. 
+For every person who believes they can count cards, only a select few are truly 
+advantaged players. An advantaged player is guaranteed to play perfectly without any 
+fault. All it takes is one mistake an hour to remove the entire player’s edge against 
+the house which would make the player break even in the long run. [1]
+
+<hr style="width:100%; color:black"> 
+<b>Betting Circle</b>: The spot on the table where players will make their initial bet at the 
+start of the round. A single player is allowed to play multiple spots per round. Each spot 
+will be dealt it’s own hand.
+
+<hr style="width:100%; color:black"> 
+<b>Big Player</b>: In Blackjack team play, the big players are advantaged players who have more 
+money than other players on the team. The big player will wait until a table reaches a 
+positive true count, and once signaled by a spotter, will sit down and start playing at 
+an advantage immediately.
+
+<hr style="width:100%; color:black"> 
+<b>Bust</b>: When either the player’s or the dealer’s hand value is greater than 21. If a player 
+busts, they immediately lose their bet. If a dealer busts, all players who did not bust 
+will win their bet amount.
+
+<hr style="width:100%; color:black"> 
+<b>Cut card</b>: A colored card placed in the shoe. Different Blackjack games place this card 
+in different positions in the shoe. Once the cut card is reached, it is placed to the side 
+while the current round will continue to be dealt normally. After the round is over, a 
+newly shuffled shoe will replace the current shoe.
+
+<hr style="width:100%; color:black"> 
+<b>Double after split</b>: The optional rule where players are allowed to double down a hand after 
+splitting. Without this rule, players can only hit, stand, or re-split after splitting.
+
+<hr style="width:100%; color:black"> 
+<b>Double Down</b>: When the current acting player wishes to double their initial bet and take 
+exactly one more card for that hand. Players cannot double a hand that has already hit. 
+Some rules allow players to double after splitting, in which case, the bet for the current 
+hand being played will be doubled. The player informs the dealer to double down by placing 
+an equal sized bet outside the betting circle next to their original bet.
+
+<hr style="width:100%; color:black"> 
+<b>Early Surrender</b>: A less common yet more favorable rule. This option occurs when the 
+dealer’s up card is an Ace or a 10 valued card. If the player chooses to surrender, the 
+player immediately loses only half of their bet and ends their turn.
+
+<hr style="width:100%; color:black"> 
+<b>Hit</b>: When the current acting player informs the dealer to give them another card in their 
+hand. This is done by the player tapping on the table with their hand.
+
+<hr style="width:100%; color:black"> 
+<b>Insurance</b>: Available when the dealer’s up card is an Ace. This is a side bet that the 
+dealer has a natural Blackjack and is treated independently of the main bet. It pays 2:1.
+
+<hr style="width:100%; color:black"> 
+<b>Liberal Vegas Strip Rules</b>: Dealer stands on soft 17, player may double on any two cards, 
+player may double after splitting, resplit Aces, late surrender. Liberal Vegas Strip rules 
+give the casino a 0.28% advantage against the player at a true count of 0. [2]
+
+<hr style="width:100%; color:black"> 
+<b>Natural Blackjack</b>: When either the player or dealer is dealt both an Ace and a 10-valued 
+card. Should a player be dealt a natural Blackjack, they will be paid 3:2 of their 
+original bet unless the dealer also has a natural Blackjack, in which case, the player will 
+push. Some Blackjack games offer 6:5 on a Blackjack; these games are unbeatable in the long 
+run and should never be played.
+
+<hr style="width:100%; color:black"> 
+<b>Resplit</b>: When a player has already split a hand and is dealt another pair. While this 
+rarely occurs, the player is allowed to place another equivalent bet to split their hand 
+again. The number of total splits allowed per bet spot vary by casino, but typically 
+players can split up to 3 total times. [3] 
+
+<hr style="width:100%; color:black"> 
+<b>Round</b>: A single instance of players placing their bets, cards being dealt to players where 
+each player then completes their turn, and players being paid out accordingly. After every 
+round, all cards are cleared from the table before new cards are dealt. 
+
+<hr style="width:100%; color:black"> 
+<b>Running count</b>: The ever-changing number which is updated by a counter every time a counter 
+sees a card. This number is used to calculate the true count. Counters must know the 
+running count at all times without fault should they wish to be profitable.
+
+<hr style="width:100%; color:black"> 
+<b>Shoe</b>: The large container which holds the deck(s) from where the dealer pulls cards.
+
+<hr style="width:100%; color:black"> 
+<b>Soft 12</b>: The rare case of having two Aces in the player's hand without the ability to 
+split the Aces again. This will occur whenever a player splits Aces, receives another Ace, 
+and resplit or continue to play the hand. The prevalence of Soft 12’s are heavily 
+dependent on the game’s rules.
+
+<hr style="width:100%; color:black"> 
+<b>Split</b>: When the current acting player is dealt a pair and wishes to split the hand into 
+two hands by placing a new bet equivalent to the initial bet. Each new hand is dealt one 
+card, and the player now acts for each hand individually. Some casinos allow players to 
+double down after splitting, some do not. All standard Blackjack games do not allow hitting 
+split Aces. [4] At most casinos, the player must stand after splitting Aces. Some Las 
+Vegas casinos will allow players to re-split Aces. This means that if a player receives 
+another Ace after splitting Aces, the hand may be split again for another bet. [4]
+
+<hr style="width:100%; color:black"> 
+<b>Spotters</b>: In Blackjack team play, a spotter is a player who sits at tables and bets the 
+minimum. Once the true count rises to a threshold, the spotter will signal the big player 
+to sit down at the table. The spotter will then tell the big player what the current 
+running count is through some system determined by the team.
+
+<hr style="width:100%; color:black"> 
+<b>Stand</b>: When the current acting player informs the dealer to end their turn. The player 
+will signal a stand by waving their hand over their cards.
+
+<hr style="width:100%; color:black"> 
+<b>Surrender (or Late Surrender)</b>: This option occurs when the dealer’s up card is an Ace 
+or a 10 valued card. The dealer will then ask for insurance, and players are given the 
+option to take it. The player signals a surrender by drawing a horizontal line with their 
+fingers behind the dealer and verbally telling the dealer they wish to surrender. 
+Afterwards, the dealer checks their hand for a Blackjack, and if the dealer has a natural 
+Blackjack, then all players lose their full bets regardless of if they took insurance or 
+not. Otherwise, all players who surrendered will immediately take half of their bet back 
+and end their turn. The remaining players will finish their hand.
+
+<hr style="width:100%; color:black"> 
+<b>True count</b>: The number used to calculate the advantage of the player against the house. 
+The true count is calculated by dividing the running count by the number of decks left 
+in the shoe. The value of the true count corresponds to about a 1% change in an advantage 
+or disadvantage to the house. “A true 2 puts the player advantage up to about half of 1 
+percent and the house edge becomes the player’s edge. A true 3 would make a player 
+advantage of about 1% and so on. This can vary greatly depending on the rules and how many 
+cards get dealt before the shuffle.” [1] Blackjack is a beatable game. The reason players 
+can win at Blackjack in the long run is because card counters are able to recognize which 
+cards have already been played and can use that information to predict the likelihood of 
+future cards.The beauty behind counting systems is that they create a well defined set of 
+rules, which when followed perfectly, allow a card counter to beat casinos at their own 
+game. Three important factors exist in the world of card counting: basic strategy, 
+counting systems, playing deviations, and bet spreads.
+    </pre>
+
+    <hr style="width:100%; color:black"> 
+
+    <h2 class="page_heading">References</h2>
+    
+    <br>
+    
+    <pre style="color: lightgray; text-shadow: 2px 2px black; font-size:20px">
+
+1. Colin Jones. “How To Count Cards” Blackjack Apprenticeship, 3 Aug. 2021, 
+    https://www.Blackjackapprenticeship.com/how-to-count-cards/.
+
+2. Michael Shackleford. “House Edge of Casino Games Compared” The Wizard of Odds, 3 Aug. tes
+    2021, https://wizardofodds.com/gambling/house-edge/.
+
+3. “Blackjack Split Rules” QFIT, 2021 https://www.qfit.com/Blackjack-rules-split.htm.
+
+4. “The Rules Behind Splitting Aces” BlackjackOnline, 3 Aug. 2021 
+    https://www.Blackjackonline.net/guide/the-rules-behind-splitting-aces/.
+    
+    </pre>
+</div>
+
+{% endblock %}
