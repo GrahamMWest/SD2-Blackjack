@@ -55,41 +55,59 @@
             </button>
 
             <!--collapsable navbar-->
-            <div class="collapse navbar-collapse" id="navbarSupportedContent" role="navigation">
+            <div class="collapse navbar-collapse" id="navbarSupportedContent" role="navigation" style="height: 70px">
                 <ul class = "navbar-nav">
                     {% if user.is_authenticated %}
                         <li class="nav-item">
-                            <a class="nav-item nav-link" id="home" href="/">Home</a>
+                            <a class="nav-item nav-link" id="home" href="/" style="font-size:25px">Home</a>
                         </li>
 
                         <li class="nav-item">
-                            <a class="nav-item nav-link" id="leaderboard" href="/Leaderboard/">Leaderboard</a>
+                            <a class="nav-item nav-link" id="leaderboard" href="/Leaderboard/" style="font-size:25px">Leaderboard</a>
                         </li>
 
                         <li class="nav-item">
-                            <a class="nav-item nav-link" id="information" href="/Information/">Information</a>
+                            <a class="nav-item nav-link" id="information" href="/Information/" style="font-size:25px">Information</a>
                         </li>
 
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" 
-                            aria-haspopup="true" aria-expanded="false"> {{ user.username }}</a>
+                            aria-haspopup="true" aria-expanded="false" style="font-size:25px"> {{ user.username }}</a>
 
                             <div class="dropdown-menu" aria-labelledby="navbarDropdown">
-                                <a class="dropdown-item" id="logout" href="/logout">Logout</a>
+                                <a class="dropdown-item" id="logout" href="/logout" style="font-size:25px">Logout</a>
                             </div>
                         </li>
 
                     {% else %}
                         <li class="nav-item">
-                            <a class="nav-item nav-link" id="login" href="/login">Login</a>
+                            <a class="nav-item nav-link" id="login" href="/login" style="font-size:25px">Login</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-item nav-link" id="createAccount" href="/create-account">Create Account</a>
+                            <a class="nav-item nav-link" id="createAccount" href="/create-account" style="font-size:25px">Create Account</a>
                         </li>
                     {% endif %}
 
                 </ul>
             </div>
+
+            <!--Bolds the current page a user is on-->
+            <script src="http://code.jquery.com/jquery-2.1.4.min.js"></script>
+            <script>
+                $(function(){
+                    $('a').each(function(){
+                        if ($(this).prop('href') == window.location.href) {
+                            $(this).addClass('active'); $(this).parents('li').addClass('active');
+                        }
+                    });
+                });
+            </script>
+
+            <style>
+                .active {
+                    color: #F8F8F8;
+                }
+            </style>
         </nav>
 
         <!--displays all alerts-->
