@@ -6,6 +6,7 @@ from sqlalchemy.util.langhelpers import portable_instancemethod
 from . import db
 from .models import User
 from sqlalchemy import desc, func
+import json
 
 # this file is a blueprint of our application, meaning it have a lot of routes inside it
 # blueprints organize the app so everything isnt in one place
@@ -23,14 +24,6 @@ views = Blueprint('views', __name__)
 @views.route('/', methods=['GET', 'POST'])
 @login_required
 def home():
-    if request.method == 'POST':
-        numDecks = request.form.get('numDecks')
-        deckPen = request.form.get('deckPen')
-        numPlayers = request.form.get('numPlayers')
-        modeSelect = request.form.get('modeSelect')
-        numDecks = request.form.get('countMethod')
-
-        flash('Game Start!', category='success')
 
     return render_template("home.html", user=current_user)
 
@@ -55,16 +48,100 @@ def leaderboard():
 def information():
     return render_template("information.html", user=current_user)
 
-@views.route('/setting-slider', methods=['POST'])
-def setting_slider():
 
-    req = request.get_json()
 
-    print(req)
+# Route/API to send user info to and from other pages
+# Sends the newUser dictionary with the user points and currency from the db
+# Sends a 200 response to show good connection from API call
+@views.route('/SendUser', methods=['GET'])
+def updateUser():
+    user = User.query.filter_by(username=current_user.username).first()
+    
+    currUser = {
+        'points': user.points,
+        'currency': user.currency,
+        'players': user.numPlayers,
+        'decks': user.numDecks,
+        'deckPenetration': user.deckPenetration,
+        'min': user.minBet,
+        'max': user.maxBet,
+        'spoiler': user.countSpoiler,
+        'peeking': user.peekingOption,
+        'payout': user.blackjackPayout,
+        'split': user.hitSplitAces,
+        'doubleSplit': user.doubleAfterSplit,
+        'hitStandSoftSeventeen': user.hitStandSoftSeventeen,
+        'doubleOpt': user.doubleOption
+    }
+    
+    return make_response(jsonify(currUser), 200)
 
-    res = make_response(jsonify(req), 200)
+@views.route('/UpdatePoints', methods=['POST'])
+def updatePoints():
+    user = User.query.filter_by(username=current_user.username).first()
+    request_data = request.get_json()
+    
+    currUser = {
+        'points': request_data["points"]
+    }
+    user.points = request_data["points"]
 
-    return res
+    db.session.commit()
+
+    return make_response(jsonify(currUser), 200)
+
+
+@views.route('/UpdateCurrency', methods=['POST'])
+def updateCurrency():
+    user = User.query.filter_by(username=current_user.username).first()
+    request_data = request.get_json()
+    
+    currUser = {
+        'currency': request_data["currency"]
+    }
+    user.currency = request_data["currency"]
+
+    db.session.commit()
+
+    return make_response(jsonify(currUser), 200)
+    
+
+@views.route('/UpdateSettings', methods=['POST'])
+def updateSettings():
+    user = User.query.filter_by(username=current_user.username).first()
+    request_data = request.get_json()
+
+    currUser = {
+        'numPlayers': request_data["players"],
+        'numDecks': request_data["decks"],
+        'deckPenetration': request_data["deckPenetration"],
+        'minBet': request_data["min"],
+        'maxBet': request_data["max"],
+        'countSpoiler': request_data["spoiler"],
+        'peekingOption': request_data["peeking"],
+        'blackjackPayout': request_data["payout"],
+        'hitSplitAces': request_data["split"],
+        'doubleAfterSplit': request_data["doubleSplit"],
+        'hitStandSoftSeventeen': request_data["hitStandSoftSeventeen"],
+        'doubleOption': request_data["doubleOpt"]
+    }
+    user.numPlayers = request_data["players"]
+    user.numDecks = request_data["decks"]
+    user.deckPenetration = request_data["deckPenetration"]
+    user.minBet = request_data["min"]
+    user.maxBet = request_data["max"]
+    user.countSpoiler = request_data["spoiler"]
+    user.peekingOption = request_data["peeking"]
+    user.blackjackPayout = request_data["payout"]
+    user.hitSplitAces = request_data["split"]
+    user.doubleAfterSplit = request_data["doubleSplit"]
+    user.hitStandSoftSeventeen = request_data["hitStandSoftSeventeen"]
+    user.doubleOption = request_data["doubleOpt"]
+    
+    db.session.commit()
+
+    return make_response(jsonify(currUser), 200)
+
 
 # everything below here is related to the Information pages
 

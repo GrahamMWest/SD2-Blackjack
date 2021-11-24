@@ -4,7 +4,8 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import date, datetime
 from . import db
 from flask_login import login_user, login_required, logout_user, current_user
-import time
+from random import *
+import logging
 
 # this file relates to all places the user can navigate to related to authentification
 
@@ -24,9 +25,29 @@ def login():
         # searches database
         user = User.query.filter_by(username=username).first()
 
+        # date time for checking time between current login and last login to add currency for each user
+        today = date.today()
+        currDate = today.strftime("%Y-%m-%d") 
+        prevDate = user.dateLastLoggedIn
+
+        years = int(currDate[0:4]) - int(prevDate[0:4])
+        months = int(currDate[5:7]) - int(prevDate[5:7])
+        days = int(currDate[8:10]) - int(prevDate[8:10])
+
+        # calculation between days
+        totalDays = (years * 365) + (months * 30) + days
+
         if user:
             if check_password_hash(user.password, password):
                 flash('Logged in successfully!', category='success')
+
+                if totalDays > 0:
+                    currency = float(500 * totalDays)
+                    userCurrency = user.currency + currency
+                    user.currency = userCurrency
+                    db.session.commit()
+
+
                 login_user(user, remember=True)
                 return redirect(url_for('views.home'))
             else:
@@ -53,8 +74,13 @@ def create_account():
         confirmPassword = request.form.get('password2')
         dateOfBirth = request.form.get('dateOfBirth') # '2021-08-09' YYYY-MM-DD
 
+        today = date.today()
+        currDate = today.strftime("%Y-%m-%d") 
+
         user = User.query.filter_by(username=username).first()
         user1 = User.query.filter_by(email=email).first()
+
+        passCheck = passwordCheck(password, confirmPassword)
 
         if user1:
             flash('Email already exists', category='error')
@@ -62,18 +88,28 @@ def create_account():
             flash('Username already exists', category='error')
         elif len(email) < 5:
             flash('Email is too short', category='error')
-        elif len(password) < 8:
+        elif passCheck == 1:
             flash('Password is too short', category='error')
-        elif len(password) > 32:
+        elif passCheck == 2:
             flash('Password is too long', category='error')
-        elif password != confirmPassword:
+        elif passCheck == 3:
             flash('Passwords do not match', category='error')
+        elif passCheck == 4:
+            flash('Password must contain a special character', category='error')
+        elif passCheck == 5:
+            flash('Password must contain a lowercase letter', category='error')
+        elif passCheck == 6:
+            flash('Password must contain an uppercase letter', category='error')
+        elif passCheck == 7:
+            flash('Password must contain a number', category='error')
+        elif birthCheck(dateOfBirth):
+            flash('Must be 21 years or older to play', category='error')
         else:
             # make a User object and initiialize it
             new_user = User(email=email, username=username, password=generate_password_hash(password, method='sha256'), 
-            dateOfBirth=datetime.strptime(dateOfBirth, '%Y-%m-%d'), currency=10000, points=0, handsCorrect=0, handsIncorrect=0)
-            #dateCreated=datetime.strptime(str(datetime.now(), '%Y-%m-%d %H:%M:%S.%f')), 
-            #dateLastLoggedIn=datetime.strptime(str(datetime.now(), '%Y-%m-%d %H:%M:%S.%f')))
+            dateOfBirth=datetime.strptime(dateOfBirth, '%Y-%m-%d'), currency=10000, points=0, numPlayers=3, numDecks=4, 
+            deckPenetration=0.50, minBet=10, maxBet=500, countSpoiler=0, peekingOption=1, doubleAfterSplit=1, blackjackPayout=3/2, 
+            hitSplitAces=1, hitStandSoftSeventeen=0, doubleOption=0, dateCreated = currDate, dateLastLoggedIn = currDate)
 
             # add user to database
             db.session.add(new_user)
@@ -86,3 +122,64 @@ def create_account():
             return redirect(url_for('views.home'))
 
     return render_template("create_account.html", user=current_user)
+
+
+# Checks if entered password meets password requirements
+def passwordCheck(password, confirmPassword):
+    
+    symbols = {'#', '@', '!', '-', '$'}
+    
+    var = 0
+
+    if len(password) < 8:
+        var = 1
+    if len(password) > 32:
+        var = 2
+    if password != confirmPassword:
+        var = 3
+    if not any(char in symbols for char in password):
+        var = 4
+    if not any(char.islower() for char in password):
+        var = 5
+    if not any(char.isupper() for char in password):
+        var = 6
+    if not any(char.isdigit() for char in password):
+        var = 7
+
+    return var
+
+# Check's to see if a user is older than 21
+def birthCheck(dateOfBirth):
+
+    today = date.today()
+    var = True
+
+    # date time to check current date
+    currDate = today.strftime("%Y-%m-%d") 
+    year = int(currDate[0:4])
+    month = int(currDate[5:7])
+    day = int(currDate[8:10])
+
+    # date time information to check if a user is over 21
+    playerYear = int(dateOfBirth[0:4])
+    playerMo = int(dateOfBirth[5:7])
+    playerDay = int(dateOfBirth[8:10])
+
+    diffYear = year - playerYear
+    diffMo = month - playerMo
+    diffDay = day - playerDay
+
+    if (diffYear < 0):
+        diffYear = 0
+    if (diffMo < 0):
+        diffMo = 0
+    if (diffDay < 0):
+        diffDay = 0
+
+    age = diffYear * 365 + diffMo * 30 + diffDay
+    currAge = age / 7665
+
+    if (currAge >= 1):
+        var = False
+
+    return var
