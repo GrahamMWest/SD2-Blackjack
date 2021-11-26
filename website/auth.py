@@ -1,9 +1,11 @@
-from flask import Blueprint, render_template, request, flash, redirect, url_for
+from flask import Blueprint, render_template, request, flash, redirect, url_for, jsonify, make_response
+from werkzeug.utils import validate_arguments
 from .models import User
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import date, datetime
 from . import db
 from flask_login import login_user, login_required, logout_user, current_user
+from datetime import date, datetime
 from random import *
 import logging
 
@@ -14,6 +16,8 @@ import logging
 
 # will get imported into init.py to access all roots located in this file
 auth = Blueprint('auth', __name__)
+
+otp = randint(0000000, 9999999)
 
 # login page
 @auth.route('/login', methods=['GET', 'POST'])
@@ -28,35 +32,38 @@ def login():
         # date time for checking time between current login and last login to add currency for each user
         today = date.today()
         currDate = today.strftime("%Y-%m-%d") 
-        prevDate = user.dateLastLoggedIn
-
-        years = int(currDate[0:4]) - int(prevDate[0:4])
-        months = int(currDate[5:7]) - int(prevDate[5:7])
-        days = int(currDate[8:10]) - int(prevDate[8:10])
-
-        # calculation between days
-        totalDays = (years * 365) + (months * 30) + days
 
         if user:
             if check_password_hash(user.password, password):
                 flash('Logged in successfully!', category='success')
 
+                prevDate = user.dateLastLoggedIn
+
+                years = int(currDate[0:4]) - int(prevDate[0:4])
+                months = int(currDate[5:7]) - int(prevDate[5:7])
+                days = int(currDate[8:10]) - int(prevDate[8:10])
+
+                # calculation between days
+                totalDays = (years * 365) + (months * 30) + days
+                
                 if totalDays > 0:
                     currency = float(500 * totalDays)
                     userCurrency = user.currency + currency
                     user.currency = userCurrency
                     db.session.commit()
-
+                
+                user.dateLastLoggedIn = currDate
+                db.session.commit()
 
                 login_user(user, remember=True)
-                return redirect(url_for('views.home'))
+                return redirect(url_for('views.home', user=current_user))
             else:
-                flash('Incorrect Password', category='error')
+                flash('Login Failed', category='error')
         else:
-            flash('Username does not exist', category='error')
+            flash('Login Failed', category='error')
 
     return render_template("login.html", user=current_user)
-
+    
 # logout button
 @auth.route('/logout')
 @login_required
@@ -107,9 +114,9 @@ def create_account():
         else:
             # make a User object and initiialize it
             new_user = User(email=email, username=username, password=generate_password_hash(password, method='sha256'), 
-            dateOfBirth=datetime.strptime(dateOfBirth, '%Y-%m-%d'), currency=10000, points=0, numPlayers=3, numDecks=4, 
-            deckPenetration=0.50, minBet=10, maxBet=500, countSpoiler=0, peekingOption=1, doubleAfterSplit=1, blackjackPayout=3/2, 
-            hitSplitAces=1, hitStandSoftSeventeen=0, doubleOption=0, dateCreated = currDate, dateLastLoggedIn = currDate)
+            dateOfBirth=datetime.strptime(dateOfBirth, '%Y-%m-%d'), isAdmin=0, isMod=0, isAuthenticated = 0, acceptedDisclaimer = 0, currency=10000, 
+            points=0, numPlayers=3, numDecks=4, deckPenetration=0.50, minBet=10, maxBet=500, countSpoiler=0, peekingOption=1, doubleAfterSplit=1, 
+            blackjackPayout=3/2, hitSplitAces=1, hitStandSoftSeventeen=0, doubleOption=0, dateCreated=currDate, dateLastLoggedIn=currDate)
 
             # add user to database
             db.session.add(new_user)
@@ -119,10 +126,9 @@ def create_account():
             login_user(new_user, remember=True)
 
             # redirect to home page
-            return redirect(url_for('views.home'))
+            return render_template("disclaimer.html", user=current_user)
 
     return render_template("create_account.html", user=current_user)
-
 
 # Checks if entered password meets password requirements
 def passwordCheck(password, confirmPassword):
