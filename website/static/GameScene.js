@@ -13626,7 +13626,7 @@ class GameScene extends Phaser.Scene {
         splitText = this.add.text(1178, 830, "Split", textStyle);
 
         // WIP Disclaimer
-        disclaimer = this.add.text(25, 25, "Work In Progress", {fontSize: '20px', fill: '#fff'});
+        // disclaimer = this.add.text(25, 25, "Work In Progress", {fontSize: '20px', fill: '#fff'});
 
         currencyWarningShape = this.add.graphics();
         currencyWarningShape.fillStyle(0xFFFFFF, 1);
